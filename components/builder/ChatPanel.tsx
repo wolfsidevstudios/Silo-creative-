@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
@@ -62,7 +61,7 @@ const BuildStatusCard: React.FC<BuildStatusCardProps> = ({ status, countdown }) 
 );
 
 const ChatPanel: React.FC = () => {
-  const { prompt, setGeneratedCode, appMode, setGeneratedFlashcards } = useAppContext();
+  const { prompt, setGeneratedCode, appMode, setGeneratedFlashcards, agents, selectedAgentId } = useAppContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [input, setInput] = useState('');
@@ -71,6 +70,8 @@ const ChatPanel: React.FC = () => {
   const [buildStatus, setBuildStatus] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const buildIntervalRef = useRef<number | null>(null);
+
+  const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -82,8 +83,10 @@ const ChatPanel: React.FC = () => {
       setMessages([userMessage]);
       setIsLoading(true);
 
+      const agentInstruction = selectedAgent?.systemInstruction;
+
       if (appMode === 'study') {
-          generateFlashcards(prompt)
+          generateFlashcards(prompt, agentInstruction)
             .then(flashcards => {
                 setGeneratedFlashcards(flashcards);
                 const modelMessage: Message = { role: 'model', content: "I've generated your flashcards! You can see them in the preview panel." };
@@ -98,7 +101,7 @@ const ChatPanel: React.FC = () => {
                 setIsLoading(false);
             });
       } else { // 'build' mode
-        generateAppPlan(prompt)
+        generateAppPlan(prompt, agentInstruction)
           .then(plan => {
               const modelMessage: Message = { role: 'model', content: JSON.stringify(plan), isPlan: true };
               setMessages(prev => [...prev, modelMessage]);
@@ -161,7 +164,8 @@ const ChatPanel: React.FC = () => {
       }, stepDuration);
       
       try {
-          const code = await generateAppCode(plan);
+          const agentInstruction = selectedAgent?.systemInstruction;
+          const code = await generateAppCode(plan, agentInstruction);
           setGeneratedCode(code);
           const successMessage: Message = { role: 'model', content: "I've generated the app for you. You can see it in the preview panel!" };
           setMessages(prev => [...prev, successMessage]);
@@ -188,7 +192,12 @@ const ChatPanel: React.FC = () => {
   return (
     <div className="w-1/2 flex flex-col h-full bg-gray-50">
       <header className="p-4 border-b border-gray-200 flex items-center">
-        <h2 className="text-xl font-semibold">Conversation</h2>
+        <div className="flex items-center gap-3">
+          {selectedAgent && (
+            <img src={selectedAgent.imageUrl} alt={selectedAgent.name} className="w-10 h-10 rounded-full" />
+          )}
+          <h2 className="text-xl font-semibold">{selectedAgent ? selectedAgent.name : "Conversation"}</h2>
+        </div>
       </header>
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.map((msg, index) => (
@@ -237,9 +246,9 @@ const ChatPanel: React.FC = () => {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask for modifications..."
             className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            disabled={isLoading || appMode === 'study'}
+            disabled={isLoading}
           />
-          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 disabled:bg-gray-300 transition-colors" disabled={isLoading || appMode === 'study'}>
+          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 disabled:bg-gray-300 transition-colors" disabled={isLoading}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 transform -rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
           </button>
         </form>

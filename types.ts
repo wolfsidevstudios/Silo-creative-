@@ -17,3 +17,11 @@ export interface Flashcard {
     question: string;
     answer: string;
 }
+
+export interface Agent {
+  id: string;
+  name: string;
+  systemInstruction: string;
+  imageUrl: string;
+  isCustom?: boolean;
+}

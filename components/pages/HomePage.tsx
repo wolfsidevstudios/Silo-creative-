@@ -5,6 +5,7 @@ import SuggestionButton from '../common/SuggestionButton';
 import { LogoIcon, PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon } from '../common/Icons';
 import Sidebar from '../common/Sidebar';
 import Banner from '../common/Banner';
+import AgentSelector from '../agents/AgentSelector';
 
 const MAX_CHARS = 350;
 
@@ -77,11 +78,12 @@ const HomePage: React.FC = () => {
               <h2 className="text-3xl text-gray-400 font-medium mb-12">What do you want to create?</h2>
 
               <form onSubmit={handleSubmit} className="w-full bg-white/50 border border-gray-200/80 rounded-2xl p-4 shadow-sm relative">
+                <AgentSelector />
                 <textarea
                   value={inputValue}
                   onChange={handleInputChange}
                   placeholder={placeholder}
-                  className="w-full h-28 bg-transparent focus:outline-none resize-none placeholder-gray-400 text-lg pb-10"
+                  className="w-full h-28 bg-transparent focus:outline-none resize-none placeholder-gray-400 text-lg pt-4"
                 />
                 <div className="absolute bottom-3 left-4 right-4 flex justify-between items-center">
                   <div className="flex items-center gap-2">

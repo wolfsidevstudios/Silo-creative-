@@ -1,14 +1,20 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppPlan, Flashcard } from '../types';
 import { getApiKey } from './apiKeyService';
 
-export const generateAppPlan = async (prompt: string): Promise<AppPlan> => {
+const combineInstructions = (agentInstruction: string | undefined, taskInstruction: string): string => {
+    if (agentInstruction) {
+        return `${agentInstruction}\n\nIMPORTANT:\n${taskInstruction}`;
+    }
+    return taskInstruction;
+}
+
+export const generateAppPlan = async (prompt: string, agentSystemInstruction?: string): Promise<AppPlan> => {
   console.log(`Generating plan for prompt: "${prompt}"`);
 
   const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
-  const systemInstruction = `You are an expert software architect. A user will provide you with an idea for a web application. Your task is to break down this idea into a simple, clear, and actionable plan.
+  const taskInstruction = `You are an expert software architect. A user will provide you with an idea for a web application. Your task is to break down this idea into a simple, clear, and actionable plan.
 
 The plan should consist of:
 1. A concise and catchy **title** for the application.
@@ -21,6 +27,8 @@ You must respond with only a JSON object that strictly follows this structure:
   "description": "string",
   "features": ["string", "string", ...]
 }`;
+  
+  const systemInstruction = combineInstructions(agentSystemInstruction, taskInstruction);
 
   const schema = {
       type: Type.OBJECT,
@@ -57,12 +65,12 @@ You must respond with only a JSON object that strictly follows this structure:
   }
 };
 
-export const generateFlashcards = async (prompt: string): Promise<Flashcard[]> => {
+export const generateFlashcards = async (prompt: string, agentSystemInstruction?: string): Promise<Flashcard[]> => {
   console.log(`Generating flashcards for topic: "${prompt}"`);
 
   const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
-  const systemInstruction = `You are an expert educator. A user will provide you with a topic. Your task is to generate a set of flashcards for that topic.
+  const taskInstruction = `You are an expert educator. A user will provide you with a topic. Your task is to generate a set of flashcards for that topic.
 
 The flashcards should be:
 1. Clear and concise.
@@ -77,6 +85,8 @@ You must respond with only a JSON object that strictly follows this structure:
   },
   ...
 ]`;
+
+  const systemInstruction = combineInstructions(agentSystemInstruction, taskInstruction);
 
   const schema = {
       type: Type.ARRAY,
@@ -112,13 +122,13 @@ You must respond with only a JSON object that strictly follows this structure:
 
 
 // Function to generate HTML code using the Gemini API
-export const generateAppCode = async (plan: AppPlan): Promise<string> => {
+export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: string): Promise<string> => {
   console.log(`Generating code for app: "${plan.title}"`);
 
   const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
   const featuresString = plan.features.map(f => `- ${f}`).join('\n');
-  const prompt = `
+  const taskPrompt = `
     You are an expert web developer tasked with creating a single-file web application.
     Based on the following plan, generate a complete HTML file.
 
@@ -136,11 +146,14 @@ export const generateAppCode = async (plan: AppPlan): Promise<string> => {
     5.  Do not include any explanations, comments, or markdown formatting like \`\`\`html outside of the HTML code itself. The output should be only the raw HTML code.
     6.  Ensure the application is functional and implements all the features described in the plan.
     `;
+    
+    const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
 
   try {
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: prompt,
+        contents: taskPrompt,
+        config: config
     });
     return response.text;
   } catch (error) {

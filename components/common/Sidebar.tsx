@@ -1,12 +1,12 @@
-
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { PlusIcon, ClockIcon, CreditCardIcon, UserIcon, ChevronLeftIcon, ChevronRightIcon, ChipIcon, SettingsIcon } from './Icons';
+import { PlusIcon, ClockIcon, CreditCardIcon, UserIcon, ChevronLeftIcon, ChevronRightIcon, ChipIcon, SettingsIcon, UsersIcon } from './Icons';
 
 const Sidebar: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { resetApp, isStudent } = useAppContext();
 
   const handleNewApp = () => {
@@ -16,6 +16,16 @@ const Sidebar: React.FC = () => {
   
   const recentProjects = [ "Study notes app", "Playful onboarding", "Shared todo app" ];
   const credits = 1250;
+  
+  const NavItem: React.FC<{ to: string; icon: React.ReactNode; text: string }> = ({ to, icon, text }) => {
+    const isActive = location.pathname === to;
+    return (
+      <button onClick={() => navigate(to)} className={`w-full flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg group ${!isExpanded && 'justify-center'} ${isActive ? 'bg-gray-100' : ''}`}>
+          {icon}
+          {isExpanded && <span className="ml-3 font-semibold whitespace-nowrap">{text}</span>}
+      </button>
+    );
+  };
 
   return (
     <aside className={`relative flex flex-col bg-white border-r border-gray-200 rounded-r-2xl shadow-lg transition-all duration-300 ease-in-out z-10 ${isExpanded ? 'w-64' : 'w-20'}`}>
@@ -32,14 +42,21 @@ const Sidebar: React.FC = () => {
         {isExpanded && <span className="ml-3 text-xl font-bold text-gray-800 whitespace-nowrap">Silo Creative</span>}
       </div>
 
-      <nav className="flex-1 px-3 py-6 space-y-4 overflow-y-auto">
+      <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
         <button 
             onClick={handleNewApp} 
-            className={`w-full flex items-center bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors py-2.5 ${isExpanded ? 'px-4' : 'justify-center'}`}
+            className={`w-full flex items-center bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors py-2.5 mb-4 ${isExpanded ? 'px-4' : 'justify-center'}`}
         >
           <PlusIcon className="w-5 h-5 flex-shrink-0" />
           {isExpanded && <span className="ml-3 font-semibold whitespace-nowrap">New App</span>}
         </button>
+        
+        <NavItem 
+            to="/agents"
+            icon={<UsersIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />}
+            text="Custom Agents"
+        />
+
 
         <div className="pt-4">
             <div className={`text-sm font-semibold text-gray-400 uppercase tracking-wider transition-all duration-300 mb-2 ${isExpanded ? 'px-2' : 'text-center'}`}>
@@ -85,10 +102,11 @@ const Sidebar: React.FC = () => {
       </div>
       
       <div className="px-3 py-3 border-t border-gray-200 space-y-1">
-        <button onClick={() => navigate('/settings')} className={`w-full flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg group ${!isExpanded && 'justify-center'}`}>
-          <SettingsIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />
-          {isExpanded && <span className="ml-3 font-semibold whitespace-nowrap">Settings</span>}
-        </button>
+        <NavItem
+            to="/settings"
+            icon={<SettingsIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />}
+            text="Settings"
+        />
         <a href="#" className={`flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg group ${!isExpanded && 'justify-center'}`}>
           <UserIcon className="w-8 h-8 rounded-full text-gray-400 flex-shrink-0" />
           {isExpanded && <span className="ml-3 font-semibold whitespace-nowrap">User Name</span>}

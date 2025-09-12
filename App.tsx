@@ -1,10 +1,10 @@
-
 import React from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import HomePage from './components/pages/HomePage';
 import AppBuilderPage from './components/pages/AppBuilderPage';
 import SettingsPage from './components/pages/SettingsPage';
+import AgentsPage from './components/pages/AgentsPage';
 
 function App() {
   return (
@@ -14,6 +14,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/build" element={<AppBuilderPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/agents" element={<AgentsPage />} />
         </Routes>
       </HashRouter>
     </AppProvider>
