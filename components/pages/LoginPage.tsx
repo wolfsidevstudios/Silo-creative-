@@ -1,6 +1,5 @@
-
 import React, { useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import GoogleSignInButton from '../auth/GoogleSignInButton';
 import { supabase } from '../../services/supabaseClient';
 import { AtSignIcon, KeyIcon, GitHubIcon, DiscordIcon } from '../common/Icons';
@@ -12,7 +11,6 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   const handleEmailAuth = async (e: FormEvent) => {
     e.preventDefault();
@@ -22,11 +20,17 @@ const LoginPage: React.FC = () => {
 
     try {
       if (authMode === 'signup') {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
         if (error) throw error;
         setMessage('Success! Please check your email for the confirmation link.');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
         if (error) throw error;
         // Navigation will be handled by the App.tsx wrapper monitoring auth state
       }
@@ -182,7 +186,7 @@ const LoginPage: React.FC = () => {
               {error && <p className="text-sm text-red-600 text-center">{error}</p>}
               {message && <p className="text-sm text-green-600 text-center">{message}</p>}
 
-              <div>
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={loading}
@@ -191,6 +195,12 @@ const LoginPage: React.FC = () => {
                   {loading ? 'Processing...' : (authMode === 'signin' ? 'Sign In' : 'Create Account')}
                 </button>
               </div>
+
+              <p className="text-xs text-gray-500 text-center pt-2">
+                This site is protected by reCAPTCHA and the Google{' '}
+                <a href="https://policies.google.com/privacy" className="underline hover:text-indigo-600">Privacy Policy</a> and{' '}
+                <a href="https://policies.google.com/terms" className="underline hover:text-indigo-600">Terms of Service</a> apply.
+              </p>
             </form>
           </div>
 
