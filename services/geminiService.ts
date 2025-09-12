@@ -1,10 +1,12 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppPlan, Flashcard } from '../types';
+import { getApiKey } from './apiKeyService';
 
 export const generateAppPlan = async (prompt: string): Promise<AppPlan> => {
   console.log(`Generating plan for prompt: "${prompt}"`);
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
   const systemInstruction = `You are an expert software architect. A user will provide you with an idea for a web application. Your task is to break down this idea into a simple, clear, and actionable plan.
 
@@ -58,7 +60,7 @@ You must respond with only a JSON object that strictly follows this structure:
 export const generateFlashcards = async (prompt: string): Promise<Flashcard[]> => {
   console.log(`Generating flashcards for topic: "${prompt}"`);
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
   const systemInstruction = `You are an expert educator. A user will provide you with a topic. Your task is to generate a set of flashcards for that topic.
 
@@ -113,7 +115,7 @@ You must respond with only a JSON object that strictly follows this structure:
 export const generateAppCode = async (plan: AppPlan): Promise<string> => {
   console.log(`Generating code for app: "${plan.title}"`);
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
   const featuresString = plan.features.map(f => `- ${f}`).join('\n');
   const prompt = `
@@ -149,7 +151,7 @@ export const generateAppCode = async (plan: AppPlan): Promise<string> => {
         <html lang="en">
         <head>
           <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale-1.0">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Error</title>
           <script src="https://cdn.tailwindcss.com"></script>
         </head>

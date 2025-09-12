@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { PlusIcon, ClockIcon, CreditCardIcon, UserIcon, ChevronLeftIcon, ChevronRightIcon, ChipIcon } from './Icons';
+import { PlusIcon, ClockIcon, CreditCardIcon, UserIcon, ChevronLeftIcon, ChevronRightIcon, ChipIcon, SettingsIcon } from './Icons';
 
 const Sidebar: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -83,7 +84,11 @@ const Sidebar: React.FC = () => {
         )}
       </div>
       
-      <div className="px-3 py-3 border-t border-gray-200">
+      <div className="px-3 py-3 border-t border-gray-200 space-y-1">
+        <button onClick={() => navigate('/settings')} className={`w-full flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg group ${!isExpanded && 'justify-center'}`}>
+          <SettingsIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />
+          {isExpanded && <span className="ml-3 font-semibold whitespace-nowrap">Settings</span>}
+        </button>
         <a href="#" className={`flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg group ${!isExpanded && 'justify-center'}`}>
           <UserIcon className="w-8 h-8 rounded-full text-gray-400 flex-shrink-0" />
           {isExpanded && <span className="ml-3 font-semibold whitespace-nowrap">User Name</span>}

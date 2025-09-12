@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { generateAppPlan, generateAppCode, generateFlashcards } from '../../services/geminiService';
-import type { Message, AppPlan, Flashcard as FlashcardType } from '../../types';
+import type { Message, AppPlan } from '../../types';
 
 interface PlanDisplayProps {
   plan: AppPlan;
@@ -60,46 +61,8 @@ const BuildStatusCard: React.FC<BuildStatusCardProps> = ({ status, countdown }) 
     </div>
 );
 
-const FlippableFlashcard: React.FC<{ card: FlashcardType }> = ({ card }) => {
-  const [isFlipped, setIsFlipped] = useState(false);
-
-  return (
-    <div className="w-full h-40 [perspective:1000px] cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
-        <div className={`relative w-full h-full transition-transform duration-500 [transform-style:preserve-3d] ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
-            {/* Front */}
-            <div className="absolute w-full h-full bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-center text-center [backface-visibility:hidden]">
-                <div>
-                    <div className="text-xs font-semibold text-gray-400 mb-2">QUESTION</div>
-                    <p className="font-semibold text-gray-800">{card.question}</p>
-                </div>
-            </div>
-            {/* Back */}
-            <div className="absolute w-full h-full bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-center justify-center text-center [transform:rotateY(180deg)] [backface-visibility:hidden]">
-                <div>
-                    <div className="text-xs font-semibold text-indigo-400 mb-2">ANSWER</div>
-                    <p className="font-semibold text-indigo-800">{card.answer}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-  );
-};
-
-const FlashcardDisplay: React.FC<{ cards: FlashcardType[], topic: string }> = ({ cards, topic }) => (
-    <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-xl font-bold mb-4 text-gray-800">Flashcards: {topic}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {cards.map((card, index) => (
-                <FlippableFlashcard key={index} card={card} />
-            ))}
-        </div>
-    </div>
-);
-
-
 const ChatPanel: React.FC = () => {
-  const { prompt, setGeneratedCode, appMode } = useAppContext();
-  const navigate = useNavigate();
+  const { prompt, setGeneratedCode, appMode, setGeneratedFlashcards } = useAppContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [input, setInput] = useState('');
@@ -122,7 +85,8 @@ const ChatPanel: React.FC = () => {
       if (appMode === 'study') {
           generateFlashcards(prompt)
             .then(flashcards => {
-                const modelMessage: Message = { role: 'model', content: JSON.stringify(flashcards), isFlashcards: true };
+                setGeneratedFlashcards(flashcards);
+                const modelMessage: Message = { role: 'model', content: "I've generated your flashcards! You can see them in the preview panel." };
                 setMessages(prev => [...prev, modelMessage]);
             })
             .catch(error => {
@@ -235,13 +199,6 @@ const ChatPanel: React.FC = () => {
                     plan={JSON.parse(msg.content)} 
                     onGenerate={() => handleGenerateCode(JSON.parse(msg.content))}
                     isGenerated={isCodeGenerated}
-                />
-              </div>
-            ) : msg.isFlashcards ? (
-              <div className="w-full max-w-lg">
-                <FlashcardDisplay
-                    cards={JSON.parse(msg.content)}
-                    topic={messages.find(m => m.role === 'user')?.content || 'your topic'}
                 />
               </div>
             ) : (

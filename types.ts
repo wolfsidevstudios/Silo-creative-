@@ -5,7 +5,6 @@ export interface Message {
   role: 'user' | 'model';
   content: string;
   isPlan?: boolean;
-  isFlashcards?: boolean;
 }
 
 export interface AppPlan {

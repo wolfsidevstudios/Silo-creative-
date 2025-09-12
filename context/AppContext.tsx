@@ -1,11 +1,14 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { AppMode } from '../types';
+import { AppMode, Flashcard } from '../types';
 
 interface AppContextType {
   prompt: string;
   setPrompt: (prompt: string) => void;
   generatedCode: string;
   setGeneratedCode: (code: string) => void;
+  generatedFlashcards: Flashcard[] | null;
+  setGeneratedFlashcards: (flashcards: Flashcard[] | null) => void;
   isStudent: boolean;
   setIsStudent: (isStudent: boolean) => void;
   resetApp: () => void;
@@ -18,6 +21,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [prompt, setPrompt] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
+  const [generatedFlashcards, setGeneratedFlashcards] = useState<Flashcard[] | null>(null);
   const [isStudent, setIsStudentState] = useState(false);
   const [appMode, setAppMode] = useState<AppMode>('build');
 
@@ -38,10 +42,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const resetApp = () => {
     setPrompt('');
     setGeneratedCode('');
+    setGeneratedFlashcards(null);
   };
 
   return (
-    <AppContext.Provider value={{ prompt, setPrompt, generatedCode, setGeneratedCode, isStudent, setIsStudent, resetApp, appMode, setAppMode }}>
+    <AppContext.Provider value={{ prompt, setPrompt, generatedCode, setGeneratedCode, generatedFlashcards, setGeneratedFlashcards, isStudent, setIsStudent, resetApp, appMode, setAppMode }}>
       {children}
     </AppContext.Provider>
   );
