@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { FlashcardDisplay } from '../common/FlashcardDisplay';
 
@@ -7,18 +7,36 @@ const PreviewPanel: React.FC = () => {
     const { generatedCode, appMode, generatedFlashcards, prompt } = useAppContext();
     const [viewMode, setViewMode] = useState<'app' | 'code'>('app');
     
+    // This effect will run when the component renders in "build" mode without generated code.
+    useEffect(() => {
+        if (appMode === 'build' && !generatedCode) {
+            try {
+                // The AdSense script should be loaded in index.html for this to work.
+                // @ts-ignore
+                (window.adsbygoogle = window.adsbygoogle || []).push({});
+            } catch (e) {
+                console.error("AdSense error:", e);
+            }
+        }
+    }, [appMode, generatedCode]);
+
     const renderBuildMode = () => {
         if (!generatedCode) {
             return (
-                <div className="w-full h-full flex flex-col items-center justify-center p-4">
-                    <div className="text-center text-gray-500">
-                        <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                        </svg>
-                        <h3 className="mt-2 text-lg font-medium text-gray-900">App Preview</h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                           Your generated app will appear here after the plan is approved.
-                        </p>
+                 <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                    <div className="text-center text-gray-500 mb-4">
+                         <h3 className="text-lg font-medium text-gray-900">Your app is being planned...</h3>
+                         <p className="mt-1 text-sm text-gray-500">
+                            The preview will appear here. In the meantime, here's a word from our sponsors.
+                         </p>
+                    </div>
+                    <div className="w-full max-w-lg h-auto min-h-[250px] bg-white border border-dashed border-gray-300 rounded-lg flex items-center justify-center p-2">
+                        <ins className="adsbygoogle"
+                             style={{ display: 'block' }}
+                             data-ad-client="ca-pub-7029279570287128"
+                             data-ad-slot="9123765567"
+                             data-ad-format="auto"
+                             data-full-width-responsive="true"></ins>
                     </div>
                 </div>
             );
