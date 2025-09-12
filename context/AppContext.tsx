@@ -59,6 +59,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
 
     // --- Auth Listener ---
+    // The listener is called once on initial load and then again every time the auth state changes.
+    // This handles all cases: initial load, login, logout, and token refresh.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
@@ -78,21 +80,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     );
 
-    // Check for existing session on initial load
-    const checkSession = async () => {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-            setSession(data.session);
-            const storedUser = localStorage.getItem('userProfile');
-            if (storedUser) {
-              setUser(JSON.parse(storedUser));
-            }
-        }
-        setLoading(false);
-    };
-
-    checkSession();
-
     return () => {
       subscription?.unsubscribe();
     };
@@ -104,6 +91,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setUser(null);
     setSession(null);
     localStorage.removeItem('userProfile');
+    // The onAuthStateChange listener will handle the state update automatically.
   };
 
   const setIsStudent = (status: boolean) => {
