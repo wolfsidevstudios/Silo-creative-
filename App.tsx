@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
@@ -9,6 +8,7 @@ import AgentsPage from './components/pages/AgentsPage';
 import PrivacyPolicyPage from './components/pages/PrivacyPolicyPage';
 import TermsOfServicePage from './components/pages/TermsOfServicePage';
 import LoginPage from './components/pages/LoginPage';
+import LandingPage from './components/pages/LandingPage';
 import SiloOneDrivePage from './components/pages/SiloOneDrivePage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -18,7 +18,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/', { state: { from: location } });
+      navigate('/login', { state: { from: location } });
     }
   }, [user, loading, navigate, location]);
 
@@ -41,7 +41,8 @@ const LoginPageWrapper: React.FC = () => {
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route path="/" element={<LoginPageWrapper />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPageWrapper />} />
       <Route path="/privacy" element={<PrivacyPolicyPage />} />
       <Route path="/terms" element={<TermsOfServicePage />} />
       <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
