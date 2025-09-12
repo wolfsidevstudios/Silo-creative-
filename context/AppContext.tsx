@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { AppMode, Flashcard, Agent, User } from '../types';
 import { getAllAgents, saveCustomAgents, getCustomAgents } from '../services/agentService';
@@ -28,6 +27,7 @@ interface AppContextType {
   session: Session | null;
   loading: boolean;
   signOut: () => void;
+  setGoogleUser: (user: User) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -58,13 +58,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setSelectedAgentId(savedAgentId);
     }
 
-    // --- Auth Listener ---
-    // The listener is called once on initial load and then again every time the auth state changes.
-    // This handles all cases: initial load, login, logout, and token refresh.
+    // On initial load, check for any persisted user profile.
+    const storedProfile = localStorage.getItem('userProfile');
+    if (storedProfile) {
+        try {
+            setUser(JSON.parse(storedProfile));
+        } catch (e) {
+            console.error("Could not parse stored user profile.", e);
+            localStorage.removeItem('userProfile');
+            localStorage.removeItem('authProvider');
+        }
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
         if (session?.user) {
+          // If a Supabase session exists, it's the source of truth.
           const profile: User = {
             email: session.user.email || '',
             name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User',
@@ -72,9 +82,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           };
           setUser(profile);
           localStorage.setItem('userProfile', JSON.stringify(profile));
+          localStorage.setItem('authProvider', 'supabase');
         } else {
-          setUser(null);
-          localStorage.removeItem('userProfile');
+          // No Supabase session. Only clear the user if they were a Supabase user.
+          // This prevents logging out a Google user when the app loads.
+          const currentProvider = localStorage.getItem('authProvider');
+          if (currentProvider === 'supabase') {
+              setUser(null);
+              localStorage.removeItem('userProfile');
+              localStorage.removeItem('authProvider');
+          }
         }
         setLoading(false);
       }
@@ -85,13 +102,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
   }, []);
+  
+  const setGoogleUser = (profile: User) => {
+    setUser(profile);
+    localStorage.setItem('userProfile', JSON.stringify(profile));
+    localStorage.setItem('authProvider', 'google');
+    setSession(null); // Clear any potential Supabase session from state
+  };
+
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Universal sign out
+    await supabase.auth.signOut(); // Triggers listener for Supabase cleanup
+    
+    // Manual cleanup for Google and local state
+    if (window.google) {
+        window.google.accounts.id.disableAutoSelect();
+    }
     setUser(null);
     setSession(null);
     localStorage.removeItem('userProfile');
-    // The onAuthStateChange listener will handle the state update automatically.
+    localStorage.removeItem('authProvider');
   };
 
   const setIsStudent = (status: boolean) => {
@@ -127,7 +158,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         appMode, setAppMode,
         agents, addAgent,
         selectedAgentId, setSelectedAgentId: handleSetSelectedAgentId,
-        user, session, loading, signOut
+        user, session, loading, signOut, setGoogleUser
     }}>
       {children}
     </AppContext.Provider>
