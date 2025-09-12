@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import SuggestionButton from '../common/SuggestionButton';
 import { LogoIcon, PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon } from '../common/Icons';
@@ -119,7 +119,18 @@ const HomePage: React.FC = () => {
                 </div>
               </form>
 
-              <div className="flex items-center gap-4 mt-8">
+              <p className="text-xs text-gray-500 mt-4 text-center max-w-md">
+                  By creating an app, you agree to our{' '}
+                  <Link to="/terms" className="underline hover:text-indigo-600 transition-colors">
+                      Terms of Service
+                  </Link>{' '}
+                  and{' '}
+                  <Link to="/privacy" className="underline hover:text-indigo-600 transition-colors">
+                      Privacy Policy
+                  </Link>.
+              </p>
+
+              <div className="flex items-center gap-4 mt-6">
                   {suggestions.map((suggestion, index) => (
                       <SuggestionButton 
                           key={index}

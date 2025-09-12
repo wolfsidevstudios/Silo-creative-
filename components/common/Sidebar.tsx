@@ -11,7 +11,7 @@ const Sidebar: React.FC = () => {
 
   const handleNewApp = () => {
     resetApp();
-    navigate('/');
+    navigate('/home');
   };
   
   const recentProjects = [ "Study notes app", "Playful onboarding", "Shared todo app" ];
