@@ -1,5 +1,6 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
-import { AppPlan, Flashcard } from '../types';
+import { AppPlan, Flashcard, FormPlan } from '../types';
 import { getApiKey } from './apiKeyService';
 
 const combineInstructions = (agentInstruction: string | undefined, taskInstruction: string): string => {
@@ -64,6 +65,64 @@ You must respond with only a JSON object that strictly follows this structure:
     throw new Error("Failed to generate an app plan from the AI model.");
   }
 };
+
+export const generateFormPlan = async (prompt: string, agentSystemInstruction?: string): Promise<FormPlan> => {
+    console.log(`Generating form plan for prompt: "${prompt}"`);
+
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+
+    const taskInstruction = `You are an expert form designer. A user wants to build a web form. Create a plan for this form.
+
+The plan must include:
+1.  A short **title** for the form.
+2.  A one-sentence **description**.
+3.  A list of **fields**, each with a 'name' (e.g., "Full Name"), 'type' (e.g., "text", "email", "textarea", "select", "checkbox", "radio"), and a 'required' boolean status.
+
+Respond with ONLY the JSON object.`;
+    
+    const systemInstruction = combineInstructions(agentSystemInstruction, taskInstruction);
+
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            title: { type: Type.STRING },
+            description: { type: Type.STRING },
+            fields: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        name: { type: Type.STRING },
+                        type: { type: Type.STRING },
+                        required: { type: Type.BOOLEAN },
+                    },
+                    required: ['name', 'type', 'required'],
+                },
+            },
+        },
+        required: ['title', 'description', 'fields'],
+    };
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                systemInstruction: systemInstruction,
+                responseMimeType: "application/json",
+                responseSchema: schema,
+            },
+        });
+
+        const planJson = response.text.trim();
+        const plan: FormPlan = JSON.parse(planJson);
+        return plan;
+    } catch (error) {
+        console.error("Error generating form plan with Gemini:", error);
+        throw new Error("Failed to generate a form plan from the AI model.");
+    }
+};
+
 
 export const generateFlashcards = async (prompt: string, agentSystemInstruction?: string): Promise<Flashcard[]> => {
   console.log(`Generating flashcards for topic: "${prompt}"`);
@@ -164,7 +223,7 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
         <html lang="en">
         <head>
           <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="viewport" content="width=device-width, initial-scale-1.0">
           <title>Error</title>
           <script src="https://cdn.tailwindcss.com"></script>
         </head>
@@ -176,5 +235,52 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
         </body>
         </html>
       `;
+  }
+};
+
+export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: string): Promise<string> => {
+  console.log(`Generating code for form: "${plan.title}"`);
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+
+  const fieldsString = plan.fields.map(f => `- ${f.name} (type: ${f.type}, required: ${f.required})`).join('\n');
+
+  const taskPrompt = `
+    You are an expert web developer who creates beautiful, accessible, and functional web forms.
+    Based on the following plan, generate a complete, single-file HTML document.
+
+    **Form Plan:**
+    - **Title:** ${plan.title}
+    - **Description:** ${plan.description}
+    - **Fields:**
+    ${fieldsString}
+
+    **CRITICAL REQUIREMENTS:**
+    1.  The output must be a single, complete HTML file.
+    2.  Use Tailwind CSS for styling. Include the CDN script: <script src="https://cdn.tailwindcss.com"></script>.
+    3.  The form MUST be compatible with Netlify Forms. This means the <form> tag must include the 'data-netlify="true"' attribute.
+    4.  Also include a honeypot field for spam prevention: <p class="hidden"><label>Don’t fill this out if you’re human: <input name="bot-field" /></label></p>.
+    5.  Implement client-side validation using JavaScript within a <script> tag. The form should not submit if required fields are empty. Show simple error messages.
+    6.  The form should be aesthetically pleasing, with good layout, spacing, and modern input styling.
+    7.  Do NOT include any explanations, comments, or markdown like \`\`\`html. The output must be ONLY the raw HTML code.
+    `;
+    
+  const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+
+  try {
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: taskPrompt,
+        config: config
+    });
+    return response.text;
+  } catch (error) {
+    console.error("Error generating form code with Gemini:", error);
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head><title>Error</title><script src="https://cdn.tailwindcss.com"></script></head>
+      <body><div class="p-4 bg-red-100 text-red-800">Failed to generate form code.</div></body>
+      </html>
+    `;
   }
 };

@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { generateAppPlan, generateAppCode, generateFlashcards } from '../../services/geminiService';
-import type { Message, AppPlan } from '../../types';
+import { generateAppPlan, generateAppCode, generateFlashcards, generateFormPlan, generateFormCode } from '../../services/geminiService';
+import { saveApp, saveFlashcards } from '../../services/storageService';
+import type { Message, AppPlan, FormPlan } from '../../types';
 
 interface PlanDisplayProps {
   plan: AppPlan;
@@ -33,6 +35,30 @@ const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, onGenerate, isGenerated
         </button>
     </div>
 );
+
+const FormPlanDisplay: React.FC<{ plan: FormPlan, onGenerate: () => void, isGenerated: boolean }> = ({ plan, onGenerate, isGenerated }) => (
+    <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 className="text-xl font-bold mb-2 text-gray-800">{plan.title}</h3>
+        <p className="text-gray-600 mb-4">{plan.description}</p>
+        <ul className="space-y-2 mb-6">
+            {plan.fields.map((field, index) => (
+                <li key={index} className="flex items-start">
+                    <svg className="w-5 h-5 text-indigo-500 mr-2 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
+                    <span className="text-gray-700 font-medium">{field.name}</span>
+                    <span className="text-gray-500 ml-2 text-sm">({field.type}{field.required ? ', required' : ''})</span>
+                </li>
+            ))}
+        </ul>
+        <button
+            onClick={onGenerate}
+            disabled={isGenerated}
+            className="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+        >
+            {isGenerated ? 'Form Generated' : 'Looks good, create the form!'}
+        </button>
+    </div>
+);
+
 
 const ESTIMATED_BUILD_TIME = 20; // 20 seconds
 
@@ -82,38 +108,46 @@ const ChatPanel: React.FC = () => {
       const userMessage: Message = { role: 'user', content: prompt };
       setMessages([userMessage]);
       setIsLoading(true);
+      setGeneratedCode('');
+      setGeneratedFlashcards(null);
+      setIsCodeGenerated(false);
 
       const agentInstruction = selectedAgent?.systemInstruction;
+
+      const handleErrors = (error: any, type: string) => {
+        console.error(`Error generating ${type}:`, error);
+        const errorMessage: Message = { role: 'model', content: `Sorry, I couldn't generate the ${type} right now. Please try again.` };
+        setMessages(prev => [...prev, errorMessage]);
+      };
 
       if (appMode === 'study') {
           generateFlashcards(prompt, agentInstruction)
             .then(flashcards => {
                 setGeneratedFlashcards(flashcards);
+                saveFlashcards(prompt, flashcards);
                 const modelMessage: Message = { role: 'model', content: "I've generated your flashcards! You can see them in the preview panel." };
                 setMessages(prev => [...prev, modelMessage]);
             })
-            .catch(error => {
-                console.error("Error generating flashcards:", error);
-                const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't generate flashcards right now. Please try again." };
-                setMessages(prev => [...prev, errorMessage]);
-            })
-            .finally(() => {
-                setIsLoading(false);
-            });
-      } else { // 'build' mode
+            .catch(error => handleErrors(error, 'flashcards'))
+            .finally(() => setIsLoading(false));
+
+      } else if (appMode === 'build') {
         generateAppPlan(prompt, agentInstruction)
           .then(plan => {
-              const modelMessage: Message = { role: 'model', content: JSON.stringify(plan), isPlan: true };
+              const modelMessage: Message = { role: 'model', content: JSON.stringify(plan), isPlan: true, planType: 'app' };
               setMessages(prev => [...prev, modelMessage]);
           })
-          .catch(error => {
-              console.error("Error generating plan:", error);
-              const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't generate a plan right now. Please try again." };
-              setMessages(prev => [...prev, errorMessage]);
+          .catch(error => handleErrors(error, 'app plan'))
+          .finally(() => setIsLoading(false));
+
+      } else if (appMode === 'form') {
+        generateFormPlan(prompt, agentInstruction)
+          .then(plan => {
+              const modelMessage: Message = { role: 'model', content: JSON.stringify(plan), isPlan: true, planType: 'form' };
+              setMessages(prev => [...prev, modelMessage]);
           })
-          .finally(() => {
-              setIsLoading(false);
-          });
+          .catch(error => handleErrors(error, 'form plan'))
+          .finally(() => setIsLoading(false));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -132,41 +166,49 @@ const ChatPanel: React.FC = () => {
     }
     return () => clearTimeout(timer);
   }, [isLoading, isCodeGenerated, countdown]);
-  
-  const handleGenerateCode = async (plan: AppPlan) => {
-      if (isCodeGenerated) return;
 
+  const startBuildProcess = (steps: string[]) => {
       setIsLoading(true);
       setIsCodeGenerated(true);
       setCountdown(ESTIMATED_BUILD_TIME);
-
-      const buildSteps = [
-          "Laying the foundation...",
-          ...plan.features.map(feature => `Implementing: ${feature}`),
-          "Styling the components...",
-          "Finalizing the script..."
-      ];
       
       let stepIndex = 0;
-      setBuildStatus(buildSteps[stepIndex]);
+      setBuildStatus(steps[stepIndex]);
 
-      const stepDuration = (ESTIMATED_BUILD_TIME * 1000) / buildSteps.length;
+      const stepDuration = (ESTIMATED_BUILD_TIME * 1000) / steps.length;
       
       if (buildIntervalRef.current) clearInterval(buildIntervalRef.current);
 
       buildIntervalRef.current = window.setInterval(() => {
           stepIndex++;
-          if (stepIndex < buildSteps.length) {
-              setBuildStatus(buildSteps[stepIndex]);
+          if (stepIndex < steps.length) {
+              setBuildStatus(steps[stepIndex]);
           } else {
               if (buildIntervalRef.current) clearInterval(buildIntervalRef.current);
           }
       }, stepDuration);
+  }
+
+  const endBuildProcess = () => {
+    setIsLoading(false);
+    if (buildIntervalRef.current) clearInterval(buildIntervalRef.current);
+    setBuildStatus('');
+  }
+  
+  const handleGenerateCode = async (plan: AppPlan) => {
+      if (isCodeGenerated) return;
+      startBuildProcess([
+          "Laying the foundation...",
+          ...plan.features.map(feature => `Implementing: ${feature}`),
+          "Styling the components...",
+          "Finalizing the script..."
+      ]);
       
       try {
           const agentInstruction = selectedAgent?.systemInstruction;
           const code = await generateAppCode(plan, agentInstruction);
           setGeneratedCode(code);
+          saveApp(plan.title, code);
           const successMessage: Message = { role: 'model', content: "I've generated the app for you. You can see it in the preview panel!" };
           setMessages(prev => [...prev, successMessage]);
       } catch (error) {
@@ -175,11 +217,35 @@ const ChatPanel: React.FC = () => {
           setMessages(prev => [...prev, errorMessage]);
           setIsCodeGenerated(false); // Allow retry
       } finally {
-          setIsLoading(false);
-          if (buildIntervalRef.current) clearInterval(buildIntervalRef.current);
-          setBuildStatus('');
+          endBuildProcess();
       }
   };
+
+  const handleGenerateForm = async (plan: FormPlan) => {
+    if (isCodeGenerated) return;
+    startBuildProcess([
+        "Drafting the HTML structure...",
+        ...plan.fields.map(field => `Adding field: ${field.name}`),
+        "Applying Tailwind styles...",
+        "Setting up Netlify integration..."
+    ]);
+
+    try {
+        const agentInstruction = selectedAgent?.systemInstruction;
+        const code = await generateFormCode(plan, agentInstruction);
+        setGeneratedCode(code);
+        saveApp(plan.title, code); // Forms are also saved as "apps"
+        const successMessage: Message = { role: 'model', content: "I've generated the form for you. It's ready for Netlify!" };
+        setMessages(prev => [...prev, successMessage]);
+    } catch (error) {
+        console.error("Error generating form code:", error);
+        const errorMessage: Message = { role: 'model', content: "Sorry, there was an error generating the form code." };
+        setMessages(prev => [...prev, errorMessage]);
+        setIsCodeGenerated(false); // Allow retry
+    } finally {
+        endBuildProcess();
+    }
+};
   
   const handleSendMessage = (e: FormEvent) => {
     e.preventDefault();
@@ -204,11 +270,19 @@ const ChatPanel: React.FC = () => {
           <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {msg.isPlan ? (
               <div className="w-full max-w-lg">
-                <PlanDisplay 
-                    plan={JSON.parse(msg.content)} 
-                    onGenerate={() => handleGenerateCode(JSON.parse(msg.content))}
-                    isGenerated={isCodeGenerated}
-                />
+                {msg.planType === 'app' ? (
+                    <PlanDisplay 
+                        plan={JSON.parse(msg.content)} 
+                        onGenerate={() => handleGenerateCode(JSON.parse(msg.content))}
+                        isGenerated={isCodeGenerated}
+                    />
+                ) : (
+                    <FormPlanDisplay
+                        plan={JSON.parse(msg.content)}
+                        onGenerate={() => handleGenerateForm(JSON.parse(msg.content))}
+                        isGenerated={isCodeGenerated}
+                    />
+                )}
               </div>
             ) : (
               <div className={`max-w-lg p-4 rounded-2xl ${msg.role === 'user' ? 'bg-indigo-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>

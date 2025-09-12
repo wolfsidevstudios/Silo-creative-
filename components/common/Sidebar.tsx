@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { PlusIcon, ClockIcon, CreditCardIcon, ChevronLeftIcon, ChevronRightIcon, ChipIcon, SettingsIcon, UsersIcon, LogOutIcon } from './Icons';
+import { PlusIcon, ClockIcon, CreditCardIcon, ChevronLeftIcon, ChevronRightIcon, ChipIcon, SettingsIcon, UsersIcon, LogOutIcon, FolderIcon, BookIcon } from './Icons';
+import { PREMADE_AGENTS } from '../../data/premadeAgents';
 
 const Sidebar: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -18,12 +19,12 @@ const Sidebar: React.FC = () => {
   const recentProjects = [ "Study notes app", "Playful onboarding", "Shared todo app" ];
   const credits = 1250;
   
-  const NavItem: React.FC<{ to: string; icon: React.ReactNode; text: string }> = ({ to, icon, text }) => {
+  const NavItem: React.FC<{ to: string; icon: React.ReactNode; text: string }> = ({ to, text, icon }) => {
     const isActive = location.pathname === to;
     return (
-      <button onClick={() => navigate(to)} className={`w-full flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg group ${!isExpanded && 'justify-center'} ${isActive ? 'bg-gray-100' : ''}`}>
+      <button onClick={() => navigate(to)} className={`w-full flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg group ${!isExpanded && 'justify-center'} ${isActive ? 'bg-gray-100 font-bold' : 'font-semibold'}`}>
           {icon}
-          {isExpanded && <span className="ml-3 font-semibold whitespace-nowrap">{text}</span>}
+          {isExpanded && <span className="ml-3 whitespace-nowrap">{text}</span>}
       </button>
     );
   };
@@ -49,8 +50,20 @@ const Sidebar: React.FC = () => {
             className={`w-full flex items-center bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors py-2.5 mb-4 ${isExpanded ? 'px-4' : 'justify-center'}`}
         >
           <PlusIcon className="w-5 h-5 flex-shrink-0" />
-          {isExpanded && <span className="ml-3 font-semibold whitespace-nowrap">New App</span>}
+          {isExpanded && <span className="ml-3 font-semibold whitespace-nowrap">New Project</span>}
         </button>
+        
+        <NavItem 
+            to="/home"
+            icon={<BookIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />}
+            text="Home"
+        />
+
+        <NavItem 
+            to="/onedrive"
+            icon={<FolderIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />}
+            text="Silo OneDrive"
+        />
         
         <NavItem 
             to="/agents"
@@ -58,22 +71,6 @@ const Sidebar: React.FC = () => {
             text="Custom Agents"
         />
 
-
-        <div className="pt-4">
-            <div className={`text-sm font-semibold text-gray-400 uppercase tracking-wider transition-all duration-300 mb-2 ${isExpanded ? 'px-2' : 'text-center'}`}>
-              {isExpanded ? "Recents" : "•"}
-            </div>
-            <ul className="space-y-1">
-                {recentProjects.map((project, index) => (
-                    <li key={index}>
-                        <a href="#" className={`flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg group ${!isExpanded && 'justify-center'}`}>
-                            <ClockIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />
-                            {isExpanded && <span className="ml-3 truncate whitespace-nowrap">{project}</span>}
-                        </a>
-                    </li>
-                ))}
-            </ul>
-        </div>
       </nav>
 
       <div className="px-3 py-4 border-t border-gray-200">

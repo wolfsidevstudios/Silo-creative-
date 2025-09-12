@@ -9,6 +9,7 @@ import AgentsPage from './components/pages/AgentsPage';
 import PrivacyPolicyPage from './components/pages/PrivacyPolicyPage';
 import TermsOfServicePage from './components/pages/TermsOfServicePage';
 import LoginPage from './components/pages/LoginPage';
+import SiloOneDrivePage from './components/pages/SiloOneDrivePage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAppContext();
@@ -47,6 +48,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/build" element={<ProtectedRoute><AppBuilderPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/agents" element={<ProtectedRoute><AgentsPage /></ProtectedRoute>} />
+      <Route path="/onedrive" element={<ProtectedRoute><SiloOneDrivePage /></ProtectedRoute>} />
     </Routes>
   );
 };

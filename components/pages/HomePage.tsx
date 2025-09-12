@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
@@ -62,9 +63,30 @@ const HomePage: React.FC = () => {
       { text: "US History Trivia", icon: <StarIcon className="w-4 h-4 text-gray-500" /> },
       { text: "JavaScript Fundamentals", icon: <CheckIcon className="w-4 h-4 text-gray-500" /> },
   ];
+  
+  const formSuggestions = [
+      { text: "Contact form for a portfolio", icon: <BookIcon className="w-4 h-4 text-gray-500" /> },
+      { text: "Event registration form", icon: <StarIcon className="w-4 h-4 text-gray-500" /> },
+      { text: "Customer feedback survey", icon: <CheckIcon className="w-4 h-4 text-gray-500" /> },
+  ];
 
-  const suggestions = appMode === 'build' ? buildSuggestions : studySuggestions;
-  const placeholder = appMode === 'build' ? 'Ask Silo Creative...' : 'What topic do you want flashcards for?';
+  const getSuggestions = () => {
+    switch(appMode) {
+        case 'build': return buildSuggestions;
+        case 'study': return studySuggestions;
+        case 'form': return formSuggestions;
+        default: return buildSuggestions;
+    }
+  }
+  
+  const getPlaceholder = () => {
+    switch(appMode) {
+        case 'build': return 'Ask Silo Creative...';
+        case 'study': return 'What topic do you want flashcards for?';
+        case 'form': return 'Describe the form you want to build...';
+        default: return 'Ask Silo Creative...';
+    }
+  }
 
   return (
     <div className="flex flex-col h-screen w-screen bg-gray-50">
@@ -82,7 +104,7 @@ const HomePage: React.FC = () => {
                 <textarea
                   value={inputValue}
                   onChange={handleInputChange}
-                  placeholder={placeholder}
+                  placeholder={getPlaceholder()}
                   className="w-full h-28 bg-transparent focus:outline-none resize-none placeholder-gray-400 text-lg pt-4"
                 />
                 <div className="absolute bottom-3 left-4 right-4 flex justify-between items-center">
@@ -98,6 +120,7 @@ const HomePage: React.FC = () => {
                         <div className="absolute bottom-full mb-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200/80 py-2 z-10">
                           <div className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">Mode</div>
                           <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>App Builder</MenuItem>
+                          <MenuItem active={appMode === 'form'} onClick={() => { setAppMode('form'); setIsMenuOpen(false); }}>AI Form Generator</MenuItem>
                           <MenuItem active={appMode === 'study'} onClick={() => { setAppMode('study'); setIsMenuOpen(false); }}>Study Mode</MenuItem>
                         </div>
                       )}
@@ -131,7 +154,7 @@ const HomePage: React.FC = () => {
               </p>
 
               <div className="flex items-center gap-4 mt-6">
-                  {suggestions.map((suggestion, index) => (
+                  {getSuggestions().map((suggestion, index) => (
                       <SuggestionButton 
                           key={index}
                           icon={suggestion.icon} 
