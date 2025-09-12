@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
     GitHubIcon, 
     DiscordIcon, 
@@ -45,6 +45,7 @@ const useScrollAnimation = () => {
 
 const Header: React.FC = () => {
     const [isScrolled, setIsScrolled] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const handleScroll = () => {
@@ -66,12 +67,12 @@ const Header: React.FC = () => {
                     <a href="#privacy" className="hover:text-indigo-600">Privacy</a>
                 </nav>
                 <div className="flex items-center gap-4">
-                    <Link to="/login" className="text-gray-600 font-medium hover:text-indigo-600">
+                    <button onClick={() => navigate('/login')} className="text-gray-600 font-medium hover:text-indigo-600">
                         Sign In
-                    </Link>
-                    <Link to="/login" className="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-sm">
+                    </button>
+                    <button onClick={() => navigate('/login')} className="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-sm">
                         Get Started
-                    </Link>
+                    </button>
                 </div>
             </div>
         </header>
@@ -81,6 +82,7 @@ const Header: React.FC = () => {
 const HeroSection: React.FC = () => {
     const [observe] = useScrollAnimation();
     const sectionRef = useRef(null);
+    const navigate = useNavigate();
     useEffect(() => observe(sectionRef.current), [observe]);
 
     return (
@@ -96,9 +98,9 @@ const HeroSection: React.FC = () => {
                     From functional apps to study flashcards, your next project starts here.
                 </p>
                 <div className="mt-10 flex justify-center items-center gap-4">
-                     <Link to="/login" className="px-8 py-3.5 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-lg text-lg">
+                     <button onClick={() => navigate('/login')} className="px-8 py-3.5 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-lg text-lg">
                         Start Building for Free
-                    </Link>
+                    </button>
                 </div>
                 <div className="mt-12">
                     <img src="https://i.ibb.co/3k2Qjct/silo-mockup.png" alt="Silo App Builder Interface" className="max-w-4xl mx-auto rounded-2xl shadow-2xl ring-1 ring-gray-900/10" />
@@ -226,6 +228,7 @@ const PrivacySection: React.FC = () => {
 const CtaSection: React.FC = () => {
     const [observe] = useScrollAnimation();
     const sectionRef = useRef(null);
+    const navigate = useNavigate();
     useEffect(() => observe(sectionRef.current), [observe]);
 
     return (
@@ -237,9 +240,9 @@ const CtaSection: React.FC = () => {
                     Join thousands of creators and bring your ideas to life faster than ever before.
                 </p>
                 <div className="mt-8">
-                    <Link to="/login" className="px-8 py-3.5 bg-white text-gray-900 font-semibold rounded-full hover:bg-gray-200 transition-colors shadow-lg text-lg">
+                    <button onClick={() => navigate('/login')} className="px-8 py-3.5 bg-white text-gray-900 font-semibold rounded-full hover:bg-gray-200 transition-colors shadow-lg text-lg">
                         Sign Up for Free
-                    </Link>
+                    </button>
                 </div>
             </div>
         </section>
