@@ -1,8 +1,9 @@
+
 import React, { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import GoogleSignInButton from '../auth/GoogleSignInButton';
 import { supabase } from '../../services/supabaseClient';
-import { AtSignIcon, KeyIcon } from '../common/Icons';
+import { AtSignIcon, KeyIcon, GitHubIcon } from '../common/Icons';
 
 const LoginPage: React.FC = () => {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
@@ -13,7 +14,7 @@ const LoginPage: React.FC = () => {
   const [message, setMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleEmailAuth = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -21,23 +22,30 @@ const LoginPage: React.FC = () => {
 
     try {
       if (authMode === 'signup') {
-        // FIX: Property 'signUp' does not exist on type 'SupabaseAuthClient'.
-        // The method 'signUp' is correct in recent versions, but the error suggests an older version is in use.
-        // Using the v1 method name.
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         setMessage('Success! Please check your email for the confirmation link.');
       } else {
-        // FIX: Property 'signInWithPassword' does not exist on type 'SupabaseAuthClient'.
-        // This method is from Supabase JS v2. The v1 equivalent is 'signIn'.
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate('/home');
+        // Navigation will be handled by the App.tsx wrapper monitoring auth state
       }
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleGitHubSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+    });
+    if (error) {
+        setError(error.message);
+        setLoading(false);
     }
   };
 
@@ -79,9 +87,20 @@ const LoginPage: React.FC = () => {
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
           <p className="text-gray-600 mb-8">Sign in to continue your creative journey.</p>
           
-          <GoogleSignInButton />
+          <div className="space-y-3">
+            <GoogleSignInButton />
+            <button
+              type="button"
+              onClick={handleGitHubSignIn}
+              disabled={loading}
+              className="w-full flex items-center justify-center py-2.5 px-4 border border-gray-300 rounded-full shadow-sm bg-white text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-60"
+            >
+              <GitHubIcon className="w-5 h-5 mr-3" />
+              <span className="font-medium">Continue with GitHub</span>
+            </button>
+          </div>
 
-          <div className="my-8 flex items-center">
+          <div className="my-6 flex items-center">
             <div className="flex-grow border-t border-gray-300"></div>
             <span className="mx-4 text-sm font-medium text-gray-500">OR</span>
             <div className="flex-grow border-t border-gray-300"></div>
@@ -98,7 +117,7 @@ const LoginPage: React.FC = () => {
                 </button>
               </nav>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleEmailAuth} className="space-y-4">
               <div>
                 <label htmlFor="email" className="sr-only">Email address</label>
                 <div className="relative">
@@ -139,8 +158,8 @@ const LoginPage: React.FC = () => {
                 </div>
               </div>
               
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              {message && <p className="text-sm text-green-600">{message}</p>}
+              {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+              {message && <p className="text-sm text-green-600 text-center">{message}</p>}
 
               <div>
                 <button

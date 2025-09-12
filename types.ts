@@ -25,3 +25,9 @@ export interface Agent {
   imageUrl: string;
   isCustom?: boolean;
 }
+
+export interface User {
+  email: string;
+  name: string;
+  avatarUrl: string;
+}

@@ -1,7 +1,11 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { AppMode, Flashcard, Agent } from '../types';
+import { AppMode, Flashcard, Agent, User } from '../types';
 import { getAllAgents, saveCustomAgents, getCustomAgents } from '../services/agentService';
 import { PREMADE_AGENTS } from '../data/premadeAgents';
+import { supabase } from '../services/supabaseClient';
+import type { Session } from '@supabase/supabase-js';
+
 
 interface AppContextType {
   prompt: string;
@@ -19,6 +23,11 @@ interface AppContextType {
   addAgent: (agent: Agent) => void;
   selectedAgentId: string;
   setSelectedAgentId: (id: string) => void;
+  // Auth
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  signOut: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -32,9 +41,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>(PREMADE_AGENTS[0].id);
 
+  // Auth state
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load agents and student status on initial load
+    // Load non-auth data on initial load
     setAgents(getAllAgents());
     const studentStatus = localStorage.getItem('isStudentUser') === 'true';
     if (studentStatus) {
@@ -45,7 +58,53 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setSelectedAgentId(savedAgentId);
     }
 
+    // --- Auth Listener ---
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        if (session?.user) {
+          const profile: User = {
+            email: session.user.email || '',
+            name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User',
+            avatarUrl: session.user.user_metadata?.avatar_url || 'https://i.ibb.co/6gKCj61/avatar-1.png',
+          };
+          setUser(profile);
+          localStorage.setItem('userProfile', JSON.stringify(profile));
+        } else {
+          setUser(null);
+          localStorage.removeItem('userProfile');
+        }
+        setLoading(false);
+      }
+    );
+
+    // Check for existing session on initial load
+    const checkSession = async () => {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+            setSession(data.session);
+            const storedUser = localStorage.getItem('userProfile');
+            if (storedUser) {
+              setUser(JSON.parse(storedUser));
+            }
+        }
+        setLoading(false);
+    };
+
+    checkSession();
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+
   }, []);
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    localStorage.removeItem('userProfile');
+  };
 
   const setIsStudent = (status: boolean) => {
     localStorage.setItem('isStudentUser', String(status));
@@ -79,7 +138,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         resetApp, 
         appMode, setAppMode,
         agents, addAgent,
-        selectedAgentId, setSelectedAgentId: handleSetSelectedAgentId
+        selectedAgentId, setSelectedAgentId: handleSetSelectedAgentId,
+        user, session, loading, signOut
     }}>
       {children}
     </AppContext.Provider>
