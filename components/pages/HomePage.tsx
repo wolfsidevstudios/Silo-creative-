@@ -1,17 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import SuggestionButton from '../common/SuggestionButton';
-import { LogoIcon, PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon } from '../common/Icons';
+import { LogoIcon, PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon } from '../common/Icons';
 import Sidebar from '../common/Sidebar';
 import Banner from '../common/Banner';
 
 const MAX_CHARS = 350;
 
+const MenuItem: React.FC<{ children: React.ReactNode, active: boolean, onClick: () => void }> = ({ children, active, onClick }) => (
+    <button onClick={onClick} className="w-full text-left flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+        <span>{children}</span>
+        {active && <CheckIcon className="w-4 h-4 text-indigo-500" />}
+    </button>
+);
+
 const HomePage: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { setPrompt } = useAppContext();
+  const { setPrompt, appMode, setAppMode } = useAppContext();
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
@@ -31,11 +50,20 @@ const HomePage: React.FC = () => {
     startBuilding(inputValue);
   };
   
-  const suggestions = [
+  const buildSuggestions = [
       { text: "Study notes app", icon: <BookIcon className="w-4 h-4 text-gray-500" /> },
       { text: "Playful onboarding flow", icon: <StarIcon className="w-4 h-4 text-gray-500" /> },
       { text: "Shared todo app", icon: <CheckIcon className="w-4 h-4 text-gray-500" /> },
   ];
+  
+  const studySuggestions = [
+      { text: "Cellular Biology", icon: <BookIcon className="w-4 h-4 text-gray-500" /> },
+      { text: "US History Trivia", icon: <StarIcon className="w-4 h-4 text-gray-500" /> },
+      { text: "JavaScript Fundamentals", icon: <CheckIcon className="w-4 h-4 text-gray-500" /> },
+  ];
+
+  const suggestions = appMode === 'build' ? buildSuggestions : studySuggestions;
+  const placeholder = appMode === 'build' ? 'Ask Silo Creative...' : 'What topic do you want flashcards for?';
 
   return (
     <div className="flex flex-col h-screen w-screen bg-gray-50">
@@ -52,13 +80,27 @@ const HomePage: React.FC = () => {
                 <textarea
                   value={inputValue}
                   onChange={handleInputChange}
-                  placeholder="Ask Silo Creative..."
+                  placeholder={placeholder}
                   className="w-full h-28 bg-transparent focus:outline-none resize-none placeholder-gray-400 text-lg pb-10"
                 />
                 <div className="absolute bottom-3 left-4 right-4 flex justify-between items-center">
-                  <button type="button" className="p-2 rounded-full hover:bg-gray-200 text-gray-500">
-                    <PaperclipIcon className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button type="button" className="p-2 rounded-full hover:bg-gray-200 text-gray-500">
+                      <PaperclipIcon className="w-5 h-5" />
+                    </button>
+                    <div className="relative" ref={menuRef}>
+                      <button type="button" onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 text-gray-500">
+                        <MoreVerticalIcon className="w-5 h-5" />
+                      </button>
+                      {isMenuOpen && (
+                        <div className="absolute bottom-full mb-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200/80 py-2 z-10">
+                          <div className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">Mode</div>
+                          <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>App Builder</MenuItem>
+                          <MenuItem active={appMode === 'study'} onClick={() => { setAppMode('study'); setIsMenuOpen(false); }}>Study Mode</MenuItem>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   <div className="flex items-center gap-4">
                       <div className="text-sm font-mono text-gray-500">
                           <span className={inputValue.length > 0 ? "text-gray-900" : ""}>{MAX_CHARS - inputValue.length}</span>/{MAX_CHARS}

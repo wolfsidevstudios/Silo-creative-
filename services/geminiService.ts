@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { AppPlan } from '../types';
+import { AppPlan, Flashcard } from '../types';
 
 export const generateAppPlan = async (prompt: string): Promise<AppPlan> => {
   console.log(`Generating plan for prompt: "${prompt}"`);
@@ -55,6 +55,59 @@ You must respond with only a JSON object that strictly follows this structure:
   }
 };
 
+export const generateFlashcards = async (prompt: string): Promise<Flashcard[]> => {
+  console.log(`Generating flashcards for topic: "${prompt}"`);
+
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  const systemInstruction = `You are an expert educator. A user will provide you with a topic. Your task is to generate a set of flashcards for that topic.
+
+The flashcards should be:
+1. Clear and concise.
+2. Factually accurate.
+3. Formatted as a JSON array of objects, where each object has a "question" and an "answer".
+
+You must respond with only a JSON object that strictly follows this structure:
+[
+  {
+    "question": "string",
+    "answer": "string"
+  },
+  ...
+]`;
+
+  const schema = {
+      type: Type.ARRAY,
+      items: {
+          type: Type.OBJECT,
+          properties: {
+              question: { type: Type.STRING },
+              answer: { type: Type.STRING },
+          },
+          required: ['question', 'answer'],
+      }
+  };
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        systemInstruction: systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: schema,
+      },
+    });
+
+    const flashcardsJson = response.text.trim();
+    const flashcards: Flashcard[] = JSON.parse(flashcardsJson);
+    return flashcards;
+  } catch (error) {
+    console.error("Error generating flashcards with Gemini:", error);
+    throw new Error("Failed to generate flashcards from the AI model.");
+  }
+};
+
 
 // Function to generate HTML code using the Gemini API
 export const generateAppCode = async (plan: AppPlan): Promise<string> => {
@@ -96,7 +149,7 @@ export const generateAppCode = async (plan: AppPlan): Promise<string> => {
         <html lang="en">
         <head>
           <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="viewport" content="width=device-width, initial-scale-1.0">
           <title>Error</title>
           <script src="https://cdn.tailwindcss.com"></script>
         </head>

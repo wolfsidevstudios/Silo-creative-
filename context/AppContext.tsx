@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import { AppMode } from '../types';
 
 interface AppContextType {
   prompt: string;
@@ -8,6 +9,8 @@ interface AppContextType {
   isStudent: boolean;
   setIsStudent: (isStudent: boolean) => void;
   resetApp: () => void;
+  appMode: AppMode;
+  setAppMode: (mode: AppMode) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -16,6 +19,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [prompt, setPrompt] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [isStudent, setIsStudentState] = useState(false);
+  const [appMode, setAppMode] = useState<AppMode>('build');
 
   useEffect(() => {
     // Check for student status in localStorage on initial load
@@ -37,7 +41,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   return (
-    <AppContext.Provider value={{ prompt, setPrompt, generatedCode, setGeneratedCode, isStudent, setIsStudent, resetApp }}>
+    <AppContext.Provider value={{ prompt, setPrompt, generatedCode, setGeneratedCode, isStudent, setIsStudent, resetApp, appMode, setAppMode }}>
       {children}
     </AppContext.Provider>
   );

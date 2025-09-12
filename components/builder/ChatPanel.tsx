@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { generateAppPlan, generateAppCode } from '../../services/geminiService';
-import type { Message, AppPlan } from '../../types';
+import { generateAppPlan, generateAppCode, generateFlashcards } from '../../services/geminiService';
+import type { Message, AppPlan, Flashcard as FlashcardType } from '../../types';
 
 interface PlanDisplayProps {
   plan: AppPlan;
@@ -11,7 +11,7 @@ interface PlanDisplayProps {
 }
 
 const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, onGenerate, isGenerated }) => (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 my-2">
+    <div className="bg-white border border-gray-200 rounded-lg p-6">
         <h3 className="text-xl font-bold mb-2 text-gray-800">{plan.title}</h3>
         <p className="text-gray-600 mb-4">{plan.description}</p>
         <ul className="space-y-2 mb-6">
@@ -42,7 +42,7 @@ interface BuildStatusCardProps {
 }
 
 const BuildStatusCard: React.FC<BuildStatusCardProps> = ({ status, countdown }) => (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 my-2">
+    <div className="bg-white border border-gray-200 rounded-lg p-4">
         <div className="flex justify-between items-center mb-2">
             <h4 className="font-semibold text-gray-800">Silo is building...</h4>
             <span className="text-sm text-gray-500 font-mono">~{countdown}s left</span>
@@ -60,9 +60,45 @@ const BuildStatusCard: React.FC<BuildStatusCardProps> = ({ status, countdown }) 
     </div>
 );
 
+const FlippableFlashcard: React.FC<{ card: FlashcardType }> = ({ card }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  return (
+    <div className="w-full h-40 [perspective:1000px] cursor-pointer" onClick={() => setIsFlipped(!isFlipped)}>
+        <div className={`relative w-full h-full transition-transform duration-500 [transform-style:preserve-3d] ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
+            {/* Front */}
+            <div className="absolute w-full h-full bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-center text-center [backface-visibility:hidden]">
+                <div>
+                    <div className="text-xs font-semibold text-gray-400 mb-2">QUESTION</div>
+                    <p className="font-semibold text-gray-800">{card.question}</p>
+                </div>
+            </div>
+            {/* Back */}
+            <div className="absolute w-full h-full bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-center justify-center text-center [transform:rotateY(180deg)] [backface-visibility:hidden]">
+                <div>
+                    <div className="text-xs font-semibold text-indigo-400 mb-2">ANSWER</div>
+                    <p className="font-semibold text-indigo-800">{card.answer}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+  );
+};
+
+const FlashcardDisplay: React.FC<{ cards: FlashcardType[], topic: string }> = ({ cards, topic }) => (
+    <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 className="text-xl font-bold mb-4 text-gray-800">Flashcards: {topic}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {cards.map((card, index) => (
+                <FlippableFlashcard key={index} card={card} />
+            ))}
+        </div>
+    </div>
+);
+
 
 const ChatPanel: React.FC = () => {
-  const { prompt, setGeneratedCode, resetApp } = useAppContext();
+  const { prompt, setGeneratedCode, appMode } = useAppContext();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -82,22 +118,39 @@ const ChatPanel: React.FC = () => {
       const userMessage: Message = { role: 'user', content: prompt };
       setMessages([userMessage]);
       setIsLoading(true);
-      generateAppPlan(prompt)
-        .then(plan => {
-            const modelMessage: Message = { role: 'model', content: JSON.stringify(plan), isPlan: true };
-            setMessages(prev => [...prev, modelMessage]);
-        })
-        .catch(error => {
-            console.error("Error generating plan:", error);
-            const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't generate a plan right now. Please try again." };
-            setMessages(prev => [...prev, errorMessage]);
-        })
-        .finally(() => {
-            setIsLoading(false);
-        });
+
+      if (appMode === 'study') {
+          generateFlashcards(prompt)
+            .then(flashcards => {
+                const modelMessage: Message = { role: 'model', content: JSON.stringify(flashcards), isFlashcards: true };
+                setMessages(prev => [...prev, modelMessage]);
+            })
+            .catch(error => {
+                console.error("Error generating flashcards:", error);
+                const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't generate flashcards right now. Please try again." };
+                setMessages(prev => [...prev, errorMessage]);
+            })
+            .finally(() => {
+                setIsLoading(false);
+            });
+      } else { // 'build' mode
+        generateAppPlan(prompt)
+          .then(plan => {
+              const modelMessage: Message = { role: 'model', content: JSON.stringify(plan), isPlan: true };
+              setMessages(prev => [...prev, modelMessage]);
+          })
+          .catch(error => {
+              console.error("Error generating plan:", error);
+              const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't generate a plan right now. Please try again." };
+              setMessages(prev => [...prev, errorMessage]);
+          })
+          .finally(() => {
+              setIsLoading(false);
+          });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prompt]);
+  }, [prompt, appMode]);
 
   useEffect(() => {
     scrollToBottom();
@@ -176,17 +229,26 @@ const ChatPanel: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-lg p-4 rounded-2xl ${msg.role === 'user' ? 'bg-indigo-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>
-              {msg.isPlan ? (
-                  <PlanDisplay 
-                      plan={JSON.parse(msg.content)} 
-                      onGenerate={() => handleGenerateCode(JSON.parse(msg.content))}
-                      isGenerated={isCodeGenerated}
-                  />
-              ) : (
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-              )}
-            </div>
+            {msg.isPlan ? (
+              <div className="w-full max-w-lg">
+                <PlanDisplay 
+                    plan={JSON.parse(msg.content)} 
+                    onGenerate={() => handleGenerateCode(JSON.parse(msg.content))}
+                    isGenerated={isCodeGenerated}
+                />
+              </div>
+            ) : msg.isFlashcards ? (
+              <div className="w-full max-w-lg">
+                <FlashcardDisplay
+                    cards={JSON.parse(msg.content)}
+                    topic={messages.find(m => m.role === 'user')?.content || 'your topic'}
+                />
+              </div>
+            ) : (
+              <div className={`max-w-lg p-4 rounded-2xl ${msg.role === 'user' ? 'bg-indigo-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>
+                <p className="whitespace-pre-wrap">{msg.content}</p>
+              </div>
+            )}
           </div>
         ))}
         {isLoading && !isCodeGenerated && (
@@ -218,9 +280,9 @@ const ChatPanel: React.FC = () => {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask for modifications..."
             className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            disabled={isLoading}
+            disabled={isLoading || appMode === 'study'}
           />
-          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 disabled:bg-gray-300 transition-colors">
+          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 disabled:bg-gray-300 transition-colors" disabled={isLoading || appMode === 'study'}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 transform -rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
           </button>
         </form>
