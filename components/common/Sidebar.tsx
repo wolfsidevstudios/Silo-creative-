@@ -104,22 +104,23 @@ const Sidebar: React.FC = () => {
       
       {user && (
         <div className="px-3 py-3 border-t border-gray-200 space-y-1">
-          <NavItem
-              to="/settings"
-              icon={<SettingsIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />}
-              text="Settings"
-          />
-          <div className={`flex items-center p-2 text-gray-600 rounded-lg group ${!isExpanded && 'justify-center'}`}>
-            <img src={user.avatarUrl} alt="User avatar" className="w-8 h-8 rounded-full flex-shrink-0" />
-            {isExpanded && (
-                <div className="ml-3 flex-1 flex justify-between items-center">
-                    <span className="font-semibold whitespace-nowrap truncate">{user.name}</span>
-                    <button onClick={signOut} className="p-1 rounded-md hover:bg-gray-200 text-gray-400 hover:text-gray-600" aria-label="Sign out">
-                        <LogOutIcon className="w-5 h-5" />
-                    </button>
-                </div>
-            )}
-          </div>
+            <button onClick={() => navigate('/settings')} className={`w-full flex items-center p-2 text-left text-gray-600 hover:bg-gray-100 rounded-lg group ${!isExpanded && 'justify-center'}`}>
+                <img src={user.avatarUrl} alt="User avatar" className="w-8 h-8 rounded-full flex-shrink-0" />
+                {isExpanded && (
+                    <div className="ml-3 flex-1 overflow-hidden">
+                        <span className="font-semibold whitespace-nowrap truncate block">{user.name}</span>
+                    </div>
+                )}
+            </button>
+            <NavItem
+                to="/settings"
+                icon={<SettingsIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />}
+                text="Settings"
+            />
+             <button onClick={signOut} className={`w-full flex items-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg group ${!isExpanded && 'justify-center'}`}>
+                <LogOutIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />
+                {isExpanded && <span className="ml-3 font-semibold whitespace-nowrap">Sign Out</span>}
+            </button>
         </div>
       )}
     </aside>
