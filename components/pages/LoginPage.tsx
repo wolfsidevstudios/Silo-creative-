@@ -3,7 +3,7 @@ import React, { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import GoogleSignInButton from '../auth/GoogleSignInButton';
 import { supabase } from '../../services/supabaseClient';
-import { AtSignIcon, KeyIcon, GitHubIcon } from '../common/Icons';
+import { AtSignIcon, KeyIcon, GitHubIcon, DiscordIcon } from '../common/Icons';
 
 const LoginPage: React.FC = () => {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
@@ -42,6 +42,18 @@ const LoginPage: React.FC = () => {
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
         provider: 'github',
+    });
+    if (error) {
+        setError(error.message);
+        setLoading(false);
+    }
+  };
+
+  const handleDiscordSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'discord',
     });
     if (error) {
         setError(error.message);
@@ -97,6 +109,15 @@ const LoginPage: React.FC = () => {
             >
               <GitHubIcon className="w-5 h-5 mr-3" />
               <span className="font-medium">Continue with GitHub</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleDiscordSignIn}
+              disabled={loading}
+              className="w-full flex items-center justify-center py-2.5 px-4 border border-gray-300 rounded-full shadow-sm bg-white text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-60"
+            >
+              <DiscordIcon className="w-5 h-5 mr-3 text-[#5865F2]" />
+              <span className="font-medium">Continue with Discord</span>
             </button>
           </div>
 
