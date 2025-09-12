@@ -1,5 +1,5 @@
 import React, { useState, FormEvent, useEffect } from 'react';
-import { XIcon } from '../common/Icons';
+import { XIcon, LinkIcon } from '../common/Icons';
 import { useAppContext } from '../../context/AppContext';
 import { Agent } from '../../types';
 
@@ -35,7 +35,7 @@ export const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isOpen, onCl
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !systemInstruction.trim()) return;
+    if (!name.trim() || !systemInstruction.trim() || !imageUrl.trim()) return;
 
     const newAgent: Agent = {
       id: `custom-${Date.now()}`,
@@ -50,6 +50,9 @@ export const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isOpen, onCl
   };
 
   if (!isOpen) return null;
+
+  const isCustomUrl = !AVATARS.includes(imageUrl);
+  const customUrlInputValue = isCustomUrl ? imageUrl : '';
 
   return (
     <div
@@ -85,8 +88,8 @@ export const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isOpen, onCl
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Profile Image</label>
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700">Profile Image</label>
               <div className="flex flex-wrap gap-3">
                 {AVATARS.map((avatarUrl) => (
                   <button
@@ -98,6 +101,30 @@ export const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isOpen, onCl
                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   </button>
                 ))}
+              </div>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center">
+                    <span className="bg-white px-2 text-sm text-gray-500">Or</span>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="agent-image-url" className="sr-only">Image URL</label>
+                 <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <LinkIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                        type="url"
+                        id="agent-image-url"
+                        value={customUrlInputValue}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        className="block w-full rounded-lg border-gray-300 py-2.5 pl-10 pr-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        placeholder="Enter image URL"
+                    />
+                </div>
               </div>
             </div>
 
@@ -129,7 +156,7 @@ export const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isOpen, onCl
             <button
               type="submit"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400"
-              disabled={!name.trim() || !systemInstruction.trim()}
+              disabled={!name.trim() || !systemInstruction.trim() || !imageUrl.trim()}
             >
               Create Agent
             </button>
