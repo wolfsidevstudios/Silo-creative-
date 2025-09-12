@@ -31,7 +31,7 @@ const GoogleSignInButton: React.FC = () => {
                 
                 window.google.accounts.id.renderButton(
                     buttonDivRef.current,
-                    { theme: "outline", size: "large", width: '368' } // Adjust theme and size as needed
+                    { theme: "outline", size: "large", width: '368', shape: 'pill' } // Adjust theme and size as needed
                 );
 
                 // Optional: Prompt user to sign in on page load
