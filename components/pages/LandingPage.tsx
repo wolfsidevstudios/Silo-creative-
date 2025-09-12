@@ -43,6 +43,97 @@ const useScrollAnimation = () => {
     return [observe];
 };
 
+const samplePrompt = "Create a simple pomodoro timer app";
+const codeLinesData = [
+  { text: '<!DOCTYPE html>', color: 'text-gray-500' },
+  { text: '<html lang="en">', color: 'text-gray-500' },
+  { text: '  <head>', color: 'text-gray-500' },
+  { text: '    <title>Pomodoro Timer</title>', color: 'text-pink-400' },
+  { text: '    <script src=".../tailwindcss.com"></script>', color: 'text-pink-400' },
+  { text: '  </head>', color: 'text-gray-500' },
+  { text: '  <body class="bg-red-500 ...">', color: 'text-pink-400' },
+  { text: '    <div id="app">', color: 'text-gray-500' },
+  { text: '      <h1 class="text-9xl">25:00</h1>', color: 'text-pink-400' },
+  { text: '      <button id="start">Start</button>', color: 'text-pink-400' },
+  { text: '    </div>', color: 'text-gray-500' },
+  { text: '    <script>', color: 'text-yellow-400' },
+  { text: "      const timer = ...;", color: 'text-cyan-400' },
+  { text: '      // ... logic ...', color: 'text-gray-600' },
+  { text: '    </script>', color: 'text-yellow-400' },
+  { text: '  </body>', color: 'text-gray-500' },
+  { text: '</html>', color: 'text-gray-500' },
+];
+
+const AnimatedAppPreview = () => {
+    const [typedPrompt, setTypedPrompt] = useState('');
+    const [visibleLines, setVisibleLines] = useState(0);
+    const [showCaret, setShowCaret] = useState(true);
+
+    useEffect(() => {
+        let i = 0;
+        const typingInterval = setInterval(() => {
+            setTypedPrompt(samplePrompt.substring(0, i + 1));
+            i++;
+            if (i > samplePrompt.length) {
+                clearInterval(typingInterval);
+                setShowCaret(false);
+
+                setTimeout(() => {
+                    let lineIndex = 0;
+                    const codeInterval = setInterval(() => {
+                        setVisibleLines(prev => prev + 1);
+                        lineIndex++;
+                        if (lineIndex >= codeLinesData.length) {
+                            clearInterval(codeInterval);
+                        }
+                    }, 100);
+                    return () => clearInterval(codeInterval);
+                }, 500);
+            }
+        }, 80);
+
+        return () => {
+            clearInterval(typingInterval);
+        };
+    }, []);
+
+    return (
+        <div className="max-w-4xl mx-auto rounded-2xl shadow-2xl ring-1 ring-gray-900/10 bg-[#282c34] font-mono text-sm overflow-hidden">
+            <div className="bg-gray-700 px-4 py-3 flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            </div>
+
+            <div className="p-6 h-80">
+                <div className="flex gap-2 items-center mb-4">
+                    <span className="text-green-400 font-bold">&gt;</span>
+                    <span className="text-gray-300">{typedPrompt}</span>
+                    {showCaret && <span className="w-2 h-4 bg-green-400 animate-pulse"></span>}
+                </div>
+                
+                <div className="overflow-hidden">
+                    {codeLinesData.slice(0, visibleLines).map((line, index) => (
+                         <p key={index} className={`whitespace-pre-wrap ${line.color} opacity-0 animate-fade-in`} style={{ animationDelay: `${index * 50}ms` }}>
+                            {line.text}
+                        </p>
+                    ))}
+                </div>
+            </div>
+            <style>{`
+                @keyframes fade-in {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in {
+                    animation: fade-in 0.4s ease forwards;
+                }
+            `}</style>
+        </div>
+    );
+};
+
+
 const Header: React.FC = () => {
     const [isScrolled, setIsScrolled] = useState(false);
     const navigate = useNavigate();
@@ -102,8 +193,14 @@ const HeroSection: React.FC = () => {
                         Start Building for Free
                     </button>
                 </div>
+                 <p className="mt-6 text-sm text-gray-500">
+                    Already have an account?{' '}
+                    <Link to="/login" className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
+                        Sign In
+                    </Link>
+                </p>
                 <div className="mt-12">
-                    <img src="https://i.ibb.co/3k2Qjct/silo-mockup.png" alt="Silo App Builder Interface" className="max-w-4xl mx-auto rounded-2xl shadow-2xl ring-1 ring-gray-900/10" />
+                    <AnimatedAppPreview />
                 </div>
             </div>
         </section>
