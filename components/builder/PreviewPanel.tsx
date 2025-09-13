@@ -37,9 +37,9 @@ const getSucrase = (): Promise<any> => {
       if (window.sucrase) {
         clearInterval(intervalId);
         resolve(window.sucrase);
-      } else if (attempts++ > 20) { // Try for ~5 seconds
+      } else if (attempts++ > 40) { // Try for ~10 seconds
         clearInterval(intervalId);
-        reject(new Error('Sucrase preview builder failed to load.'));
+        reject(new Error('Sucrase preview builder failed to load. Please check your network connection and try refreshing the page.'));
       }
     }, 250);
   });
