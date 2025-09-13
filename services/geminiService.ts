@@ -235,7 +235,7 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
         <html lang="en">
         <head>
           <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale-1.0">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Error</title>
           <script src="https://cdn.tailwindcss.com"></script>
         </head>
@@ -296,5 +296,45 @@ export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: 
       <body><div class="p-4 bg-red-100 text-red-800">Failed to generate form code.</div></body>
       </html>
     `;
+  }
+};
+
+export const refineAppCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<string> => {
+  console.log(`Refining code with prompt: "${prompt}"`);
+
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+
+  const taskPrompt = `
+    You are an expert web developer tasked with modifying an existing single-file web application built with React, HTM, and Tailwind CSS.
+    You will be given the application's complete current HTML code and a user's request for a change.
+
+    **User's Change Request:**
+    "${prompt}"
+
+    **Existing Application Code:**
+    \`\`\`html
+    ${existingCode}
+    \`\`\`
+
+    **CRITICAL INSTRUCTIONS:**
+    1.  **Apply the Change:** Your primary goal is to accurately implement the user's requested change into the provided code.
+    2.  **Return the Full Code:** You MUST return the entire, complete, and updated HTML file. Do NOT provide only the changed snippets, explanations, or markdown formatting. Your response should be only the raw HTML code.
+    3.  **Maintain Structure:** The application must remain a single HTML file with React, ReactDOM, HTM, and Tailwind CSS loaded from CDN. All JavaScript logic must be within the single \`<script type="module">\`.
+    4.  **Preserve Functionality:** Ensure that the existing functionality of the application remains intact unless the user's request specifically asks to change or remove it.
+    `;
+    
+    const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+
+  try {
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: taskPrompt,
+        config: config
+    });
+    return response.text;
+  } catch (error) {
+      console.error("Error refining code with Gemini:", error);
+      // On error, we throw so the UI can inform the user but keep the old code.
+      throw new Error("Failed to refine the application code.");
   }
 };

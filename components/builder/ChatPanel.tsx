@@ -1,8 +1,9 @@
 
+
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { generateAppPlan, generateAppCode, generateFlashcards, generateFormPlan, generateFormCode } from '../../services/geminiService';
+import { generateAppPlan, generateAppCode, generateFlashcards, generateFormPlan, generateFormCode, refineAppCode } from '../../services/geminiService';
 import { saveApp, saveFlashcards } from '../../services/storageService';
 import type { Message, AppPlan, FormPlan } from '../../types';
 
@@ -87,11 +88,12 @@ const BuildStatusCard: React.FC<BuildStatusCardProps> = ({ status, countdown }) 
 );
 
 const ChatPanel: React.FC = () => {
-  const { prompt, setGeneratedCode, appMode, setGeneratedFlashcards, agents, selectedAgentId } = useAppContext();
+  const { prompt, generatedCode, setGeneratedCode, appMode, setGeneratedFlashcards, agents, selectedAgentId } = useAppContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [input, setInput] = useState('');
   const [isCodeGenerated, setIsCodeGenerated] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<AppPlan | FormPlan | null>(null);
   const [countdown, setCountdown] = useState(0);
   const [buildStatus, setBuildStatus] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -111,6 +113,7 @@ const ChatPanel: React.FC = () => {
       setGeneratedCode('');
       setGeneratedFlashcards(null);
       setIsCodeGenerated(false);
+      setCurrentPlan(null);
 
       const agentInstruction = selectedAgent?.systemInstruction;
 
@@ -134,6 +137,7 @@ const ChatPanel: React.FC = () => {
       } else if (appMode === 'build') {
         generateAppPlan(prompt, agentInstruction)
           .then(plan => {
+              setCurrentPlan(plan);
               const modelMessage: Message = { role: 'model', content: JSON.stringify(plan), isPlan: true, planType: 'app' };
               setMessages(prev => [...prev, modelMessage]);
           })
@@ -143,6 +147,7 @@ const ChatPanel: React.FC = () => {
       } else if (appMode === 'form') {
         generateFormPlan(prompt, agentInstruction)
           .then(plan => {
+              setCurrentPlan(plan);
               const modelMessage: Message = { role: 'model', content: JSON.stringify(plan), isPlan: true, planType: 'form' };
               setMessages(prev => [...prev, modelMessage]);
           })
@@ -159,17 +164,16 @@ const ChatPanel: React.FC = () => {
   
   useEffect(() => {
     let timer: number;
-    if (isLoading && isCodeGenerated && countdown > 0) {
+    if (isLoading && countdown > 0) {
         timer = window.setTimeout(() => {
             setCountdown(prev => prev - 1);
         }, 1000);
     }
     return () => clearTimeout(timer);
-  }, [isLoading, isCodeGenerated, countdown]);
+  }, [isLoading, countdown]);
 
   const startBuildProcess = (steps: string[]) => {
       setIsLoading(true);
-      setIsCodeGenerated(true);
       setCountdown(ESTIMATED_BUILD_TIME);
       
       let stepIndex = 0;
@@ -209,13 +213,13 @@ const ChatPanel: React.FC = () => {
           const code = await generateAppCode(plan, agentInstruction);
           setGeneratedCode(code);
           saveApp(plan.title, code);
+          setIsCodeGenerated(true);
           const successMessage: Message = { role: 'model', content: "I've generated the app for you. You can see it in the preview panel!" };
           setMessages(prev => [...prev, successMessage]);
       } catch (error) {
           console.error("Error generating code:", error);
           const errorMessage: Message = { role: 'model', content: "Sorry, there was an error generating the code. Please try again." };
           setMessages(prev => [...prev, errorMessage]);
-          setIsCodeGenerated(false); // Allow retry
       } finally {
           endBuildProcess();
       }
@@ -234,25 +238,56 @@ const ChatPanel: React.FC = () => {
         const agentInstruction = selectedAgent?.systemInstruction;
         const code = await generateFormCode(plan, agentInstruction);
         setGeneratedCode(code);
-        saveApp(plan.title, code); // Forms are also saved as "apps"
+        saveApp(plan.title, code);
+        setIsCodeGenerated(true);
         const successMessage: Message = { role: 'model', content: "I've generated the form for you. It's ready for Netlify!" };
         setMessages(prev => [...prev, successMessage]);
     } catch (error) {
         console.error("Error generating form code:", error);
         const errorMessage: Message = { role: 'model', content: "Sorry, there was an error generating the form code." };
         setMessages(prev => [...prev, errorMessage]);
-        setIsCodeGenerated(false); // Allow retry
     } finally {
         endBuildProcess();
     }
 };
   
-  const handleSendMessage = (e: FormEvent) => {
+  const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    // In a real app, you'd handle follow-up messages here.
-    console.log("Follow-up message:", input);
-    setInput('');
+
+    // Handle iterative refinement
+    if (isCodeGenerated && generatedCode) {
+        const userMessage: Message = { role: 'user', content: input };
+        setMessages(prev => [...prev, userMessage]);
+        const currentInput = input;
+        setInput('');
+
+        startBuildProcess([
+            `Understanding: "${currentInput}"`,
+            "Analyzing existing code...",
+            "Applying modifications...",
+            "Finalizing new version..."
+        ]);
+
+        try {
+            const agentInstruction = selectedAgent?.systemInstruction;
+            const newCode = await refineAppCode(generatedCode, currentInput, agentInstruction);
+            setGeneratedCode(newCode);
+            // Save the new version to history
+            const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
+            saveApp(title, newCode);
+            const successMessage: Message = { role: 'model', content: "I've updated the app with your changes. Take a look!" };
+            setMessages(prev => [...prev, successMessage]);
+        } catch (error) {
+            console.error("Error refining code:", error);
+            const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't apply those changes. The previous version of the app is still active." };
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
+            endBuildProcess();
+        }
+    } else {
+      console.log("Cannot send message. App not generated yet.");
+    }
   };
 
   return (
@@ -303,7 +338,7 @@ const ChatPanel: React.FC = () => {
              </div>
            </div>
         )}
-        {isLoading && isCodeGenerated && buildStatus && (
+        {isLoading && buildStatus && (
             <div className="flex justify-start">
                 <div className="w-full max-w-lg">
                     <BuildStatusCard status={buildStatus} countdown={countdown} />
@@ -318,12 +353,12 @@ const ChatPanel: React.FC = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask for modifications..."
+            placeholder={isCodeGenerated ? "Ask for modifications..." : "Describe your app to start..."}
             className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            disabled={isLoading}
+            disabled={isLoading || (!isCodeGenerated && appMode !== 'study')}
           />
-          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 disabled:bg-gray-300 transition-colors" disabled={isLoading}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 transform -rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+          <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 disabled:bg-gray-300 transition-colors" disabled={isLoading || !input.trim()}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" /></svg>
           </button>
         </form>
       </div>
