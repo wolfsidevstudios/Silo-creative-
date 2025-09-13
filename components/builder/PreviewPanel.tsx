@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { FlashcardDisplay } from '../common/FlashcardDisplay';
+import { ClipboardIcon, CheckIcon } from '../common/Icons';
+
+// Add QRCode to window interface to avoid TypeScript errors
+declare global {
+    interface Window {
+        QRCode: any;
+    }
+}
 
 // Dedicated Ad component to manage its own lifecycle
 const AdUnit: React.FC = () => {
@@ -32,6 +40,47 @@ const AdUnit: React.FC = () => {
 const PreviewPanel: React.FC = () => {
     const { generatedCode, appMode, generatedFlashcards, prompt } = useAppContext();
     const [viewMode, setViewMode] = useState<'app' | 'code'>('app');
+    const [isCopied, setIsCopied] = useState(false);
+    const [qrCodeUrl, setQrCodeUrl] = useState('');
+    const [qrError, setQrError] = useState<string | null>(null);
+
+    useEffect(() => {
+        // Reset view mode when app mode changes to ensure a consistent start
+        setViewMode('app');
+    }, [appMode]);
+
+    useEffect(() => {
+        if (appMode === 'native' && generatedCode) {
+            const snackUrl = `https://snack.expo.dev/?code=${encodeURIComponent(generatedCode)}`;
+            if (window.QRCode) {
+                window.QRCode.toDataURL(snackUrl, { width: 256, margin: 1 })
+                    .then((url: string) => {
+                        setQrCodeUrl(url);
+                        setQrError(null);
+                    })
+                    .catch((err: Error) => {
+                        console.error('Failed to generate QR code:', err);
+                        // This error often happens if the code is too long for a QR code.
+                        setQrError('The generated code is too long to be encoded into a QR code. Please try opening the Snack URL directly.');
+                        setQrCodeUrl('');
+                    });
+            } else {
+                console.warn('QRCode library not loaded.');
+                setQrError('QR Code library failed to load.');
+            }
+        } else {
+            setQrCodeUrl('');
+            setQrError(null);
+        }
+    }, [generatedCode, appMode]);
+
+
+    const handleCopy = () => {
+        if (!generatedCode) return;
+        navigator.clipboard.writeText(generatedCode);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
 
     const renderBuildMode = () => {
         if (!generatedCode) {
@@ -61,8 +110,24 @@ const PreviewPanel: React.FC = () => {
             );
         } else {
              return (
-                <div className="w-full h-full bg-gray-900 text-white font-mono text-sm overflow-auto">
-                    <pre className="p-4"><code>{generatedCode}</code></pre>
+                <div className="relative w-full h-full bg-gray-900 text-white font-mono text-sm overflow-auto">
+                    <button 
+                        onClick={handleCopy}
+                        className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md text-xs transition-colors"
+                    >
+                        {isCopied ? (
+                            <>
+                                <CheckIcon className="w-4 h-4 text-green-400" />
+                                <span>Copied!</span>
+                            </>
+                        ) : (
+                            <>
+                                <ClipboardIcon className="w-4 h-4" />
+                                <span>Copy Code</span>
+                            </>
+                        )}
+                    </button>
+                    <pre className="p-4 pt-12"><code>{generatedCode}</code></pre>
                 </div>
             );
         }
@@ -85,27 +150,78 @@ const PreviewPanel: React.FC = () => {
 
         if (viewMode === 'app') {
             const snackUrl = `https://snack.expo.dev/?code=${encodeURIComponent(generatedCode)}`;
-            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(snackUrl)}`;
             
             return (
-                <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gray-50 text-center">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Scan to Preview</h3>
-                    <p className="text-gray-600 mb-4 max-w-sm">
-                        Use the <a href="https://expo.dev/go" target="_blank" rel="noopener noreferrer" className="text-indigo-600 font-medium underline">Expo Go</a> app on your iOS or Android device to scan the QR code.
-                    </p>
-                    <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
-                        <img src={qrCodeUrl} alt="Expo Snack QR Code" width="256" height="256" />
+                <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gray-50 text-center overflow-y-auto">
+                    <div className="w-full max-w-lg">
+                        <h3 className="text-xl font-bold text-gray-800 mb-2">Scan to Preview</h3>
+                        <p className="text-gray-600 mb-4 max-w-sm mx-auto">
+                            Use the <a href="https://expo.dev/go" target="_blank" rel="noopener noreferrer" className="text-indigo-600 font-medium underline">Expo Go</a> app on your iOS or Android device to scan the QR code.
+                        </p>
+                        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 inline-block">
+                            {qrCodeUrl ? (
+                                <img src={qrCodeUrl} alt="Expo Snack QR Code" width="256" height="256" />
+                            ) : (
+                                <div className="w-64 h-64 bg-gray-100 flex items-center justify-center text-center text-sm text-gray-500 p-4 rounded-md">
+                                    {qrError ? (
+                                        <span className="text-red-600">{qrError}</span>
+                                    ) : (
+                                        'Generating QR Code...'
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        <a href={snackUrl} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-900 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                            Open in Expo Snack
+                        </a>
                     </div>
-                    <a href={snackUrl} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-900 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                        Open in Expo Snack
-                    </a>
+
+                    <div className="mt-8 border-t border-gray-200 w-full max-w-lg pt-6">
+                        <h4 className="font-bold text-lg text-gray-800">Run Locally</h4>
+                        <p className="text-gray-600 mt-1 mb-4 max-w-sm mx-auto">
+                            Follow these steps in your terminal to run the app on your own machine.
+                        </p>
+                        <div className="text-left bg-gray-200/60 p-4 rounded-lg text-sm text-gray-800 space-y-3 font-mono max-w-md mx-auto">
+                            <p>
+                                <span className="select-none text-green-600 mr-2">$</span>
+                                <span>npx create-expo-app my-app</span>
+                            </p>
+                            <p>
+                                <span className="select-none text-green-600 mr-2">$</span>
+                                <span>cd my-app</span>
+                            </p>
+                            <p className="text-gray-500 italic pl-5">
+                                // Copy the code from the 'Code' tab into App.js
+                            </p>
+                            <p>
+                                <span className="select-none text-green-600 mr-2">$</span>
+                                <span>npm run expo</span>
+                            </p>
+                        </div>
+                    </div>
                 </div>
             );
         } else { // 'code' view
             return (
-                <div className="w-full h-full bg-gray-900 text-white font-mono text-sm overflow-auto">
-                    <pre className="p-4"><code>{generatedCode}</code></pre>
+                <div className="relative w-full h-full bg-gray-900 text-white font-mono text-sm overflow-auto">
+                    <button 
+                        onClick={handleCopy}
+                        className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md text-xs transition-colors"
+                    >
+                        {isCopied ? (
+                            <>
+                                <CheckIcon className="w-4 h-4 text-green-400" />
+                                <span>Copied!</span>
+                            </>
+                        ) : (
+                            <>
+                                <ClipboardIcon className="w-4 h-4" />
+                                <span>Copy Code</span>
+                            </>
+                        )}
+                    </button>
+                    <pre className="p-4 pt-12"><code>{generatedCode}</code></pre>
                 </div>
             );
         }

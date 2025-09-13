@@ -36,7 +36,7 @@ const Header: React.FC = () => {
 };
 
 const Footer: React.FC = () => (
-    <footer className="bg-white border-t border-gray-200">
+    <footer className="bg-white/50 border-t border-gray-200 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
                 <div className="text-sm text-gray-500">
@@ -176,13 +176,19 @@ const LandingPage: React.FC = () => {
     };
 
     return (
-        <div className="bg-white text-gray-800">
+        <div className="relative bg-white text-gray-800 overflow-x-hidden">
+            <div aria-hidden="true" className="absolute inset-0 -z-10 overflow-hidden">
+                <div className="absolute top-0 -left-80 w-[40rem] h-[40rem] bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+                <div className="absolute top-40 -right-40 w-[40rem] h-[40rem] bg-yellow-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+                <div className="absolute -bottom-40 left-20 w-[40rem] h-[40rem] bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+                <div className="absolute -bottom-80 -right-20 w-[40rem] h-[40rem] bg-orange-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-6000"></div>
+            </div>
+
             <Header />
             <main>
                 {/* Hero Section */}
-                <div className="relative bg-gray-50 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-100/50 via-white to-purple-100/50 blur-3xl"></div>
-                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 text-center">
+                <div className="relative isolate">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 text-center">
                         <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight">
                             Create Web Apps Instantly
                         </h1>
@@ -211,7 +217,7 @@ const LandingPage: React.FC = () => {
                 </div>
 
                  {/* Who We Are Section */}
-                <section id="about" className="py-20 sm:py-28 bg-white">
+                <section id="about" className="relative isolate py-20 sm:py-28">
                     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                         <img 
                             src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
@@ -226,7 +232,7 @@ const LandingPage: React.FC = () => {
                 </section>
 
                 {/* Features Section */}
-                <section id="features" className="py-20 sm:py-28 bg-gray-50">
+                <section id="features" className="relative isolate py-20 sm:py-28 bg-gray-50/50 backdrop-blur-sm">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center">
                             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Why Choose Silo Creative?</h2>
@@ -267,7 +273,7 @@ const LandingPage: React.FC = () => {
                 </section>
 
                 {/* Testimonials Section */}
-                <section id="testimonials" className="py-20 sm:py-28 bg-white">
+                <section id="testimonials" className="relative isolate py-20 sm:py-28">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center">
                             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">What Our Users Say</h2>
@@ -317,7 +323,7 @@ const LandingPage: React.FC = () => {
                 </section>
                 
                  {/* Pricing Section */}
-                <section id="pricing" className="py-20 sm:py-28 bg-gray-50">
+                <section id="pricing" className="relative isolate py-20 sm:py-28 bg-gray-50/50 backdrop-blur-sm">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center">
                             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Simple, Transparent Pricing</h2>
@@ -325,7 +331,7 @@ const LandingPage: React.FC = () => {
                         </div>
                         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                             {/* Free Plan */}
-                            <div className="bg-white border border-gray-200/80 rounded-2xl p-8 flex flex-col">
+                            <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 rounded-2xl p-8 flex flex-col">
                                 <h3 className="text-2xl font-semibold text-gray-800">Hobbyist</h3>
                                 <p className="mt-2 text-gray-500">For personal projects and exploration.</p>
                                 <div className="mt-6">
@@ -342,7 +348,7 @@ const LandingPage: React.FC = () => {
                                 </button>
                             </div>
                              {/* Student Plan */}
-                            <div className="bg-white border-2 border-indigo-500 rounded-2xl p-8 flex flex-col relative">
+                            <div className="bg-white/80 backdrop-blur-md border-2 border-indigo-500 rounded-2xl p-8 flex flex-col relative">
                                 <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 px-4 py-1 bg-indigo-500 text-white text-sm font-semibold rounded-full">
                                     Most Popular
                                 </div>
@@ -367,7 +373,7 @@ const LandingPage: React.FC = () => {
                 </section>
 
                 {/* FAQ Section */}
-                <section id="faq" className="py-20 sm:py-28 bg-white">
+                <section id="faq" className="relative isolate py-20 sm:py-28">
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center">
                             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Frequently Asked Questions</h2>
@@ -393,19 +399,19 @@ const LandingPage: React.FC = () => {
                 </section>
                 
                 {/* Contact Section */}
-                <section id="contact" className="py-20 sm:py-28 bg-gray-50">
+                <section id="contact" className="relative isolate py-20 sm:py-28 bg-gray-50/50 backdrop-blur-sm">
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Get in Touch</h2>
                         <p className="mt-4 text-lg text-gray-600">Have questions or feedback? We'd love to hear from you.</p>
                         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <a href="mailto:survivalcreativeminecraftadven@gmail.com" className="group p-8 bg-white border border-gray-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/50 transition-all">
+                            <a href="mailto:survivalcreativeminecraftadven@gmail.com" className="group p-8 bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl hover:border-indigo-500 transition-all">
                                 <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg mb-4">
                                     <AtSignIcon className="w-6 h-6" />
                                 </div>
                                 <h3 className="text-xl font-semibold text-gray-800">General Inquiries</h3>
                                 <p className="mt-2 text-gray-600">survivalcreativeminecraftadven@gmail.com</p>
                             </a>
-                            <a href="mailto:support@silodev.com" className="group p-8 bg-white border border-gray-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/50 transition-all">
+                            <a href="mailto:support@silodev.com" className="group p-8 bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl hover:border-indigo-500 transition-all">
                                 <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg mb-4">
                                     <AtSignIcon className="w-6 h-6" />
                                 </div>
@@ -433,6 +439,34 @@ const LandingPage: React.FC = () => {
 
             </main>
             <Footer />
+            <style>{`
+              .animation-delay-2000 {
+                animation-delay: 2s;
+              }
+              .animation-delay-4000 {
+                animation-delay: 4s;
+              }
+              .animation-delay-6000 {
+                animation-delay: 6s;
+              }
+              @keyframes blob {
+                0% {
+                  transform: translate(0px, 0px) scale(1);
+                }
+                33% {
+                  transform: translate(30px, -50px) scale(1.1);
+                }
+                66% {
+                  transform: translate(-20px, 20px) scale(0.9);
+                }
+                100% {
+                  transform: translate(0px, 0px) scale(1);
+                }
+              }
+              .animate-blob {
+                animation: blob 10s infinite;
+              }
+            `}</style>
         </div>
     );
 };
