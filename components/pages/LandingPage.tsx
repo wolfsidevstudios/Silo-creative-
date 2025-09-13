@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { GitHubIcon, DiscordIcon, BrainCircuitIcon, CodeIcon, UsersIcon, AtSignIcon } from '../common/Icons';
+import { GitHubIcon, DiscordIcon, BrainCircuitIcon, CodeIcon, UsersIcon, AtSignIcon, ChevronDownIcon } from '../common/Icons';
 import GoogleSignInButton from '../auth/GoogleSignInButton';
 import { useAppContext } from '../../context/AppContext';
 
@@ -15,15 +15,16 @@ const Header: React.FC = () => {
     };
 
     return (
-        <header className="fixed top-4 left-1/2 -translate-x-1/2 z-30">
-            <nav className="w-full max-w-md mx-auto">
-                <div className="flex items-center justify-between gap-4 bg-white/70 backdrop-blur-md rounded-full shadow-lg ring-1 ring-black/5 px-6 py-3">
+        <header className="fixed top-4 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-lg">
+            <nav>
+                <div className="flex items-center justify-between gap-4 bg-white/70 backdrop-blur-md rounded-full shadow-lg ring-1 ring-black/5 px-4 py-2 sm:px-6 sm:py-3">
                     <Link to="/" className="flex items-center gap-2 flex-shrink-0">
                         <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Creative Logo" className="w-8 h-8 rounded-full" />
                     </Link>
-                    <div className="flex items-center gap-6 text-sm font-medium text-gray-600">
+                    <div className="hidden sm:flex items-center gap-6 text-sm font-medium text-gray-600">
                          <button onClick={() => scrollToSection('features')} className="hover:text-indigo-600 transition-colors">Features</button>
-                         <button onClick={() => scrollToSection('contact')} className="hover:text-indigo-600 transition-colors">Contact</button>
+                         <button onClick={() => scrollToSection('how-it-works')} className="hover:text-indigo-600 transition-colors">How It Works</button>
+                         <button onClick={() => scrollToSection('faq')} className="hover:text-indigo-600 transition-colors">FAQ</button>
                     </div>
                     <button onClick={() => navigate('/login')} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-sm">
                         Get Started
@@ -140,6 +141,26 @@ const AppPreview: React.FC = () => {
   );
 };
 
+const FaqItem: React.FC<{ question: string; children: React.ReactNode }> = ({ question, children }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <div className="border-b border-gray-200 py-6">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex justify-between items-center text-left text-lg font-medium text-gray-800"
+            >
+                <span>{question}</span>
+                <ChevronDownIcon className={`w-6 h-6 text-gray-500 transform transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 mt-4' : 'max-h-0'}`}>
+                <div className="text-gray-600">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const LandingPage: React.FC = () => {
     const navigate = useNavigate();
@@ -231,7 +252,7 @@ const LandingPage: React.FC = () => {
                 </section>
                 
                 {/* How it Works Section */}
-                <section className="py-20 sm:py-28 bg-gray-50">
+                <section id="how-it-works" className="py-20 sm:py-28 bg-gray-50">
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Get Started in 3 Easy Steps</h2>
                          <p className="mt-4 text-lg text-gray-600">From idea to application in just a few clicks.</p>
@@ -258,6 +279,73 @@ const LandingPage: React.FC = () => {
                                 </div>
                             </div>
                          </div>
+                    </div>
+                </section>
+
+                {/* FAQ Section */}
+                <section id="faq" className="py-20 sm:py-28 bg-white">
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center">
+                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Frequently Asked Questions</h2>
+                            <p className="mt-4 text-lg text-gray-600">
+                                Have questions? We've got answers.
+                            </p>
+                        </div>
+                        <div className="mt-12">
+                            <FaqItem question="What is Silo Creative?">
+                                <p>Silo Creative is an AI-powered platform that lets you build simple, single-page web applications just by describing them. It's designed for makers, students, and developers who want to quickly prototype and build ideas without writing code from scratch.</p>
+                            </FaqItem>
+                            <FaqItem question="Do I need to know how to code?">
+                                <p>Not at all! You can generate complete, functional applications just by writing a prompt. If you are a developer, you can also view and download the generated HTML and Tailwind CSS code to customize it further.</p>
+                            </FaqItem>
+                            <FaqItem question="Is it free to use?">
+                                <p>Yes, Silo Creative offers a generous free tier to get you started. We also have a special program for students to get unlimited credits. For advanced users, we will offer premium plans in the future.</p>
+                            </FaqItem>
+                             <FaqItem question="What can I build with it?">
+                                <p>You can build a wide variety of single-page applications, tools, and components. Think things like calculators, to-do lists, landing pages, forms, timers, and small interactive widgets. The complexity of what you can build will continue to grow as we improve our AI models.</p>
+                            </FaqItem>
+                        </div>
+                    </div>
+                </section>
+                
+                {/* Coming Soon Section */}
+                <section id="coming-soon" className="py-20 sm:py-28 bg-gray-50">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center">
+                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">What's Next for Silo?</h2>
+                            <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+                                We're always working on new features. Here's a sneak peek at what's coming soon.
+                            </p>
+                        </div>
+                        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-10">
+                            <div className="text-center p-6 bg-white border border-gray-200/80 rounded-2xl">
+                                <div className="inline-flex items-center justify-center w-12 h-12 bg-purple-100 text-purple-600 rounded-lg mb-4">
+                                    <UsersIcon className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-800">Team Collaboration</h3>
+                                <p className="mt-2 text-gray-600">
+                                    Work with your team in real-time. Share projects, invite collaborators, and build together seamlessly.
+                                </p>
+                            </div>
+                            <div className="text-center p-6 bg-white border border-gray-200/80 rounded-2xl">
+                                <div className="inline-flex items-center justify-center w-12 h-12 bg-purple-100 text-purple-600 rounded-lg mb-4">
+                                    <CodeIcon className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-800">Custom Domains</h3>
+                                <p className="mt-2 text-gray-600">
+                                    Deploy your generated application to a custom domain with a single click, directly from Silo Creative.
+                                </p>
+                            </div>
+                            <div className="text-center p-6 bg-white border border-gray-200/80 rounded-2xl">
+                                <div className="inline-flex items-center justify-center w-12 h-12 bg-purple-100 text-purple-600 rounded-lg mb-4">
+                                    <BrainCircuitIcon className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-800">Expanded AI Capabilities</h3>
+                                <p className="mt-2 text-gray-600">
+                                    Generate more complex, multi-page applications and even simple backends to handle data and logic.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
