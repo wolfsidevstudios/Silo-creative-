@@ -247,3 +247,56 @@ export const FilesIcon: React.FC<{ className?: string }> = ({ className }) => (
         <path d="M3 7.6v12.8c0 .4.2.8.5 1.1.3.3.7.5 1.1.5h9.8V16c0-.4-.2-.8-.5-1.1-.3-.3-.7-.5-1.1-.5H3V7.6c0-.4.2-.8.5-1.1.3-.3.7-.5 1.1-.5h4.8"></path>
     </svg>
 );
+
+// --- File Type Icons ---
+export const FileTextIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+    </svg>
+);
+
+export const ReactIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="2"></circle>
+      <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path>
+    </svg>
+);
+
+export const ViteIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor" className={className}>
+        <path d="M251.2 33.6c-2-12.5-13.7-20.7-25.5-17.3L30.9 61.1c-11.8 3.4-19.3 14.6-17.3 27.1.8 4.7 2.9 8.9 6.2 12.3l93.2 93.2c3.4 3.4 7.6 5.4 12.3 6.2 12.5 2 23.7-5.5 27.1-17.3l45.2-124.8c2.6-7.2 1-15.1-4.2-20.7zM140 140L52 52l188-44-80 80v52zm12-28a12 12 0 1112-12 12 12 0 01-12 12z"/>
+    </svg>
+);
+
+export const TailwindIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M12.001,4.529c-3.445,0-6.521,2.095-7.913,5.111H18.99c-1.396-3.016-4.471-5.111-7.001-5.111C11.997,4.529,11.997,4.529,12.001,4.529z M4.089,10.64c-0.217,0.59-0.34,1.212-0.34,1.86c0,0.648,0.123,1.27,0.34,1.86h15.823c0.217-0.59,0.339-1.212,0.339-1.86c0-0.648-0.122-1.27-0.339-1.86H4.089z M12.001,15.471c3.445,0,6.521-2.095,7.913-5.111H4.089c1.392,3.016,4.468,5.111,7.912,5.111C12.003,15.471,12.003,15.471,12.001,15.471z" />
+    </svg>
+);
+
+export const JsonIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M8 16c-2.5 0-4-1.5-4-4s1.5-4 4-4"/><path d="M16 8c2.5 0 4 1.5 4 4s-1.5 4-4 4"/><path d="M12 8v8"/>
+    </svg>
+);
+
+export const HtmlIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/>
+    </svg>
+);
+
+export const CssIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <circle cx="12" cy="12" r="3"/><path d="M12 16.5V22"/><path d="M12 7.5V2"/><path d="M16.5 12H22"/><path d="M7.5 12H2"/><path d="m15.54 8.46-.71-.71a1 1 0 0 0-1.41 0l-1.06 1.06a1 1 0 0 0 0 1.41l.71.71"/><path d="m8.46 15.54.71.71a1 1 0 0 0 1.41 0l1.06-1.06a1 1 0 0 0 0-1.41l-.71-.71"/><path d="m15.54 15.54.71-.71a1 1 0 0 0 0-1.41l-1.06-1.06a1 1 0 0 0-1.41 0l-.71.71"/><path d="m8.46 8.46-.71.71a1 1 0 0 0 0 1.41l1.06 1.06a1 1 0 0 0 1.41 0l.71-.71"/>
+    </svg>
+);
+
+export const TsIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M4 0h16a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H4a4 4 0 0 1-4-4V4a4 4 0 0 1 4-4zm4 5.5a1 1 0 0 0-1 1v1.5a1 1 0 0 0 1 1h1.5v7.5a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1V9h1.5a1 1 0 0 0 1-1v-1.5a1 1 0 0 0-1-1H8zm7 0a1 1 0 0 0-1 1v4.381l-1.854-1.854a1 1 0 0 0-1.414 0l-.707.707a1 1 0 0 0 0 1.414L14.586 15l-3.561 3.561a1 1 0 0 0 0 1.414l.707.707a1 1 0 0 0 1.414 0L15 18.828V20a1 1 0 0 0 1 1h1.5a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1H15z"/>
+    </svg>
+);
