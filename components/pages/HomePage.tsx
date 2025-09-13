@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import SuggestionButton from '../common/SuggestionButton';
-import { LogoIcon, PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon, PhoneIcon } from '../common/Icons';
+import { LogoIcon, PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon, PhoneIcon, FilesIcon } from '../common/Icons';
 import Sidebar from '../common/Sidebar';
 import Banner from '../common/Banner';
 import AgentSelector from '../agents/AgentSelector';
@@ -76,22 +76,30 @@ const HomePage: React.FC = () => {
       { text: "Tap counter", icon: <PhoneIcon className="w-4 h-4 text-gray-500" /> },
   ];
 
+  const reactWebSuggestions = [
+      { text: "A kanban board", icon: <FilesIcon className="w-4 h-4 text-gray-500" /> },
+      { text: "A markdown editor", icon: <BookIcon className="w-4 h-4 text-gray-500" /> },
+      { text: "An image gallery with search", icon: <StarIcon className="w-4 h-4 text-gray-500" /> },
+  ];
+
   const getSuggestions = () => {
     switch(appMode) {
         case 'build': return buildSuggestions;
         case 'study': return studySuggestions;
         case 'form': return formSuggestions;
         case 'native': return nativeSuggestions;
+        case 'react_web': return reactWebSuggestions;
         default: return buildSuggestions;
     }
   }
   
   const getPlaceholder = () => {
     switch(appMode) {
-        case 'build': return 'Describe the web app you want to create...';
+        case 'build': return 'Describe the single-page web app you want...';
         case 'study': return 'What topic do you want flashcards for?';
         case 'form': return 'Describe the form you want to build...';
         case 'native': return 'Describe the native mobile app you want...';
+        case 'react_web': return 'Describe the React web app you want to create...';
         default: return 'Describe the web app you want to create...';
     }
   }
@@ -127,7 +135,8 @@ const HomePage: React.FC = () => {
                       {isMenuOpen && (
                         <div className="absolute bottom-full mb-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200/80 py-2 z-10">
                           <div className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">Mode</div>
-                          <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>Web App Builder</MenuItem>
+                          <MenuItem active={appMode === 'react_web'} onClick={() => { setAppMode('react_web'); setIsMenuOpen(false); }}>React Web App Builder</MenuItem>
+                          <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>Single-File Web App</MenuItem>
                           <MenuItem active={appMode === 'native'} onClick={() => { setAppMode('native'); setIsMenuOpen(false); }}>Native App Builder</MenuItem>
                           <MenuItem active={appMode === 'form'} onClick={() => { setAppMode('form'); setIsMenuOpen(false); }}>AI Form Generator</MenuItem>
                           <MenuItem active={appMode === 'study'} onClick={() => { setAppMode('study'); setIsMenuOpen(false); }}>Study Mode</MenuItem>

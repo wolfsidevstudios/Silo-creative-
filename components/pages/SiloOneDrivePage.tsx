@@ -7,6 +7,12 @@ import { getRecentApps, getRecentFlashcards } from '../../services/storageServic
 import { StoredApp, StoredFlashcards } from '../../types';
 import { useAppContext } from '../../context/AppContext';
 
+declare global {
+    interface Window {
+        JSZip: any;
+    }
+}
+
 const TimeAgo: React.FC<{ timestamp: number }> = ({ timestamp }) => {
     const [timeAgo, setTimeAgo] = useState('');
 
@@ -39,31 +45,52 @@ const SiloOneDrivePage: React.FC = () => {
     const [recentApps, setRecentApps] = useState<StoredApp[]>([]);
     const [recentFlashcards, setRecentFlashcards] = useState<StoredFlashcards[]>([]);
     const navigate = useNavigate();
-    const { setGeneratedFlashcards, setPrompt, setAppMode, setGeneratedCode } = useAppContext();
+    const { setGeneratedFlashcards, setPrompt, setAppMode, setGeneratedCode, setGeneratedFileTree } = useAppContext();
 
     useEffect(() => {
         setRecentApps(getRecentApps());
         setRecentFlashcards(getRecentFlashcards());
     }, []);
 
-    const handleDownloadCode = (code: string, title: string) => {
-        const blob = new Blob([code], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const filename = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        a.href = url;
-        a.download = `${filename}.html`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+    const handleDownload = (app: StoredApp) => {
+        const filename = app.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+        if (app.appMode === 'react_web' && typeof app.content === 'object') {
+            // Use JSZip to create and download a zip file
+            const zip = new window.JSZip();
+            Object.entries(app.content).forEach(([filePath, fileContent]) => {
+                zip.file(filePath, fileContent);
+            });
+            zip.generateAsync({ type: 'blob' }).then((blob: Blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${filename}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        } else if (typeof app.content === 'string') {
+            // Handle single-file download
+            const blob = new Blob([app.content], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${filename}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
     };
 
     const handleViewFlashcards = (deck: StoredFlashcards) => {
         setAppMode('study');
         setPrompt(deck.topic);
         setGeneratedFlashcards(deck.cards);
-        setGeneratedCode(''); // Clear any existing code
+        setGeneratedCode('');
+        setGeneratedFileTree(null);
         navigate('/build');
     };
 
@@ -92,9 +119,9 @@ const SiloOneDrivePage: React.FC = () => {
                                             </div>
                                             <div className="p-3 bg-gray-50 border-t border-gray-200">
                                                 <button 
-                                                    onClick={() => handleDownloadCode(app.code, app.title)}
+                                                    onClick={() => handleDownload(app)}
                                                     className="w-full text-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                                                    Download Code
+                                                    Download
                                                 </button>
                                             </div>
                                         </div>

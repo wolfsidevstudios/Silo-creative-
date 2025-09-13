@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { generateAppPlan, generateAppCode, generateFlashcards, generateFormPlan, generateFormCode, refineAppCode, generateNativeAppCode, refineNativeAppCode } from '../../services/geminiService';
-import { saveApp, saveFlashcards } from '../../services/storageService';
-import type { Message, AppPlan, FormPlan } from '../../types';
+import { generateAppPlan, generateAppCode, generateFlashcards, generateFormPlan, generateFormCode, refineAppCode, generateNativeAppCode, refineNativeAppCode, generateReactAppPlan, generateReactAppCode, refineReactAppCode } from '../../services/geminiService';
+import { saveApp } from '../../services/storageService';
+import type { Message, AppPlan, FormPlan, ReactAppPlan } from '../../types';
 
 interface PlanDisplayProps {
   plan: AppPlan;
@@ -60,6 +60,32 @@ const FormPlanDisplay: React.FC<{ plan: FormPlan, onGenerate: () => void, isGene
     </div>
 );
 
+const ReactAppPlanDisplay: React.FC<{ plan: ReactAppPlan, onGenerate: () => void, isGenerated: boolean }> = ({ plan, onGenerate, isGenerated }) => (
+  <div className="bg-white border border-gray-200 rounded-lg p-6">
+    <h3 className="text-xl font-bold mb-2 text-gray-800">{plan.title}</h3>
+    <p className="text-gray-600 mb-4">{plan.description}</p>
+    <div className="mb-6">
+      <h4 className="font-semibold text-gray-700 mb-2">File Structure:</h4>
+      <div className="bg-gray-100 rounded-md p-3 max-h-48 overflow-y-auto">
+        <ul className="space-y-1">
+          {plan.files.map((file) => (
+            <li key={file.name} className="text-sm font-mono text-gray-600">
+              {file.name}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+    <button
+      onClick={onGenerate}
+      disabled={isGenerated}
+      className="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+    >
+      {isGenerated ? 'App Generated' : 'Looks good, create the app!'}
+    </button>
+  </div>
+);
+
 
 const ESTIMATED_BUILD_TIME = 20; // 20 seconds
 
@@ -88,12 +114,17 @@ const BuildStatusCard: React.FC<BuildStatusCardProps> = ({ status, countdown }) 
 );
 
 const ChatPanel: React.FC = () => {
-  const { prompt, generatedCode, setGeneratedCode, appMode, setGeneratedFlashcards, agents, selectedAgentId } = useAppContext();
+  const { 
+    prompt, 
+    generatedCode, setGeneratedCode, 
+    generatedFileTree, setGeneratedFileTree,
+    appMode, setGeneratedFlashcards, agents, selectedAgentId 
+  } = useAppContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [input, setInput] = useState('');
   const [isCodeGenerated, setIsCodeGenerated] = useState(false);
-  const [currentPlan, setCurrentPlan] = useState<AppPlan | FormPlan | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<AppPlan | FormPlan | ReactAppPlan | null>(null);
   const [countdown, setCountdown] = useState(0);
   const [buildStatus, setBuildStatus] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -111,6 +142,7 @@ const ChatPanel: React.FC = () => {
       setMessages([userMessage]);
       setIsLoading(true);
       setGeneratedCode('');
+      setGeneratedFileTree(null);
       setGeneratedFlashcards(null);
       setIsCodeGenerated(false);
       setCurrentPlan(null);
@@ -127,7 +159,6 @@ const ChatPanel: React.FC = () => {
           generateFlashcards(prompt, agentInstruction)
             .then(flashcards => {
                 setGeneratedFlashcards(flashcards);
-                saveFlashcards(prompt, flashcards);
                 const modelMessage: Message = { role: 'model', content: "I've generated your flashcards! You can see them in the preview panel." };
                 setMessages(prev => [...prev, modelMessage]);
             })
@@ -153,7 +184,16 @@ const ChatPanel: React.FC = () => {
           })
           .catch(error => handleErrors(error, 'form plan'))
           .finally(() => setIsLoading(false));
-      }
+      } else if (appMode === 'react_web') {
+        generateReactAppPlan(prompt, agentInstruction)
+            .then(plan => {
+                setCurrentPlan(plan);
+                const modelMessage: Message = { role: 'model', content: JSON.stringify(plan), isPlan: true, planType: 'react_web' };
+                setMessages(prev => [...prev, modelMessage]);
+            })
+            .catch(error => handleErrors(error, 'react web app plan'))
+            .finally(() => setIsLoading(false));
+        }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompt, appMode]);
@@ -212,7 +252,7 @@ const ChatPanel: React.FC = () => {
           const agentInstruction = selectedAgent?.systemInstruction;
           const code = await generateAppCode(plan, agentInstruction);
           setGeneratedCode(code);
-          saveApp(plan.title, code);
+          saveApp(plan.title, code, 'build');
           setIsCodeGenerated(true);
           const successMessage: Message = { role: 'model', content: "I've generated the app for you. You can see it in the preview panel!" };
           setMessages(prev => [...prev, successMessage]);
@@ -225,6 +265,31 @@ const ChatPanel: React.FC = () => {
       }
   };
   
+  const handleGenerateReactAppCode = async (plan: ReactAppPlan) => {
+    if (isCodeGenerated) return;
+    startBuildProcess([
+      "Setting up Vite project...",
+      ...plan.files.map(file => `Generating file: ${file.name}`),
+      "Installing dependencies...",
+      "Finalizing the app..."
+    ]);
+    try {
+      const agentInstruction = selectedAgent?.systemInstruction;
+      const files = await generateReactAppCode(plan, agentInstruction);
+      setGeneratedFileTree(files);
+      saveApp(plan.title, files, 'react_web');
+      setIsCodeGenerated(true);
+      const successMessage: Message = { role: 'model', content: "I've generated the React app! The live preview is starting up now." };
+      setMessages(prev => [...prev, successMessage]);
+    } catch (error) {
+      console.error("Error generating React app code:", error);
+      const errorMessage: Message = { role: 'model', content: "Sorry, there was an error generating the React app. Please try again." };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      endBuildProcess();
+    }
+  };
+
   const handleGenerateNativeCode = async (plan: AppPlan) => {
       if (isCodeGenerated) return;
       startBuildProcess([
@@ -238,7 +303,7 @@ const ChatPanel: React.FC = () => {
           const agentInstruction = selectedAgent?.systemInstruction;
           const code = await generateNativeAppCode(plan, agentInstruction);
           setGeneratedCode(code);
-          saveApp(plan.title, code);
+          saveApp(plan.title, code, 'native');
           setIsCodeGenerated(true);
           const successMessage: Message = { role: 'model', content: "I've generated the native app for you. Scan the QR code in the preview panel with Expo Go to run it!" };
           setMessages(prev => [...prev, successMessage]);
@@ -264,7 +329,7 @@ const ChatPanel: React.FC = () => {
         const agentInstruction = selectedAgent?.systemInstruction;
         const code = await generateFormCode(plan, agentInstruction);
         setGeneratedCode(code);
-        saveApp(plan.title, code);
+        saveApp(plan.title, code, 'form');
         setIsCodeGenerated(true);
         const successMessage: Message = { role: 'model', content: "I've generated the form for you. It's ready for Netlify!" };
         setMessages(prev => [...prev, successMessage]);
@@ -281,8 +346,7 @@ const ChatPanel: React.FC = () => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    // Handle iterative refinement
-    if (isCodeGenerated && generatedCode) {
+    if (isCodeGenerated && (generatedCode || generatedFileTree)) {
         const userMessage: Message = { role: 'user', content: input };
         setMessages(prev => [...prev, userMessage]);
         const currentInput = input;
@@ -297,19 +361,33 @@ const ChatPanel: React.FC = () => {
 
         try {
             const agentInstruction = selectedAgent?.systemInstruction;
-            const newCode = appMode === 'native'
-                ? await refineNativeAppCode(generatedCode, currentInput, agentInstruction)
-                : await refineAppCode(generatedCode, currentInput, agentInstruction);
+            let successMessage: Message;
 
-            setGeneratedCode(newCode);
-            // Save the new version to history
-            const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
-            saveApp(title, newCode);
-            const successMessage: Message = { role: 'model', content: "I've updated the app with your changes. Take a look!" };
-            setMessages(prev => [...prev, successMessage]);
+            if (appMode === 'react_web' && generatedFileTree) {
+                const newFileTree = await refineReactAppCode(generatedFileTree, currentInput, agentInstruction);
+                setGeneratedFileTree(newFileTree);
+                const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
+                saveApp(title, newFileTree, 'react_web');
+                successMessage = { role: 'model', content: "I've updated the React app with your changes." };
+            } else if (appMode === 'native' && generatedCode) {
+                const newCode = await refineNativeAppCode(generatedCode, currentInput, agentInstruction);
+                setGeneratedCode(newCode);
+                const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
+                saveApp(title, newCode, 'native');
+                successMessage = { role: 'model', content: "I've updated the native app." };
+            } else if (generatedCode) { // build or form
+                const newCode = await refineAppCode(generatedCode, currentInput, agentInstruction);
+                setGeneratedCode(newCode);
+                const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
+                saveApp(title, newCode, appMode as 'build' | 'form');
+                successMessage = { role: 'model', content: "I've updated the app with your changes. Take a look!" };
+            } else {
+                throw new Error("No code available to refine.");
+            }
+             setMessages(prev => [...prev, successMessage]);
         } catch (error) {
             console.error("Error refining code:", error);
-            const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't apply those changes. The previous version of the app is still active." };
+            const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't apply those changes. The previous version is still active." };
             setMessages(prev => [...prev, errorMessage]);
         } finally {
             endBuildProcess();
@@ -345,6 +423,12 @@ const ChatPanel: React.FC = () => {
                                 handleGenerateCode(plan);
                             }
                         }}
+                        isGenerated={isCodeGenerated}
+                    />
+                ) : msg.planType === 'react_web' ? (
+                     <ReactAppPlanDisplay
+                        plan={JSON.parse(msg.content)}
+                        onGenerate={() => handleGenerateReactAppCode(JSON.parse(msg.content))}
                         isGenerated={isCodeGenerated}
                     />
                 ) : (

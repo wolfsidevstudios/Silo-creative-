@@ -1,5 +1,5 @@
 
-import { StoredApp, StoredFlashcards, Flashcard } from '../types';
+import { StoredApp, StoredFlashcards, Flashcard, AppMode } from '../types';
 
 const RECENT_APPS_KEY = 'silo-recent-apps';
 const RECENT_FLASHCARDS_KEY = 'silo-recent-flashcards';
@@ -17,12 +17,13 @@ export const getRecentApps = (): StoredApp[] => {
   }
 };
 
-export const saveApp = (title: string, code: string): void => {
+export const saveApp = (title: string, content: string | { [fileName: string]: string }, appMode: AppMode): void => {
   try {
     const newApp: StoredApp = {
       id: `app-${Date.now()}`,
       title,
-      code,
+      content,
+      appMode,
       timestamp: Date.now(),
     };
     const recentApps = getRecentApps();

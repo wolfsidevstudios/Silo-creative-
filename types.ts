@@ -1,11 +1,11 @@
 
-export type AppMode = 'build' | 'study' | 'form' | 'native';
+export type AppMode = 'build' | 'study' | 'form' | 'native' | 'react_web';
 
 export interface Message {
   role: 'user' | 'model';
   content: string;
   isPlan?: boolean;
-  planType?: 'app' | 'form';
+  planType?: 'app' | 'form' | 'react_web';
 }
 
 export interface AppPlan {
@@ -18,6 +18,18 @@ export interface FormPlan {
     title: string;
     description: string;
     fields: { name: string; type: string; required: boolean }[];
+}
+
+export interface ReactAppFile {
+    name: string;
+    description: string;
+}
+
+export interface ReactAppPlan {
+    title: string;
+    description: string;
+    features: string[];
+    files: ReactAppFile[];
 }
 
 
@@ -44,7 +56,8 @@ export interface User {
 export interface StoredApp {
     id: string;
     title: string;
-    code: string;
+    appMode: AppMode;
+    content: string | { [fileName: string]: string };
     timestamp: number;
 }
 

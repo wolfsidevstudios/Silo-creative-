@@ -1,55 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { FlashcardDisplay } from './FlashcardDisplay';
+import { FlashcardDisplay } from '../builder/FlashcardDisplay';
 import { ClipboardIcon, CheckIcon } from '../common/Icons';
 
-// Add QRCode to window interface to avoid TypeScript errors
+// Add QRCode and StackBlitzSDK to window interface to avoid TypeScript errors
 declare global {
     interface Window {
         QRCode: any;
+        StackBlitzSDK: any;
     }
 }
 
 // Helper function to wait for the QRCode library to load.
 const getQRCodeLibrary = (): Promise<any> => {
   return new Promise((resolve, reject) => {
-    // If it's already there, resolve immediately.
-    if (window.QRCode) {
-      return resolve(window.QRCode);
-    }
-
-    // Otherwise, poll for a few seconds.
+    if (window.QRCode) return resolve(window.QRCode);
     let attempts = 0;
     const intervalId = setInterval(() => {
       if (window.QRCode) {
         clearInterval(intervalId);
         resolve(window.QRCode);
-      } else {
-        attempts++;
-        if (attempts > 20) { // Wait for max 5 seconds (20 * 250ms)
-          clearInterval(intervalId);
-          reject(new Error('QR Code library failed to load.'));
-        }
+      } else if (attempts++ > 20) {
+        clearInterval(intervalId);
+        reject(new Error('QR Code library failed to load.'));
       }
     }, 250);
   });
 };
 
-// Dedicated Ad component to manage its own lifecycle
 const AdUnit: React.FC = () => {
     useEffect(() => {
-        // A small delay ensures the container has its dimensions calculated before the ad is requested.
         const timer = setTimeout(() => {
             try {
-                // This is the command to signal to AdSense to render an ad in this slot.
                 // @ts-ignore
                 (window.adsbygoogle = window.adsbygoogle || []).push({});
             } catch (e) {
                 console.error("AdSense error:", e);
             }
         }, 50);
-
-        return () => clearTimeout(timer); // Cleanup on unmount
+        return () => clearTimeout(timer);
     }, []);
 
     return (
@@ -76,47 +65,58 @@ const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const PreviewPanel: React.FC = () => {
-    const { generatedCode, appMode, generatedFlashcards, prompt } = useAppContext();
+    const { generatedCode, appMode, generatedFlashcards, prompt, generatedFileTree } = useAppContext();
     const [viewMode, setViewMode] = useState<'app' | 'code'>('app');
     const [isCopied, setIsCopied] = useState(false);
     const [qrCodeUrl, setQrCodeUrl] = useState('');
     const [qrError, setQrError] = useState<string | null>(null);
     const [isQrLoading, setIsQrLoading] = useState(false);
+    const stackblitzRef = useRef<HTMLDivElement>(null);
+    const [selectedFile, setSelectedFile] = useState('src/App.tsx');
 
     useEffect(() => {
-        // Reset view mode when app mode changes to ensure a consistent start
         setViewMode('app');
     }, [appMode]);
+
+    useEffect(() => {
+        if (appMode === 'react_web' && generatedFileTree && viewMode === 'app' && stackblitzRef.current) {
+            window.StackBlitzSDK.embedProject(
+                stackblitzRef.current,
+                {
+                    title: 'Silo Generated App',
+                    description: prompt,
+                    template: 'node',
+                    files: generatedFileTree,
+                    dependencies: {
+                        "react": "latest",
+                        "react-dom": "latest",
+                    }
+                },
+                {
+                    openFile: 'src/App.tsx',
+                    view: 'preview',
+                    height: '100%',
+                    hideExplorer: false,
+                    terminalHeight: 50,
+                }
+            );
+        }
+    }, [generatedFileTree, viewMode, appMode, prompt]);
 
     useEffect(() => {
         if (appMode === 'native' && generatedCode) {
             setIsQrLoading(true);
             setQrCodeUrl('');
             setQrError(null);
-
             const snackUrl = `https://snack.expo.dev/?code=${encodeURIComponent(generatedCode)}`;
             
-            getQRCodeLibrary()
-                .then(QRCode => {
-                    return QRCode.toDataURL(snackUrl, { width: 256, margin: 1 });
-                })
-                .then((url: string) => {
-                    setQrCodeUrl(url);
-                    setQrError(null);
-                })
+            getQRCodeLibrary().then(QRCode => QRCode.toDataURL(snackUrl, { width: 256, margin: 1 }))
+                .then((url: string) => { setQrCodeUrl(url); setQrError(null); })
                 .catch((err: Error) => {
                     console.error('QR code generation failed:', err);
-                    // Check for common error types
-                    if (err.message.includes('too long') || generatedCode.length > 2000) {
-                         setQrError('The generated code is too long for a QR code. Please try the Snack URL directly.');
-                    } else {
-                        setQrError(err.message || 'QR Code library failed to load.');
-                    }
+                    setQrError(err.message || 'QR Code library failed to load.');
                     setQrCodeUrl('');
-                })
-                .finally(() => {
-                    setIsQrLoading(false);
-                });
+                }).finally(() => setIsQrLoading(false));
         } else {
             setQrCodeUrl('');
             setQrError(null);
@@ -124,194 +124,52 @@ const PreviewPanel: React.FC = () => {
         }
     }, [generatedCode, appMode]);
 
-
     const handleCopy = () => {
-        if (!generatedCode) return;
-        navigator.clipboard.writeText(generatedCode);
+        const codeToCopy = appMode === 'react_web' ? generatedFileTree?.[selectedFile] : generatedCode;
+        if (!codeToCopy) return;
+        navigator.clipboard.writeText(codeToCopy);
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
     };
 
     const renderBuildMode = () => {
-        if (!generatedCode) {
-            return (
-                 <div className="w-full h-full flex flex-col items-center justify-center p-4">
-                    <div className="text-center text-gray-500 mb-4">
-                         <h3 className="text-lg font-medium text-gray-900">Your app is being planned...</h3>
-                         <p className="mt-1 text-sm text-gray-500">
-                            The preview will appear here. In the meantime, here's a word from our sponsors.
-                         </p>
-                    </div>
-                    <div className="w-full max-w-lg h-auto min-h-[250px] bg-white border border-dashed border-gray-300 rounded-lg p-2">
-                        <AdUnit />
-                    </div>
-                </div>
-            );
-        }
-
+        if (!generatedCode) return <AdPlaceholder title="Your app is being planned..." />;
         if (viewMode === 'app') {
-            return (
-                <iframe
-                    srcDoc={generatedCode}
-                    title="App Preview"
-                    className="w-full h-full border-0"
-                    sandbox="allow-scripts allow-forms"
-                />
-            );
-        } else {
-             return (
-                <div className="relative w-full h-full bg-gray-900 text-white font-mono text-sm overflow-auto">
-                    <button 
-                        onClick={handleCopy}
-                        className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md text-xs transition-colors"
-                    >
-                        {isCopied ? (
-                            <>
-                                <CheckIcon className="w-4 h-4 text-green-400" />
-                                <span>Copied!</span>
-                            </>
-                        ) : (
-                            <>
-                                <ClipboardIcon className="w-4 h-4" />
-                                <span>Copy Code</span>
-                            </>
-                        )}
-                    </button>
-                    <pre className="p-4 pt-12"><code>{generatedCode}</code></pre>
-                </div>
-            );
+            return <iframe srcDoc={generatedCode} title="App Preview" className="w-full h-full border-0" sandbox="allow-scripts allow-forms" />;
         }
+        return <CodeViewer code={generatedCode} onCopy={handleCopy} isCopied={isCopied} />;
+    };
+    
+    const renderReactWebMode = () => {
+        if (!generatedFileTree) return <AdPlaceholder title="Your React app is being planned..." />;
+        if (viewMode === 'app') {
+            return <div ref={stackblitzRef} className="w-full h-full bg-gray-200"></div>;
+        }
+        return <FileExplorerViewer fileTree={generatedFileTree} selectedFile={selectedFile} setSelectedFile={setSelectedFile} onCopy={handleCopy} isCopied={isCopied} />;
     };
     
     const renderNativeMode = () => {
-        if (!generatedCode) {
-            return (
-                 <div className="w-full h-full flex flex-col items-center justify-center p-4">
-                    <div className="text-center text-gray-500">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto h-12 w-12 text-gray-400"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
-                        <h3 className="mt-2 text-lg font-medium text-gray-900">Native App Preview</h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                           Your generated native app will appear here.
-                        </p>
-                    </div>
-                </div>
-            );
-        }
-
-        if (viewMode === 'app') {
-            const snackUrl = `https://snack.expo.dev/embedded?platform=web&preview=true&theme=light&waitForData=true&code=${encodeURIComponent(generatedCode)}`;
-            const snackDirectUrl = `https://snack.expo.dev/?code=${encodeURIComponent(generatedCode)}`;
-            
-            return (
-                <div className="w-full h-full flex flex-col lg:flex-row items-center justify-center p-4 bg-gray-100 gap-8 overflow-y-auto">
-                    {/* Left side: Phone simulator */}
-                    <div className="flex-shrink-0">
-                        <PhoneFrame>
-                            <iframe
-                                src={snackUrl}
-                                title="Native App Preview"
-                                className="w-full h-full border-0"
-                                sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
-                            />
-                        </PhoneFrame>
-                    </div>
-                    
-                    {/* Right side: QR and instructions */}
-                    <div className="flex-grow max-w-md w-full space-y-6">
-                        {/* QR Code Section */}
-                        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center">
-                            <h3 className="text-lg font-bold text-gray-800 mb-1">Test on Your Device</h3>
-                            <p className="text-sm text-gray-600 mb-4">
-                                Use the <a href="https://expo.dev/go" target="_blank" rel="noopener noreferrer" className="text-indigo-600 font-medium underline">Expo Go</a> app to get a true native preview.
-                            </p>
-                            <div className="bg-white p-2 rounded-lg border border-gray-200 inline-block">
-                                <div className="w-40 h-40 flex items-center justify-center">
-                                    {isQrLoading ? (
-                                        <span className="text-sm text-gray-500">Generating QR Code...</span>
-                                    ) : qrCodeUrl ? (
-                                        <img src={qrCodeUrl} alt="Expo Snack QR Code" width="160" height="160" />
-                                    ) : (
-                                        <div className="text-center text-xs text-red-600 p-2">
-                                            {qrError}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <a href={snackDirectUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-900 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                                Open in Expo Snack
-                            </a>
-                        </div>
-                        
-                        {/* Local Run Section */}
-                        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                             <h4 className="font-bold text-lg text-gray-800">Run Locally</h4>
-                            <p className="text-sm text-gray-600 mt-1 mb-4">
-                                Follow these steps in your terminal to run the app on your own machine.
-                            </p>
-                            <div className="text-left bg-gray-100 p-4 rounded-lg text-xs text-gray-800 space-y-2 font-mono">
-                                <p><span className="select-none text-green-600 mr-2">$</span>npx create-expo-app my-app</p>
-                                <p><span className="select-none text-green-600 mr-2">$</span>cd my-app</p>
-                                <p className="text-gray-500 italic pl-5">// Copy code into App.js</p>
-                                <p><span className="select-none text-green-600 mr-2">$</span>npm run expo</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-
-        } else { // 'code' view
-            return (
-                <div className="relative w-full h-full bg-gray-900 text-white font-mono text-sm overflow-auto">
-                    <button 
-                        onClick={handleCopy}
-                        className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md text-xs transition-colors"
-                    >
-                        {isCopied ? (
-                            <>
-                                <CheckIcon className="w-4 h-4 text-green-400" />
-                                <span>Copied!</span>
-                            </>
-                        ) : (
-                            <>
-                                <ClipboardIcon className="w-4 h-4" />
-                                <span>Copy Code</span>
-                            </>
-                        )}
-                    </button>
-                    <pre className="p-4 pt-12"><code>{generatedCode}</code></pre>
-                </div>
-            );
-        }
+        if (!generatedCode) return <NativePlaceholder />;
+        if (viewMode === 'app') return <NativePreview generatedCode={generatedCode} qrCodeUrl={qrCodeUrl} qrError={qrError} isQrLoading={isQrLoading} />;
+        return <CodeViewer code={generatedCode} onCopy={handleCopy} isCopied={isCopied} />;
     };
 
     const renderStudyMode = () => {
-        if (!generatedFlashcards) {
-            return (
-                 <div className="w-full h-full flex flex-col items-center justify-center p-4">
-                    <div className="text-center text-gray-500">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto h-12 w-12 text-gray-400"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 15h4M7 11h7"/></svg>
-                        <h3 className="mt-2 text-lg font-medium text-gray-900">Flashcards</h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                           Your generated flashcards will appear here.
-                        </p>
-                    </div>
-                </div>
-            )
-        }
+        if (!generatedFlashcards) return <FlashcardPlaceholder />;
         return (
             <div className="p-6 overflow-y-auto h-full">
                 <FlashcardDisplay cards={generatedFlashcards} topic={prompt} />
             </div>
-        )
+        );
     };
     
     const getHeaderText = () => {
         switch(appMode) {
-            case 'build': return 'Web App Preview';
+            case 'build': return 'Single-File Web App';
             case 'form': return 'Form Preview';
             case 'native': return 'Native App Preview';
             case 'study': return 'Study Deck';
+            case 'react_web': return 'React App Preview';
             default: return 'Preview';
         }
     }
@@ -319,38 +177,25 @@ const PreviewPanel: React.FC = () => {
     const renderContent = () => {
         switch(appMode) {
             case 'build':
-            case 'form':
-                return renderBuildMode();
-            case 'native':
-                return renderNativeMode();
-            case 'study':
-                return renderStudyMode();
-            default:
-                return <div className="p-6">Select a mode to get started.</div>;
+            case 'form': return renderBuildMode();
+            case 'react_web': return renderReactWebMode();
+            case 'native': return renderNativeMode();
+            case 'study': return renderStudyMode();
+            default: return <div className="p-6">Select a mode to get started.</div>;
         }
     };
+    
+    const showViewModeToggle = (appMode === 'build' || appMode === 'form' || appMode === 'native' || appMode === 'react_web') && (generatedCode || generatedFileTree);
 
     return (
         <div className="w-1/2 flex flex-col h-full bg-white">
             <header className="p-4 border-b border-gray-200 flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                     <h2 className="text-xl font-semibold">
-                        {getHeaderText()}
-                     </h2>
-                     {(appMode === 'build' || appMode === 'form' || appMode === 'native') && generatedCode && (
+                     <h2 className="text-xl font-semibold">{getHeaderText()}</h2>
+                     {showViewModeToggle && (
                         <div className="bg-gray-200/80 rounded-full p-1 flex items-center text-sm font-medium">
-                            <button
-                                onClick={() => setViewMode('app')}
-                                className={`px-4 py-1.5 rounded-full transition-all duration-200 ${viewMode === 'app' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-                            >
-                                {appMode === 'native' ? 'Preview' : 'App'}
-                            </button>
-                            <button
-                                onClick={() => setViewMode('code')}
-                                className={`px-4 py-1.5 rounded-full transition-all duration-200 ${viewMode === 'code' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-                            >
-                                Code
-                            </button>
+                            <button onClick={() => setViewMode('app')} className={`px-4 py-1.5 rounded-full transition-all duration-200 ${viewMode === 'app' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>Preview</button>
+                            <button onClick={() => setViewMode('code')} className={`px-4 py-1.5 rounded-full transition-all duration-200 ${viewMode === 'code' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>Code</button>
                         </div>
                      )}
                 </div>
@@ -360,11 +205,105 @@ const PreviewPanel: React.FC = () => {
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 </div>
             </header>
-            <div className="flex-1 bg-gray-100">
-                {renderContent()}
+            <div className="flex-1 bg-gray-100 overflow-hidden">{renderContent()}</div>
+        </div>
+    );
+};
+
+// --- Sub-components for cleaner rendering logic ---
+
+const CodeViewer: React.FC<{ code: string; onCopy: () => void; isCopied: boolean }> = ({ code, onCopy, isCopied }) => (
+    <div className="relative w-full h-full bg-gray-900 text-white font-mono text-sm overflow-auto">
+        <button onClick={onCopy} className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md text-xs transition-colors">
+            {isCopied ? <><CheckIcon className="w-4 h-4 text-green-400" /><span>Copied!</span></> : <><ClipboardIcon className="w-4 h-4" /><span>Copy Code</span></>}
+        </button>
+        <pre className="p-4 pt-12"><code>{code}</code></pre>
+    </div>
+);
+
+const FileExplorerViewer: React.FC<{ fileTree: { [key: string]: string }, selectedFile: string, setSelectedFile: (file: string) => void, onCopy: () => void, isCopied: boolean }> = ({ fileTree, selectedFile, setSelectedFile, onCopy, isCopied }) => (
+    <div className="w-full h-full flex bg-gray-800 text-white font-mono text-sm">
+        <div className="w-48 h-full bg-gray-900/50 border-r border-gray-700 overflow-y-auto p-2">
+            <h4 className="text-xs text-gray-400 uppercase font-sans font-bold px-2 mb-2">Files</h4>
+            <ul>
+                {Object.keys(fileTree).sort().map(fileName => (
+                    <li key={fileName}>
+                        <button onClick={() => setSelectedFile(fileName)} className={`w-full text-left text-xs px-2 py-1 rounded ${selectedFile === fileName ? 'bg-indigo-500/30 text-white' : 'text-gray-300 hover:bg-white/10'}`}>
+                            {fileName}
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        </div>
+        <div className="flex-1 relative h-full">
+            <CodeViewer code={fileTree[selectedFile] || ''} onCopy={onCopy} isCopied={isCopied} />
+        </div>
+    </div>
+);
+
+const AdPlaceholder: React.FC<{ title: string }> = ({ title }) => (
+    <div className="w-full h-full flex flex-col items-center justify-center p-4">
+        <div className="text-center text-gray-500 mb-4">
+            <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+            <p className="mt-1 text-sm text-gray-500">The preview will appear here. In the meantime, here's a word from our sponsors.</p>
+        </div>
+        <div className="w-full max-w-lg h-auto min-h-[250px] bg-white border border-dashed border-gray-300 rounded-lg p-2"><AdUnit /></div>
+    </div>
+);
+
+const NativePlaceholder: React.FC = () => (
+    <div className="w-full h-full flex flex-col items-center justify-center p-4">
+        <div className="text-center text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto h-12 w-12 text-gray-400"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            <h3 className="mt-2 text-lg font-medium text-gray-900">Native App Preview</h3>
+            <p className="mt-1 text-sm text-gray-500">Your generated native app will appear here.</p>
+        </div>
+    </div>
+);
+
+const NativePreview: React.FC<{ generatedCode: string; qrCodeUrl: string; qrError: string | null; isQrLoading: boolean; }> = ({ generatedCode, qrCodeUrl, qrError, isQrLoading }) => {
+    const snackUrl = `https://snack.expo.dev/embedded?platform=web&preview=true&theme=light&waitForData=true&code=${encodeURIComponent(generatedCode)}`;
+    const snackDirectUrl = `https://snack.expo.dev/?code=${encodeURIComponent(generatedCode)}`;
+    return (
+        <div className="w-full h-full flex flex-col lg:flex-row items-center justify-center p-4 bg-gray-100 gap-8 overflow-y-auto">
+            <div className="flex-shrink-0"><PhoneFrame><iframe src={snackUrl} title="Native App Preview" className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-popups allow-presentation" /></PhoneFrame></div>
+            <div className="flex-grow max-w-md w-full space-y-6">
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center">
+                    <h3 className="text-lg font-bold text-gray-800 mb-1">Test on Your Device</h3>
+                    <p className="text-sm text-gray-600 mb-4">Use the <a href="https://expo.dev/go" target="_blank" rel="noopener noreferrer" className="text-indigo-600 font-medium underline">Expo Go</a> app to get a true native preview.</p>
+                    <div className="bg-white p-2 rounded-lg border border-gray-200 inline-block">
+                        <div className="w-40 h-40 flex items-center justify-center">
+                            {isQrLoading ? <span className="text-sm text-gray-500">Generating...</span> : qrCodeUrl ? <img src={qrCodeUrl} alt="Expo Snack QR Code" width="160" height="160" /> : <div className="text-center text-xs text-red-600 p-2">{qrError}</div>}
+                        </div>
+                    </div>
+                    <a href={snackDirectUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-900 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                        Open in Expo Snack
+                    </a>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h4 className="font-bold text-lg text-gray-800">Run Locally</h4>
+                    <p className="text-sm text-gray-600 mt-1 mb-4">Follow these steps in your terminal to run the app on your own machine.</p>
+                    <div className="text-left bg-gray-100 p-4 rounded-lg text-xs text-gray-800 space-y-2 font-mono">
+                        <p><span className="select-none text-green-600 mr-2">$</span>npx create-expo-app my-app</p>
+                        <p><span className="select-none text-green-600 mr-2">$</span>cd my-app</p>
+                        <p className="text-gray-500 italic pl-5">// Copy code into App.js</p>
+                        <p><span className="select-none text-green-600 mr-2">$</span>npm run expo</p>
+                    </div>
+                </div>
             </div>
         </div>
     );
 };
+
+const FlashcardPlaceholder: React.FC = () => (
+    <div className="w-full h-full flex flex-col items-center justify-center p-4">
+        <div className="text-center text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto h-12 w-12 text-gray-400"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 15h4M7 11h7"/></svg>
+            <h3 className="mt-2 text-lg font-medium text-gray-900">Flashcards</h3>
+            <p className="mt-1 text-sm text-gray-500">Your generated flashcards will appear here.</p>
+        </div>
+    </div>
+);
 
 export default PreviewPanel;
