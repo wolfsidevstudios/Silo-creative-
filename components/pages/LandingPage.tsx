@@ -85,7 +85,7 @@ const AppPreview: React.FC = () => {
   }, [step]);
 
   return (
-    <div className="w-full max-w-3xl mx-auto mt-16 rounded-2xl shadow-2xl ring-1 ring-gray-900/10 bg-[#2a2734] font-mono text-sm overflow-hidden h-80 flex flex-col">
+    <div className="w-full max-w-3xl mx-auto mt-8 rounded-2xl shadow-2xl ring-1 ring-gray-900/10 bg-[#2a2734] font-mono text-sm overflow-hidden h-80 flex flex-col">
       <div className="bg-gray-700/50 px-4 py-3 flex items-center gap-2 flex-shrink-0">
         <div className="w-3 h-3 rounded-full bg-red-500"></div>
         <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
@@ -211,6 +211,11 @@ const LandingPage: React.FC = () => {
                             >
                                 Try without an account &rarr;
                             </button>
+                        </div>
+                        <div className="mt-8 flex justify-center">
+                            <a href="https://www.producthunt.com/products/silo-creative-app-builder?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-silo&#0045;creative&#0045;app&#0045;builder" target="_blank" rel="noopener noreferrer">
+                                <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1015728&theme=light&t=1757771222673" alt="Silo&#0032;Creative&#0032;App&#0032;Builder - AI&#0032;app&#0032;builder | Product Hunt" style={{width: '250px', height: '54px'}} width="250" height="54" />
+                            </a>
                         </div>
                         <AppPreview />
                     </div>
