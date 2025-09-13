@@ -6,8 +6,10 @@ import {
     BookIcon, 
     CodeIcon, 
     FormIcon, 
-    BrainCircuitIcon 
+    BrainCircuitIcon,
+    AtSignIcon
 } from '../common/Icons';
+import GoogleSignInButton from '../auth/GoogleSignInButton';
 
 // Custom hook for scroll animations
 const useScrollAnimation = () => {
@@ -44,30 +46,11 @@ const useScrollAnimation = () => {
 };
 
 const samplePrompt = "Create a simple pomodoro timer app";
-const codeLinesData = [
-  { text: '<!DOCTYPE html>', color: 'text-gray-500' },
-  { text: '<html lang="en">', color: 'text-gray-500' },
-  { text: '  <head>', color: 'text-gray-500' },
-  { text: '    <title>Pomodoro Timer</title>', color: 'text-pink-400' },
-  { text: '    <script src=".../tailwindcss.com"></script>', color: 'text-pink-400' },
-  { text: '  </head>', color: 'text-gray-500' },
-  { text: '  <body class="bg-red-500 ...">', color: 'text-pink-400' },
-  { text: '    <div id="app">', color: 'text-gray-500' },
-  { text: '      <h1 class="text-9xl">25:00</h1>', color: 'text-pink-400' },
-  { text: '      <button id="start">Start</button>', color: 'text-pink-400' },
-  { text: '    </div>', color: 'text-gray-500' },
-  { text: '    <script>', color: 'text-yellow-400' },
-  { text: "      const timer = ...;", color: 'text-cyan-400' },
-  { text: '      // ... logic ...', color: 'text-gray-600' },
-  { text: '    </script>', color: 'text-yellow-400' },
-  { text: '  </body>', color: 'text-gray-500' },
-  { text: '</html>', color: 'text-gray-500' },
-];
 
 const AnimatedAppPreview = () => {
     const [typedPrompt, setTypedPrompt] = useState('');
-    const [visibleLines, setVisibleLines] = useState(0);
     const [showCaret, setShowCaret] = useState(true);
+    const [showApp, setShowApp] = useState(false);
 
     useEffect(() => {
         let i = 0;
@@ -77,17 +60,8 @@ const AnimatedAppPreview = () => {
             if (i > samplePrompt.length) {
                 clearInterval(typingInterval);
                 setShowCaret(false);
-
                 setTimeout(() => {
-                    let lineIndex = 0;
-                    const codeInterval = setInterval(() => {
-                        setVisibleLines(prev => prev + 1);
-                        lineIndex++;
-                        if (lineIndex >= codeLinesData.length) {
-                            clearInterval(codeInterval);
-                        }
-                    }, 100);
-                    return () => clearInterval(codeInterval);
+                    setShowApp(true);
                 }, 500);
             }
         }, 80);
@@ -97,36 +71,55 @@ const AnimatedAppPreview = () => {
         };
     }, []);
 
+    const AppContent = () => (
+         <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-orange-400 p-6 flex flex-col items-center justify-center text-white font-sans opacity-0 animate-fade-in">
+            <div className="text-center opacity-0 animate-slide-in" style={{animationDelay: '200ms'}}>
+                <div className="text-sm font-semibold bg-white/20 rounded-full px-3 py-1 inline-block">Focus Time</div>
+                <h1 className="text-7xl font-bold tracking-tighter my-2">25:00</h1>
+            </div>
+            <div className="flex gap-3 mt-4 opacity-0 animate-slide-in" style={{animationDelay: '400ms'}}>
+                <button className="px-6 py-2 bg-white text-red-500 font-semibold rounded-full shadow-md">Start</button>
+                <button className="px-6 py-2 bg-white/30 text-white font-semibold rounded-full">Reset</button>
+            </div>
+             <div className="mt-6 w-full max-w-xs bg-white/20 p-3 rounded-lg text-left text-sm opacity-0 animate-slide-in" style={{animationDelay: '600ms'}}>
+                <p className="font-bold mb-1">Tasks:</p>
+                <p>› Design new UI</p>
+                <p>› Develop feature</p>
+            </div>
+        </div>
+    );
+
     return (
-        <div className="max-w-4xl mx-auto rounded-2xl shadow-2xl ring-1 ring-gray-900/10 bg-[#282c34] font-mono text-sm overflow-hidden">
+        <div className="max-w-4xl mx-auto rounded-2xl shadow-2xl ring-1 ring-gray-900/10 bg-[#282c34] font-mono text-sm overflow-hidden h-80">
             <div className="bg-gray-700 px-4 py-3 flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-500"></div>
                 <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
             </div>
 
-            <div className="p-6 h-80">
-                <div className="flex gap-2 items-center mb-4">
-                    <span className="text-green-400 font-bold">&gt;</span>
-                    <span className="text-gray-300">{typedPrompt}</span>
-                    {showCaret && <span className="w-2 h-4 bg-green-400 animate-pulse"></span>}
-                </div>
-                
-                <div className="overflow-hidden">
-                    {codeLinesData.slice(0, visibleLines).map((line, index) => (
-                         <p key={index} className={`whitespace-pre-wrap ${line.color} opacity-0 animate-fade-in`} style={{ animationDelay: `${index * 50}ms` }}>
-                            {line.text}
-                        </p>
-                    ))}
-                </div>
+            <div className="p-6 relative h-full">
+                {!showApp ? (
+                    <div className="flex gap-2 items-center">
+                        <span className="text-green-400 font-bold">&gt;</span>
+                        <span className="text-gray-300">{typedPrompt}</span>
+                        {showCaret && <span className="w-2 h-4 bg-green-400 animate-pulse"></span>}
+                    </div>
+                ) : <AppContent />}
             </div>
             <style>{`
                 @keyframes fade-in {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
+                    from { opacity: 0; }
+                    to { opacity: 1; }
                 }
                 .animate-fade-in {
-                    animation: fade-in 0.4s ease forwards;
+                    animation: fade-in 0.5s ease forwards;
+                }
+                @keyframes slide-in {
+                    from { opacity: 0; transform: translateY(15px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-slide-in {
+                    animation: slide-in 0.5s ease-out forwards;
                 }
             `}</style>
         </div>
@@ -156,6 +149,7 @@ const Header: React.FC = () => {
                 <nav className="hidden md:flex items-center gap-6 text-gray-600 font-medium">
                     <a href="#features" className="hover:text-indigo-600">Features</a>
                     <a href="#privacy" className="hover:text-indigo-600">Privacy</a>
+                    <a href="#contact" className="hover:text-indigo-600">Contact</a>
                 </nav>
                 <div className="flex items-center gap-4">
                     <button onClick={() => navigate('/login')} className="text-gray-600 font-medium hover:text-indigo-600">
@@ -188,17 +182,17 @@ const HeroSection: React.FC = () => {
                     Describe your idea, and watch Silo's AI bring it to life in seconds.
                     From functional apps to study flashcards, your next project starts here.
                 </p>
-                <div className="mt-10 flex justify-center items-center gap-4">
+                <div className="mt-10 flex flex-col justify-center items-center gap-4">
                      <button onClick={() => navigate('/login')} className="px-8 py-3.5 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-lg text-lg">
                         Start Building for Free
                     </button>
+                    <div className="my-2 flex items-center w-full max-w-xs">
+                        <div className="flex-grow border-t border-gray-300"></div>
+                        <span className="mx-4 text-xs font-medium text-gray-500">OR</span>
+                        <div className="flex-grow border-t border-gray-300"></div>
+                    </div>
+                    <GoogleSignInButton />
                 </div>
-                 <p className="mt-6 text-sm text-gray-500">
-                    Already have an account?{' '}
-                    <Link to="/login" className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
-                        Sign In
-                    </Link>
-                </p>
                 <div className="mt-12">
                     <AnimatedAppPreview />
                 </div>
@@ -321,6 +315,53 @@ const PrivacySection: React.FC = () => {
     );
 };
 
+const ContactCard: React.FC<{ icon: React.ReactNode, title: string, email: string, description: string }> = ({ icon, title, email, description }) => {
+    const [observe] = useScrollAnimation();
+    const cardRef = useRef(null);
+    useEffect(() => observe(cardRef.current), [observe]);
+
+    return (
+        <div ref={cardRef} className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm hover:shadow-md transition-shadow">
+            <div className="mx-auto bg-indigo-100 text-indigo-600 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                {icon}
+            </div>
+            <h3 className="text-xl font-bold text-gray-900">{title}</h3>
+            <p className="text-gray-600 mt-1 mb-4">{description}</p>
+            <a 
+                href={`mailto:${email}`}
+                className="inline-block px-6 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-full hover:bg-indigo-100 transition-colors"
+            >
+                {email}
+            </a>
+        </div>
+    );
+};
+
+const ContactSection: React.FC = () => (
+    <section id="contact" className="py-20 md:py-28 bg-gray-50">
+        <div className="container mx-auto px-6">
+            <div className="text-center max-w-2xl mx-auto mb-16">
+                <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900">Contact Us</h2>
+                <p className="mt-4 text-lg text-gray-600">We'd love to hear from you. Here's how you can reach us.</p>
+            </div>
+            <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
+                <ContactCard 
+                    icon={<AtSignIcon className="w-6 h-6" />}
+                    title="General Inquiries"
+                    description="For partnerships, questions, or general feedback."
+                    email="survivalcreativeminecraftadven@gmail.com"
+                />
+                 <ContactCard 
+                    icon={<BookIcon className="w-6 h-6" />}
+                    title="Support"
+                    description="Need help with the app or have a technical question?"
+                    email="support@silodev.com"
+                />
+            </div>
+        </div>
+    </section>
+);
+
 
 const CtaSection: React.FC = () => {
     const [observe] = useScrollAnimation();
@@ -387,6 +428,7 @@ const LandingPage: React.FC = () => {
                 <FeaturesSection />
                 <HowItWorksSection />
                 <PrivacySection />
+                <ContactSection />
                 <CtaSection />
             </main>
             <Footer />

@@ -59,7 +59,7 @@ const GoogleSignInButton: React.FC = () => {
                 
                 window.google.accounts.id.renderButton(
                     buttonDivRef.current,
-                    { theme: "outline", size: "large", type: "standard", width: '368', shape: 'pill' }
+                    { theme: "outline", size: "large", type: "standard", shape: 'pill', width: '300' }
                 );
             }
         };
