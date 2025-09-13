@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { GitHubIcon, DiscordIcon, BrainCircuitIcon, CodeIcon, UsersIcon, AtSignIcon, ChevronDownIcon } from '../common/Icons';
+import { GitHubIcon, DiscordIcon, BrainCircuitIcon, CodeIcon, UsersIcon, AtSignIcon, ChevronDownIcon, CheckIcon } from '../common/Icons';
 import GoogleSignInButton from '../auth/GoogleSignInButton';
 import { useAppContext } from '../../context/AppContext';
 
@@ -15,7 +15,7 @@ const Header: React.FC = () => {
     };
 
     return (
-        <header className="fixed top-4 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-lg">
+        <header className="fixed top-4 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl">
             <nav>
                 <div className="flex items-center justify-between gap-4 bg-white/70 backdrop-blur-md rounded-full shadow-lg ring-1 ring-black/5 px-4 py-2 sm:px-6 sm:py-3">
                     <Link to="/" className="flex items-center gap-2 flex-shrink-0">
@@ -23,7 +23,7 @@ const Header: React.FC = () => {
                     </Link>
                     <div className="hidden sm:flex items-center gap-6 text-sm font-medium text-gray-600">
                          <button onClick={() => scrollToSection('features')} className="hover:text-indigo-600 transition-colors">Features</button>
-                         <button onClick={() => scrollToSection('how-it-works')} className="hover:text-indigo-600 transition-colors">How It Works</button>
+                         <button onClick={() => scrollToSection('pricing')} className="hover:text-indigo-600 transition-colors">Pricing</button>
                          <button onClick={() => scrollToSection('faq')} className="hover:text-indigo-600 transition-colors">FAQ</button>
                     </div>
                     <button onClick={() => navigate('/login')} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-sm">
@@ -210,8 +210,27 @@ const LandingPage: React.FC = () => {
                     </div>
                 </div>
 
+                 {/* Who We Are Section */}
+                <section id="about" className="py-20 sm:py-28 bg-white">
+                    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center gap-12">
+                        <div className="w-full md:w-1/2">
+                            <img 
+                                src="https://i.ibb.co/kX01Qj5/team-photo.png" 
+                                alt="Silo Creative Team" 
+                                className="rounded-2xl shadow-xl w-full h-auto"
+                            />
+                        </div>
+                        <div className="w-full md:w-1/2 text-center md:text-left">
+                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Who We Are</h2>
+                            <p className="mt-4 text-lg text-gray-600">
+                                At Silo Creative, we believe that a great idea shouldn't be limited by coding skills. We are a passionate team of developers and designers dedicated to making technology accessible to everyone. Our mission is to empower creators, entrepreneurs, and students to bring their digital ideas to life, instantly.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
                 {/* Features Section */}
-                <section id="features" className="py-20 sm:py-28 bg-white">
+                <section id="features" className="py-20 sm:py-28 bg-gray-50">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center">
                             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Why Choose Silo Creative?</h2>
@@ -220,7 +239,7 @@ const LandingPage: React.FC = () => {
                             </p>
                         </div>
                         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-10">
-                            <div className="text-center p-6 border border-gray-200/80 rounded-2xl">
+                            <div className="text-center p-6 bg-white border border-gray-200/80 rounded-2xl">
                                 <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg mb-4">
                                     <BrainCircuitIcon className="w-6 h-6" />
                                 </div>
@@ -229,7 +248,7 @@ const LandingPage: React.FC = () => {
                                     Describe your app in plain English and watch our AI bring it to life, generating clean, functional code in seconds.
                                 </p>
                             </div>
-                            <div className="text-center p-6 border border-gray-200/80 rounded-2xl">
+                            <div className="text-center p-6 bg-white border border-gray-200/80 rounded-2xl">
                                 <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg mb-4">
                                     <CodeIcon className="w-6 h-6" />
                                 </div>
@@ -238,7 +257,7 @@ const LandingPage: React.FC = () => {
                                     See your application as it's being built. No more guessing—what you see is what you get, updated in real-time.
                                 </p>
                             </div>
-                            <div className="text-center p-6 border border-gray-200/80 rounded-2xl">
+                            <div className="text-center p-6 bg-white border border-gray-200/80 rounded-2xl">
                                 <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg mb-4">
                                     <UsersIcon className="w-6 h-6" />
                                 </div>
@@ -250,35 +269,104 @@ const LandingPage: React.FC = () => {
                         </div>
                     </div>
                 </section>
+
+                {/* Testimonials Section */}
+                <section id="testimonials" className="py-20 sm:py-28 bg-white">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center">
+                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">What Our Users Say</h2>
+                            <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+                                We're helping creators and developers build faster than ever.
+                            </p>
+                        </div>
+                        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-10">
+                            <div className="bg-gray-50 p-8 rounded-2xl border border-gray-200/80">
+                                <p className="text-gray-700 relative">
+                                    "As a student, Silo is a game-changer. I can instantly create study tools and small apps for my projects. The unlimited student plan is amazing!"
+                                </p>
+                                <div className="mt-6 flex items-center gap-4">
+                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/VMyPzZC/avatar-2.png" alt="User avatar" />
+                                    <div>
+                                        <div className="font-semibold text-gray-800">Sarah L.</div>
+                                        <div className="text-gray-500 text-sm">Computer Science Student</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 p-8 rounded-2xl border border-gray-200/80">
+                                <p className="text-gray-700 relative">
+                                    "This tool has supercharged my prototyping workflow. I can go from a client's idea to a working demo in minutes. It's an indispensable part of my toolkit now."
+                                </p>
+                                <div className="mt-6 flex items-center gap-4">
+                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/yQjLgP4/avatar-5.png" alt="User avatar" />
+                                    <div>
+                                        <div className="font-semibold text-gray-800">Mike R.</div>
+                                        <div className="text-gray-500 text-sm">Freelance Developer</div>
+                                    </div>
+                                </div>
+                            </div>
+                             <div className="bg-gray-50 p-8 rounded-2xl border border-gray-200/80">
+                                <p className="text-gray-700 relative">
+                                    "I don't code, but I have a lot of ideas. Silo Creative bridges that gap perfectly. I can finally build and test my concepts without hiring a developer."
+                                </p>
+                                <div className="mt-6 flex items-center gap-4">
+                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/Ld1sWv1/avatar-3.png" alt="User avatar" />
+                                    <div>
+                                        <div className="font-semibold text-gray-800">Jessica P.</div>
+                                        <div className="text-gray-500 text-sm">Product Manager</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
                 
-                {/* How it Works Section */}
-                <section id="how-it-works" className="py-20 sm:py-28 bg-gray-50">
-                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Get Started in 3 Easy Steps</h2>
-                         <p className="mt-4 text-lg text-gray-600">From idea to application in just a few clicks.</p>
-                         <div className="mt-16 space-y-12">
-                            <div className="flex flex-col md:flex-row items-center gap-8 text-left">
-                                <div className="flex-shrink-0 w-16 h-16 bg-indigo-600 text-white text-2xl font-bold rounded-full flex items-center justify-center">1</div>
-                                <div>
-                                    <h3 className="text-xl font-semibold">Describe Your Idea</h3>
-                                    <p className="mt-1 text-gray-600">Start with a simple prompt. Whether it's a 'Pomodoro timer' or a 'contact form', just tell the AI what you need.</p>
+                 {/* Pricing Section */}
+                <section id="pricing" className="py-20 sm:py-28 bg-gray-50">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center">
+                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Simple, Transparent Pricing</h2>
+                            <p className="mt-4 text-lg text-gray-600">Choose the plan that's right for you. Get started for free.</p>
+                        </div>
+                        <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                            {/* Free Plan */}
+                            <div className="bg-white border border-gray-200/80 rounded-2xl p-8 flex flex-col">
+                                <h3 className="text-2xl font-semibold text-gray-800">Hobbyist</h3>
+                                <p className="mt-2 text-gray-500">For personal projects and exploration.</p>
+                                <div className="mt-6">
+                                    <span className="text-5xl font-bold">$0</span>
+                                    <span className="text-lg text-gray-500">/ month</span>
                                 </div>
+                                <ul className="mt-8 space-y-4 text-gray-600 flex-grow">
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-500"/>1,250 free credits per month</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-500"/>Generate apps, forms, and flashcards</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-500"/>Access to Silo Agents</li>
+                                </ul>
+                                <button onClick={() => navigate('/login')} className="mt-8 w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+                                    Get Started
+                                </button>
                             </div>
-                            <div className="flex flex-col md:flex-row items-center gap-8 text-left">
-                                <div className="flex-shrink-0 w-16 h-16 bg-indigo-600 text-white text-2xl font-bold rounded-full flex items-center justify-center">2</div>
-                                <div>
-                                    <h3 className="text-xl font-semibold">Review the Plan</h3>
-                                    <p className="mt-1 text-gray-600">Our AI generates a clear plan with a title, description, and key features. Give it the green light to start building.</p>
+                             {/* Student Plan */}
+                            <div className="bg-white border-2 border-indigo-500 rounded-2xl p-8 flex flex-col relative">
+                                <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 px-4 py-1 bg-indigo-500 text-white text-sm font-semibold rounded-full">
+                                    Most Popular
                                 </div>
-                            </div>
-                            <div className="flex flex-col md:flex-row items-center gap-8 text-left">
-                                <div className="flex-shrink-0 w-16 h-16 bg-indigo-600 text-white text-2xl font-bold rounded-full flex items-center justify-center">3</div>
-                                <div>
-                                    <h3 className="text-xl font-semibold">Launch & Customize</h3>
-                                    <p className="mt-1 text-gray-600">Your app is ready! Preview it live, view the code, and download the complete HTML file to host anywhere.</p>
+                                <h3 className="text-2xl font-semibold text-gray-800">Student</h3>
+                                <p className="mt-2 text-gray-500">For learners and educators.</p>
+                                <div className="mt-6">
+                                    <span className="text-5xl font-bold">Free</span>
+                                    <span className="text-lg text-gray-500"> for 1 year</span>
                                 </div>
+                                <ul className="mt-8 space-y-4 text-gray-600 flex-grow">
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-500"/><strong>Unlimited</strong> credits</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-500"/>Generate apps, forms, and flashcards</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-500"/>Create and use Custom Agents</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-500"/>Requires a valid .edu email</li>
+                                </ul>
+                                <button onClick={() => navigate('/login')} className="mt-8 w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+                                    Sign Up with School Email
+                                </button>
                             </div>
-                         </div>
+                        </div>
                     </div>
                 </section>
 
@@ -298,8 +386,8 @@ const LandingPage: React.FC = () => {
                             <FaqItem question="Do I need to know how to code?">
                                 <p>Not at all! You can generate complete, functional applications just by writing a prompt. If you are a developer, you can also view and download the generated HTML and Tailwind CSS code to customize it further.</p>
                             </FaqItem>
-                            <FaqItem question="Is it free to use?">
-                                <p>Yes, Silo Creative offers a generous free tier to get you started. We also have a special program for students to get unlimited credits. For advanced users, we will offer premium plans in the future.</p>
+                             <FaqItem question="What are credits?">
+                                <p>Credits are used to power the AI generation. Each time you create or modify an app, form, or set of flashcards, it consumes a small number of credits. Our free Hobbyist plan provides more than enough for regular use, and our Student plan offers unlimited credits.</p>
                             </FaqItem>
                              <FaqItem question="What can I build with it?">
                                 <p>You can build a wide variety of single-page applications, tools, and components. Think things like calculators, to-do lists, landing pages, forms, timers, and small interactive widgets. The complexity of what you can build will continue to grow as we improve our AI models.</p>
@@ -308,61 +396,20 @@ const LandingPage: React.FC = () => {
                     </div>
                 </section>
                 
-                {/* Coming Soon Section */}
-                <section id="coming-soon" className="py-20 sm:py-28 bg-gray-50">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="text-center">
-                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">What's Next for Silo?</h2>
-                            <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-                                We're always working on new features. Here's a sneak peek at what's coming soon.
-                            </p>
-                        </div>
-                        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-10">
-                            <div className="text-center p-6 bg-white border border-gray-200/80 rounded-2xl">
-                                <div className="inline-flex items-center justify-center w-12 h-12 bg-purple-100 text-purple-600 rounded-lg mb-4">
-                                    <UsersIcon className="w-6 h-6" />
-                                </div>
-                                <h3 className="text-xl font-semibold text-gray-800">Team Collaboration</h3>
-                                <p className="mt-2 text-gray-600">
-                                    Work with your team in real-time. Share projects, invite collaborators, and build together seamlessly.
-                                </p>
-                            </div>
-                            <div className="text-center p-6 bg-white border border-gray-200/80 rounded-2xl">
-                                <div className="inline-flex items-center justify-center w-12 h-12 bg-purple-100 text-purple-600 rounded-lg mb-4">
-                                    <CodeIcon className="w-6 h-6" />
-                                </div>
-                                <h3 className="text-xl font-semibold text-gray-800">Custom Domains</h3>
-                                <p className="mt-2 text-gray-600">
-                                    Deploy your generated application to a custom domain with a single click, directly from Silo Creative.
-                                </p>
-                            </div>
-                            <div className="text-center p-6 bg-white border border-gray-200/80 rounded-2xl">
-                                <div className="inline-flex items-center justify-center w-12 h-12 bg-purple-100 text-purple-600 rounded-lg mb-4">
-                                    <BrainCircuitIcon className="w-6 h-6" />
-                                </div>
-                                <h3 className="text-xl font-semibold text-gray-800">Expanded AI Capabilities</h3>
-                                <p className="mt-2 text-gray-600">
-                                    Generate more complex, multi-page applications and even simple backends to handle data and logic.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
                 {/* Contact Section */}
-                <section id="contact" className="py-20 sm:py-28 bg-white">
+                <section id="contact" className="py-20 sm:py-28 bg-gray-50">
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Get in Touch</h2>
                         <p className="mt-4 text-lg text-gray-600">Have questions or feedback? We'd love to hear from you.</p>
                         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <a href="mailto:survivalcreativeminecraftadven@gmail.com" className="group p-8 border border-gray-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50 transition-all">
+                            <a href="mailto:survivalcreativeminecraftadven@gmail.com" className="group p-8 bg-white border border-gray-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/50 transition-all">
                                 <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg mb-4">
                                     <AtSignIcon className="w-6 h-6" />
                                 </div>
                                 <h3 className="text-xl font-semibold text-gray-800">General Inquiries</h3>
                                 <p className="mt-2 text-gray-600">survivalcreativeminecraftadven@gmail.com</p>
                             </a>
-                            <a href="mailto:support@silodev.com" className="group p-8 border border-gray-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50 transition-all">
+                            <a href="mailto:support@silodev.com" className="group p-8 bg-white border border-gray-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/50 transition-all">
                                 <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg mb-4">
                                     <AtSignIcon className="w-6 h-6" />
                                 </div>
