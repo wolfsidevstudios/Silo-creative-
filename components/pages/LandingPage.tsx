@@ -1,420 +1,49 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-    GitHubIcon, 
-    DiscordIcon, 
-    BookIcon, 
-    CodeIcon, 
-    FormIcon, 
-    BrainCircuitIcon,
-    AtSignIcon
-} from '../common/Icons';
+import { GitHubIcon, DiscordIcon, BrainCircuitIcon, CodeIcon, UsersIcon, AtSignIcon } from '../common/Icons';
 import GoogleSignInButton from '../auth/GoogleSignInButton';
 import { useAppContext } from '../../context/AppContext';
 
-// Custom hook for scroll animations
-const useScrollAnimation = () => {
-    const [elements, setElements] = useState<Map<HTMLElement, () => void>>(new Map());
-
-    const observer = useRef<IntersectionObserver | null>(
-        new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.remove('opacity-0', 'translate-y-10');
-                    entry.target.classList.add('opacity-100', 'translate-y-0');
-                    observer.current?.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.1 })
-    );
-
-    useEffect(() => {
-        const currentObserver = observer.current;
-        elements.forEach((_, el) => currentObserver?.observe(el));
-        return () => {
-             elements.forEach((_, el) => currentObserver?.unobserve(el));
-        };
-    }, [elements]);
-    
-    const observe = (el: HTMLElement | null) => {
-      if (el) {
-        el.classList.add('opacity-0', 'translate-y-10', 'transition-all', 'duration-700', 'ease-out');
-        setElements(prev => new Map(prev).set(el, () => {}));
-      }
-    };
-
-    return [observe];
-};
-
-const samplePrompt = "Create a simple pomodoro timer app";
-
-const AnimatedAppPreview = () => {
-    const [typedPrompt, setTypedPrompt] = useState('');
-    const [showCaret, setShowCaret] = useState(true);
-    const [showApp, setShowApp] = useState(false);
-
-    useEffect(() => {
-        let i = 0;
-        const typingInterval = setInterval(() => {
-            setTypedPrompt(samplePrompt.substring(0, i + 1));
-            i++;
-            if (i > samplePrompt.length) {
-                clearInterval(typingInterval);
-                setShowCaret(false);
-                setTimeout(() => {
-                    setShowApp(true);
-                }, 500);
-            }
-        }, 80);
-
-        return () => {
-            clearInterval(typingInterval);
-        };
-    }, []);
-
-    const AppContent = () => (
-         <div className="absolute inset-0 bg-gradient-to-br from-red-500 to-orange-400 p-6 flex flex-col items-center justify-center text-white font-sans opacity-0 animate-fade-in">
-            <div className="text-center opacity-0 animate-slide-in" style={{animationDelay: '200ms'}}>
-                <div className="text-sm font-semibold bg-white/20 rounded-full px-3 py-1 inline-block">Focus Time</div>
-                <h1 className="text-7xl font-bold tracking-tighter my-2">25:00</h1>
-            </div>
-            <div className="flex gap-3 mt-4 opacity-0 animate-slide-in" style={{animationDelay: '400ms'}}>
-                <button className="px-6 py-2 bg-white text-red-500 font-semibold rounded-full shadow-md">Start</button>
-                <button className="px-6 py-2 bg-white/30 text-white font-semibold rounded-full">Reset</button>
-            </div>
-             <div className="mt-6 w-full max-w-xs bg-white/20 p-3 rounded-lg text-left text-sm opacity-0 animate-slide-in" style={{animationDelay: '600ms'}}>
-                <p className="font-bold mb-1">Tasks:</p>
-                <p>› Design new UI</p>
-                <p>› Develop feature</p>
-            </div>
-        </div>
-    );
-
-    return (
-        <div className="max-w-4xl mx-auto rounded-2xl shadow-2xl ring-1 ring-gray-900/10 bg-[#282c34] font-mono text-sm overflow-hidden h-80 flex flex-col">
-            <div className="bg-gray-700 px-4 py-3 flex items-center gap-2 flex-shrink-0">
-                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            </div>
-
-            <div className="p-6 relative flex-grow">
-                {!showApp ? (
-                    <div className="flex gap-2 items-center">
-                        <span className="text-green-400 font-bold">&gt;</span>
-                        <span className="text-gray-300">{typedPrompt}</span>
-                        {showCaret && <span className="w-2 h-4 bg-green-400 animate-pulse"></span>}
-                    </div>
-                ) : <AppContent />}
-            </div>
-            <style>{`
-                @keyframes fade-in {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                .animate-fade-in {
-                    animation: fade-in 0.5s ease forwards;
-                }
-                @keyframes slide-in {
-                    from { opacity: 0; transform: translateY(15px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                .animate-slide-in {
-                    animation: slide-in 0.5s ease-out forwards;
-                }
-            `}</style>
-        </div>
-    );
-};
-
-
 const Header: React.FC = () => {
-    const [isScrolled, setIsScrolled] = useState(false);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 10);
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+    const scrollToSection = (id: string) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
 
     return (
-        <header className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-lg shadow-md' : 'bg-transparent'}`}>
-            <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-                <Link to="/" className="flex items-center gap-3">
-                    <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Creative Logo" className="w-9 h-9 rounded-full" />
-                    <span className="text-xl font-bold text-gray-800">Silo Creative</span>
-                </Link>
-                <nav className="hidden md:flex items-center gap-6 text-gray-600 font-medium">
-                    <a href="#features" className="hover:text-indigo-600">Features</a>
-                    <a href="#privacy" className="hover:text-indigo-600">Privacy</a>
-                    <a href="#contact" className="hover:text-indigo-600">Contact</a>
-                </nav>
-                <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('/login')} className="text-gray-600 font-medium hover:text-indigo-600">
-                        Sign In
-                    </button>
-                    <button onClick={() => navigate('/login')} className="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-sm">
+        <header className="fixed top-4 left-1/2 -translate-x-1/2 z-30">
+            <nav className="w-full max-w-md mx-auto">
+                <div className="flex items-center justify-between gap-4 bg-white/70 backdrop-blur-md rounded-full shadow-lg ring-1 ring-black/5 px-6 py-3">
+                    <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+                        <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Creative Logo" className="w-8 h-8 rounded-full" />
+                    </Link>
+                    <div className="flex items-center gap-6 text-sm font-medium text-gray-600">
+                         <button onClick={() => scrollToSection('features')} className="hover:text-indigo-600 transition-colors">Features</button>
+                         <button onClick={() => scrollToSection('contact')} className="hover:text-indigo-600 transition-colors">Contact</button>
+                    </div>
+                    <button onClick={() => navigate('/login')} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-sm">
                         Get Started
                     </button>
                 </div>
-            </div>
+            </nav>
         </header>
     );
 };
 
-const HeroSection: React.FC = () => {
-    const [observe] = useScrollAnimation();
-    const sectionRef = useRef(null);
-    const navigate = useNavigate();
-    const { signInAnonymously } = useAppContext();
-    useEffect(() => observe(sectionRef.current), [observe]);
-
-    const handleAnonymousSignIn = async () => {
-        await signInAnonymously();
-        navigate('/home');
-    };
-
-    return (
-        <section ref={sectionRef} className="py-20 md:py-32 text-center bg-gray-50 overflow-hidden relative">
-            <div className="absolute top-0 left-0 w-64 h-64 bg-indigo-200 rounded-full -translate-x-16 -translate-y-16 blur-3xl opacity-50"></div>
-            <div className="absolute bottom-0 right-0 w-80 h-80 bg-purple-200 rounded-full translate-x-20 translate-y-20 blur-3xl opacity-50"></div>
-            <div className="container mx-auto px-6 relative z-10">
-                <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 leading-tight">
-                    Build Web Apps with a <br className="hidden md:block"/> Simple Conversation
-                </h1>
-                <p className="mt-6 max-w-2xl mx-auto text-lg text-gray-600">
-                    Describe your idea, and watch Silo's AI bring it to life in seconds.
-                    From functional apps to study flashcards, your next project starts here.
-                </p>
-                <div className="mt-10 flex flex-col justify-center items-center gap-4">
-                     <button onClick={() => navigate('/login')} className="px-8 py-3.5 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-lg text-lg">
-                        Start Building for Free
-                    </button>
-                    <div className="my-2 flex items-center w-full max-w-xs">
-                        <div className="flex-grow border-t border-gray-300"></div>
-                        <span className="mx-4 text-xs font-medium text-gray-500">OR</span>
-                        <div className="flex-grow border-t border-gray-300"></div>
-                    </div>
-                    <GoogleSignInButton />
-                    <button
-                        onClick={handleAnonymousSignIn}
-                        className="text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-colors mt-2"
-                    >
-                        Try Anonymously &rarr;
-                    </button>
-                </div>
-                <div className="mt-12">
-                    <AnimatedAppPreview />
-                </div>
-            </div>
-        </section>
-    );
-};
-
-const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; description: string }> = ({ icon, title, description }) => {
-    const [observe] = useScrollAnimation();
-    const cardRef = useRef(null);
-    useEffect(() => observe(cardRef.current), [observe]);
-    
-    return (
-        <div ref={cardRef} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <div className="bg-indigo-100 text-indigo-600 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                {icon}
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
-            <p className="text-gray-600">{description}</p>
-        </div>
-    );
-};
-
-const FeaturesSection: React.FC = () => (
-    <section id="features" className="py-20 md:py-28 bg-white">
-        <div className="container mx-auto px-6">
-            <div className="text-center max-w-2xl mx-auto mb-16">
-                 <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900">Everything you need to create.</h2>
-                 <p className="mt-4 text-lg text-gray-600">Silo provides powerful tools to turn your thoughts into tangible, usable products.</p>
-            </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <FeatureCard 
-                    icon={<CodeIcon className="w-6 h-6"/>}
-                    title="AI App Builder"
-                    description="Describe a web app, and our AI will generate the plan and the complete, production-ready code in a single HTML file."
-                />
-                 <FeatureCard 
-                    icon={<FormIcon className="w-6 h-6"/>}
-                    title="AI Form Generator"
-                    description="Need a contact, registration, or feedback form? Just ask. Get Netlify-ready forms in an instant."
-                />
-                 <FeatureCard 
-                    icon={<BookIcon className="w-6 h-6"/>}
-                    title="Study Mode"
-                    description="Enter any topic, and Silo will generate a comprehensive set of flashcards to help you learn and revise effectively."
-                />
-            </div>
-        </div>
-    </section>
-);
-
-
-const HowItWorksSection: React.FC = () => {
-    const [observe] = useScrollAnimation();
-    const step1 = useRef(null);
-    const step2 = useRef(null);
-    const step3 = useRef(null);
-
-    useEffect(() => {
-        observe(step1.current);
-        observe(step2.current);
-        observe(step3.current);
-    }, [observe]);
-    
-    const Step: React.FC<{ num: string, title: string, desc: string, refEl: React.RefObject<HTMLDivElement> }> = ({num, title, desc, refEl}) => (
-        <div ref={refEl} className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-indigo-600 text-white font-bold text-xl rounded-full">
-                {num}
-            </div>
-            <div>
-                <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-                <p className="mt-1 text-gray-600">{desc}</p>
-            </div>
-        </div>
-    );
-
-    return (
-         <section className="py-20 md:py-28 bg-gray-50">
-            <div className="container mx-auto px-6">
-                <div className="text-center max-w-2xl mx-auto mb-16">
-                    <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900">From Idea to Reality in 3 Steps</h2>
-                    <p className="mt-4 text-lg text-gray-600">Our process is designed to be simple, intuitive, and incredibly fast.</p>
-                </div>
-                <div className="max-w-3xl mx-auto grid md:grid-cols-1 gap-12">
-                    <Step refEl={step1} num="1" title="Describe Your Vision" desc="Start with a simple text prompt. Explain what you want to build, whether it's an app, a form, or a study guide. The more detail, the better!" />
-                    <Step refEl={step2} num="2" title="AI Plans & Builds" desc="Silo's AI agent analyzes your request, creates a structured plan for your approval, and then writes the complete code." />
-                    <Step refEl={step3} num="3" title="Preview & Download" desc="Instantly see your creation live in the preview panel. When you're happy, download the code and deploy it anywhere." />
-                </div>
-            </div>
-        </section>
-    );
-};
-
-
-const PrivacySection: React.FC = () => {
-    const [observe] = useScrollAnimation();
-    const sectionRef = useRef(null);
-    useEffect(() => observe(sectionRef.current), [observe]);
-
-    return (
-        <section id="privacy" ref={sectionRef} className="py-20 md:py-28 bg-white">
-            <div className="container mx-auto px-6">
-                <div className="max-w-3xl mx-auto bg-gray-50 border border-gray-200 rounded-2xl p-8 md:p-12 text-center">
-                    <div className="mx-auto bg-green-100 text-green-700 w-16 h-16 rounded-2xl flex items-center justify-center mb-6">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    </div>
-                    <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900">Your Data Stays Yours. Period.</h2>
-                    <p className="mt-4 text-lg text-gray-600">
-                        We believe in privacy by design. Your API keys and custom agent configurations are stored exclusively in your browser's local storage. They are never sent to our servers, ensuring your sensitive information remains private and secure.
-                    </p>
-                    <div className="mt-8">
-                        <Link to="/privacy" className="font-semibold text-indigo-600 hover:text-indigo-800">
-                            Read our full Privacy Policy &rarr;
-                        </Link>
-                    </div>
-                </div>
-            </div>
-        </section>
-    );
-};
-
-const ContactCard: React.FC<{ icon: React.ReactNode, title: string, email: string, description: string }> = ({ icon, title, email, description }) => {
-    const [observe] = useScrollAnimation();
-    const cardRef = useRef(null);
-    useEffect(() => observe(cardRef.current), [observe]);
-
-    return (
-        <div ref={cardRef} className="bg-white border border-gray-200 rounded-2xl p-6 text-center shadow-sm hover:shadow-md transition-shadow">
-            <div className="mx-auto bg-indigo-100 text-indigo-600 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                {icon}
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-            <p className="text-gray-600 mt-1 mb-4">{description}</p>
-            <a 
-                href={`mailto:${email}`}
-                className="inline-block px-6 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-full hover:bg-indigo-100 transition-colors"
-            >
-                {email}
-            </a>
-        </div>
-    );
-};
-
-const ContactSection: React.FC = () => (
-    <section id="contact" className="py-20 md:py-28 bg-gray-50">
-        <div className="container mx-auto px-6">
-            <div className="text-center max-w-2xl mx-auto mb-16">
-                <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900">Contact Us</h2>
-                <p className="mt-4 text-lg text-gray-600">We'd love to hear from you. Here's how you can reach us.</p>
-            </div>
-            <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
-                <ContactCard 
-                    icon={<AtSignIcon className="w-6 h-6" />}
-                    title="General Inquiries"
-                    description="For partnerships, questions, or general feedback."
-                    email="survivalcreativeminecraftadven@gmail.com"
-                />
-                 <ContactCard 
-                    icon={<BookIcon className="w-6 h-6" />}
-                    title="Support"
-                    description="Need help with the app or have a technical question?"
-                    email="support@silodev.com"
-                />
-            </div>
-        </div>
-    </section>
-);
-
-
-const CtaSection: React.FC = () => {
-    const [observe] = useScrollAnimation();
-    const sectionRef = useRef(null);
-    const navigate = useNavigate();
-    useEffect(() => observe(sectionRef.current), [observe]);
-
-    return (
-        <section ref={sectionRef} className="bg-gray-900 text-white">
-            <div className="container mx-auto px-6 py-20 text-center">
-                 <BrainCircuitIcon className="w-12 h-12 mx-auto text-indigo-400 mb-4" />
-                <h2 className="text-3xl md:text-4xl font-extrabold">Ready to build something amazing?</h2>
-                <p className="mt-4 max-w-xl mx-auto text-lg text-gray-300">
-                    Join thousands of creators and bring your ideas to life faster than ever before.
-                </p>
-                <div className="mt-8">
-                    <button onClick={() => navigate('/login')} className="px-8 py-3.5 bg-white text-gray-900 font-semibold rounded-full hover:bg-gray-200 transition-colors shadow-lg text-lg">
-                        Sign Up for Free
-                    </button>
-                </div>
-            </div>
-        </section>
-    );
-};
-
-
 const Footer: React.FC = () => (
     <footer className="bg-white border-t border-gray-200">
-        <div className="container mx-auto px-6 py-8">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                <div className="flex items-center gap-3">
-                     <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Creative Logo" className="w-8 h-8 rounded-full" />
-                    <span className="text-lg font-bold text-gray-800">Silo Creative</span>
-                </div>
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
                 <div className="text-sm text-gray-500">
                     &copy; {new Date().getFullYear()} Silo Creative. All rights reserved.
                 </div>
                 <div className="flex items-center gap-4 text-gray-500">
-                    <Link to="/terms" className="hover:text-indigo-600">Terms</Link>
-                    <Link to="/privacy" className="hover:text-indigo-600">Privacy</Link>
+                    <Link to="/terms" className="hover:text-indigo-600">Terms of Service</Link>
+                    <Link to="/privacy" className="hover:text-indigo-600">Privacy Policy</Link>
                 </div>
                  <div className="flex space-x-6">
                     <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-500">
@@ -431,18 +60,197 @@ const Footer: React.FC = () => (
     </footer>
 );
 
+const AppPreview: React.FC = () => (
+    <div className="w-full max-w-3xl mx-auto mt-16 rounded-2xl shadow-2xl ring-1 ring-gray-900/10 bg-[#1e1e1e] font-mono text-sm overflow-hidden h-72">
+        <div className="bg-gray-700/50 px-4 py-3 flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+        </div>
+        <div className="p-6 text-gray-300 animate-pulse-slow">
+            <pre><code>
+<span className="text-pink-400">&lt;!DOCTYPE <span className="text-sky-300">html</span>&gt;</span>
+<span className="text-pink-400">&lt;html <span className="text-sky-300">lang</span>="<span className="text-yellow-300">en</span>"&gt;</span>
+  <span className="text-pink-400">&lt;head&gt;</span>
+    <span className="text-pink-400">&lt;script <span className="text-sky-300">src</span>="<span className="text-yellow-300">https://cdn.tailwindcss.com</span>"&gt;&lt;/script&gt;</span>
+  <span className="text-pink-400">&lt;/head&gt;</span>
+  <span className="text-pink-400">&lt;body <span className="text-sky-300">class</span>="<span className="text-yellow-300">bg-gray-900 text-white</span>"&gt;</span>
+    <span className="text-pink-400">&lt;h1 <span className="text-sky-300">class</span>="<span className="text-yellow-300">text-4xl</span>"&gt;</span>Hello, Silo!<span className="text-pink-400">&lt;/h1&gt;</span>
+  <span className="text-pink-400">&lt;/body&gt;</span>
+<span className="text-pink-400">&lt;/html&gt;</span>
+            </code></pre>
+        </div>
+        <style>{`
+            @keyframes pulse-slow {
+                50% { opacity: 0.8; }
+            }
+            .animate-pulse-slow {
+                animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+        `}</style>
+    </div>
+);
+
 
 const LandingPage: React.FC = () => {
+    const navigate = useNavigate();
+    const { signInAnonymously } = useAppContext();
+
+    const handleAnonymousSignIn = async () => {
+        try {
+            await signInAnonymously();
+            navigate('/home');
+        } catch(e) {
+            console.error("Anonymous sign in failed", e);
+        }
+    };
+
     return (
-        <div className="bg-white">
+        <div className="bg-white text-gray-800">
             <Header />
             <main>
-                <HeroSection />
-                <FeaturesSection />
-                <HowItWorksSection />
-                <PrivacySection />
-                <ContactSection />
-                <CtaSection />
+                {/* Hero Section */}
+                <div className="relative bg-gray-50 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-100/50 via-white to-purple-100/50 blur-3xl"></div>
+                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 text-center">
+                        <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight">
+                            Create Web Apps Instantly
+                        </h1>
+                        <p className="mt-6 max-w-2xl mx-auto text-lg text-gray-600">
+                            Describe your idea. Our AI builds it. Go from concept to code in seconds.
+                        </p>
+                        <div className="mt-10 flex flex-col justify-center items-center gap-4">
+                            <button onClick={() => navigate('/login')} className="w-full sm:w-auto px-8 py-3.5 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-lg text-lg">
+                                Get Started for Free
+                            </button>
+                             <div className="my-2 flex items-center w-full max-w-xs">
+                                <div className="flex-grow border-t border-gray-300"></div>
+                                <span className="mx-4 text-xs font-medium text-gray-500">OR</span>
+                                <div className="flex-grow border-t border-gray-300"></div>
+                            </div>
+                            <GoogleSignInButton />
+                             <button
+                                onClick={handleAnonymousSignIn}
+                                className="text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-colors"
+                            >
+                                Try without an account &rarr;
+                            </button>
+                        </div>
+                        <AppPreview />
+                    </div>
+                </div>
+
+                {/* Features Section */}
+                <section id="features" className="py-20 sm:py-28 bg-white">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="text-center">
+                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Why Choose Silo Creative?</h2>
+                            <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+                                We combine powerful AI with an intuitive interface to make app development accessible to everyone.
+                            </p>
+                        </div>
+                        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-10">
+                            <div className="text-center p-6 border border-gray-200/80 rounded-2xl">
+                                <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg mb-4">
+                                    <BrainCircuitIcon className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-800">AI-Powered Generation</h3>
+                                <p className="mt-2 text-gray-600">
+                                    Describe your app in plain English and watch our AI bring it to life, generating clean, functional code in seconds.
+                                </p>
+                            </div>
+                            <div className="text-center p-6 border border-gray-200/80 rounded-2xl">
+                                <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg mb-4">
+                                    <CodeIcon className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-800">Instant Live Previews</h3>
+                                <p className="mt-2 text-gray-600">
+                                    See your application as it's being built. No more guessing—what you see is what you get, updated in real-time.
+                                </p>
+                            </div>
+                            <div className="text-center p-6 border border-gray-200/80 rounded-2xl">
+                                <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg mb-4">
+                                    <UsersIcon className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-800">Customizable AI Agents</h3>
+                                <p className="mt-2 text-gray-600">
+                                    Tailor the AI's personality and expertise to match your project's needs, from a formal UX expert to a creative coder.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                {/* How it Works Section */}
+                <section className="py-20 sm:py-28 bg-gray-50">
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Get Started in 3 Easy Steps</h2>
+                         <p className="mt-4 text-lg text-gray-600">From idea to application in just a few clicks.</p>
+                         <div className="mt-16 space-y-12">
+                            <div className="flex flex-col md:flex-row items-center gap-8 text-left">
+                                <div className="flex-shrink-0 w-16 h-16 bg-indigo-600 text-white text-2xl font-bold rounded-full flex items-center justify-center">1</div>
+                                <div>
+                                    <h3 className="text-xl font-semibold">Describe Your Idea</h3>
+                                    <p className="mt-1 text-gray-600">Start with a simple prompt. Whether it's a 'Pomodoro timer' or a 'contact form', just tell the AI what you need.</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-col md:flex-row items-center gap-8 text-left">
+                                <div className="flex-shrink-0 w-16 h-16 bg-indigo-600 text-white text-2xl font-bold rounded-full flex items-center justify-center">2</div>
+                                <div>
+                                    <h3 className="text-xl font-semibold">Review the Plan</h3>
+                                    <p className="mt-1 text-gray-600">Our AI generates a clear plan with a title, description, and key features. Give it the green light to start building.</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-col md:flex-row items-center gap-8 text-left">
+                                <div className="flex-shrink-0 w-16 h-16 bg-indigo-600 text-white text-2xl font-bold rounded-full flex items-center justify-center">3</div>
+                                <div>
+                                    <h3 className="text-xl font-semibold">Launch & Customize</h3>
+                                    <p className="mt-1 text-gray-600">Your app is ready! Preview it live, view the code, and download the complete HTML file to host anywhere.</p>
+                                </div>
+                            </div>
+                         </div>
+                    </div>
+                </section>
+
+                {/* Contact Section */}
+                <section id="contact" className="py-20 sm:py-28 bg-white">
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Get in Touch</h2>
+                        <p className="mt-4 text-lg text-gray-600">Have questions or feedback? We'd love to hear from you.</p>
+                        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <a href="mailto:survivalcreativeminecraftadven@gmail.com" className="group p-8 border border-gray-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50 transition-all">
+                                <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg mb-4">
+                                    <AtSignIcon className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-800">General Inquiries</h3>
+                                <p className="mt-2 text-gray-600">survivalcreativeminecraftadven@gmail.com</p>
+                            </a>
+                            <a href="mailto:support@silodev.com" className="group p-8 border border-gray-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50 transition-all">
+                                <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 text-indigo-600 rounded-lg mb-4">
+                                    <AtSignIcon className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-800">Support</h3>
+                                <p className="mt-2 text-gray-600">support@silodev.com</p>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+                
+                {/* Final CTA Section */}
+                <section className="bg-indigo-700 text-white">
+                     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+                        <h2 className="text-3xl sm:text-4xl font-bold">Ready to Build Your Idea?</h2>
+                        <p className="mt-4 text-lg text-indigo-200 max-w-2xl mx-auto">
+                           Stop wondering and start building. Join Silo Creative today and turn your vision into reality.
+                        </p>
+                        <div className="mt-10">
+                            <button onClick={() => navigate('/login')} className="px-8 py-3.5 bg-white text-indigo-600 font-semibold rounded-full hover:bg-gray-100 transition-colors shadow-lg text-lg">
+                                Start Building Now
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
             </main>
             <Footer />
         </div>
