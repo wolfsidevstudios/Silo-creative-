@@ -10,6 +10,31 @@ declare global {
     }
 }
 
+// Helper function to wait for the QRCode library to load.
+const getQRCodeLibrary = (): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    // If it's already there, resolve immediately.
+    if (window.QRCode) {
+      return resolve(window.QRCode);
+    }
+
+    // Otherwise, poll for a few seconds.
+    let attempts = 0;
+    const intervalId = setInterval(() => {
+      if (window.QRCode) {
+        clearInterval(intervalId);
+        resolve(window.QRCode);
+      } else {
+        attempts++;
+        if (attempts > 20) { // Wait for max 5 seconds (20 * 250ms)
+          clearInterval(intervalId);
+          reject(new Error('QR Code library failed to load.'));
+        }
+      }
+    }, 250);
+  });
+};
+
 // Dedicated Ad component to manage its own lifecycle
 const AdUnit: React.FC = () => {
     useEffect(() => {
@@ -56,6 +81,7 @@ const PreviewPanel: React.FC = () => {
     const [isCopied, setIsCopied] = useState(false);
     const [qrCodeUrl, setQrCodeUrl] = useState('');
     const [qrError, setQrError] = useState<string | null>(null);
+    const [isQrLoading, setIsQrLoading] = useState(false);
 
     useEffect(() => {
         // Reset view mode when app mode changes to ensure a consistent start
@@ -64,26 +90,37 @@ const PreviewPanel: React.FC = () => {
 
     useEffect(() => {
         if (appMode === 'native' && generatedCode) {
+            setIsQrLoading(true);
+            setQrCodeUrl('');
+            setQrError(null);
+
             const snackUrl = `https://snack.expo.dev/?code=${encodeURIComponent(generatedCode)}`;
-            if (window.QRCode) {
-                window.QRCode.toDataURL(snackUrl, { width: 256, margin: 1 })
-                    .then((url: string) => {
-                        setQrCodeUrl(url);
-                        setQrError(null);
-                    })
-                    .catch((err: Error) => {
-                        console.error('Failed to generate QR code:', err);
-                        // This error often happens if the code is too long for a QR code.
-                        setQrError('The generated code is too long to be encoded into a QR code. Please try opening the Snack URL directly.');
-                        setQrCodeUrl('');
-                    });
-            } else {
-                console.warn('QRCode library not loaded.');
-                setQrError('QR Code library failed to load.');
-            }
+            
+            getQRCodeLibrary()
+                .then(QRCode => {
+                    return QRCode.toDataURL(snackUrl, { width: 256, margin: 1 });
+                })
+                .then((url: string) => {
+                    setQrCodeUrl(url);
+                    setQrError(null);
+                })
+                .catch((err: Error) => {
+                    console.error('QR code generation failed:', err);
+                    // Check for common error types
+                    if (err.message.includes('too long') || generatedCode.length > 2000) {
+                         setQrError('The generated code is too long for a QR code. Please try the Snack URL directly.');
+                    } else {
+                        setQrError(err.message || 'QR Code library failed to load.');
+                    }
+                    setQrCodeUrl('');
+                })
+                .finally(() => {
+                    setIsQrLoading(false);
+                });
         } else {
             setQrCodeUrl('');
             setQrError(null);
+            setIsQrLoading(false);
         }
     }, [generatedCode, appMode]);
 
@@ -188,13 +225,17 @@ const PreviewPanel: React.FC = () => {
                                 Use the <a href="https://expo.dev/go" target="_blank" rel="noopener noreferrer" className="text-indigo-600 font-medium underline">Expo Go</a> app to get a true native preview.
                             </p>
                             <div className="bg-white p-2 rounded-lg border border-gray-200 inline-block">
-                                {qrCodeUrl ? (
-                                    <img src={qrCodeUrl} alt="Expo Snack QR Code" width="160" height="160" />
-                                ) : (
-                                    <div className="w-40 h-40 bg-gray-100 flex items-center justify-center text-center text-xs text-gray-500 p-2 rounded-md">
-                                        {qrError ? <span className="text-red-600">{qrError}</span> : 'Generating QR Code...'}
-                                    </div>
-                                )}
+                                <div className="w-40 h-40 flex items-center justify-center">
+                                    {isQrLoading ? (
+                                        <span className="text-sm text-gray-500">Generating QR Code...</span>
+                                    ) : qrCodeUrl ? (
+                                        <img src={qrCodeUrl} alt="Expo Snack QR Code" width="160" height="160" />
+                                    ) : (
+                                        <div className="text-center text-xs text-red-600 p-2">
+                                            {qrError}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <a href={snackDirectUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-900 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
