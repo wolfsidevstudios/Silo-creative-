@@ -28,6 +28,7 @@ interface AppContextType {
   loading: boolean;
   signOut: () => void;
   setGoogleUser: (user: User) => void;
+  signInAnonymously: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -77,7 +78,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           // If a Supabase session exists, it's the source of truth.
           const profile: User = {
             email: session.user.email || '',
-            name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User',
+            name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Guest User',
             avatarUrl: session.user.user_metadata?.avatar_url || 'https://i.ibb.co/6gKCj61/avatar-1.png',
           };
           setUser(profile);
@@ -125,6 +126,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.removeItem('authProvider');
   };
 
+  const signInAnonymously = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInAnonymously();
+    if (error) {
+        console.error("Anonymous sign-in error:", error);
+        setLoading(false); // Make sure to stop loading on error
+    }
+    // onAuthStateChange will handle success and set loading to false.
+  };
+
   const setIsStudent = (status: boolean) => {
     localStorage.setItem('isStudentUser', String(status));
     setIsStudentState(status);
@@ -158,7 +169,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         appMode, setAppMode,
         agents, addAgent,
         selectedAgentId, setSelectedAgentId: handleSetSelectedAgentId,
-        user, session, loading, signOut, setGoogleUser
+        user, session, loading, signOut, setGoogleUser,
+        signInAnonymously
     }}>
       {children}
     </AppContext.Provider>

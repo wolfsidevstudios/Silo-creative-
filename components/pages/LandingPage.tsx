@@ -10,6 +10,7 @@ import {
     AtSignIcon
 } from '../common/Icons';
 import GoogleSignInButton from '../auth/GoogleSignInButton';
+import { useAppContext } from '../../context/AppContext';
 
 // Custom hook for scroll animations
 const useScrollAnimation = () => {
@@ -90,14 +91,14 @@ const AnimatedAppPreview = () => {
     );
 
     return (
-        <div className="max-w-4xl mx-auto rounded-2xl shadow-2xl ring-1 ring-gray-900/10 bg-[#282c34] font-mono text-sm overflow-hidden h-80">
-            <div className="bg-gray-700 px-4 py-3 flex items-center gap-2">
+        <div className="max-w-4xl mx-auto rounded-2xl shadow-2xl ring-1 ring-gray-900/10 bg-[#282c34] font-mono text-sm overflow-hidden h-80 flex flex-col">
+            <div className="bg-gray-700 px-4 py-3 flex items-center gap-2 flex-shrink-0">
                 <div className="w-3 h-3 rounded-full bg-red-500"></div>
                 <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
             </div>
 
-            <div className="p-6 relative h-full">
+            <div className="p-6 relative flex-grow">
                 {!showApp ? (
                     <div className="flex gap-2 items-center">
                         <span className="text-green-400 font-bold">&gt;</span>
@@ -168,7 +169,13 @@ const HeroSection: React.FC = () => {
     const [observe] = useScrollAnimation();
     const sectionRef = useRef(null);
     const navigate = useNavigate();
+    const { signInAnonymously } = useAppContext();
     useEffect(() => observe(sectionRef.current), [observe]);
+
+    const handleAnonymousSignIn = async () => {
+        await signInAnonymously();
+        navigate('/home');
+    };
 
     return (
         <section ref={sectionRef} className="py-20 md:py-32 text-center bg-gray-50 overflow-hidden relative">
@@ -192,6 +199,12 @@ const HeroSection: React.FC = () => {
                         <div className="flex-grow border-t border-gray-300"></div>
                     </div>
                     <GoogleSignInButton />
+                    <button
+                        onClick={handleAnonymousSignIn}
+                        className="text-sm font-semibold text-gray-600 hover:text-indigo-600 transition-colors mt-2"
+                    >
+                        Try Anonymously &rarr;
+                    </button>
                 </div>
                 <div className="mt-12">
                     <AnimatedAppPreview />
