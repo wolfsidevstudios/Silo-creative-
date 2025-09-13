@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { FlashcardDisplay } from '../common/FlashcardDisplay';
@@ -6,18 +5,23 @@ import { FlashcardDisplay } from '../common/FlashcardDisplay';
 // Dedicated Ad component to manage its own lifecycle
 const AdUnit: React.FC = () => {
     useEffect(() => {
-        try {
-            // This is the command to signal to AdSense to render an ad in this slot.
-            // @ts-ignore
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
-        } catch (e) {
-            console.error("AdSense error:", e);
-        }
-    }, []); // Empty dependency array ensures this runs only once when the component mounts
+        // A small delay ensures the container has its dimensions calculated before the ad is requested.
+        const timer = setTimeout(() => {
+            try {
+                // This is the command to signal to AdSense to render an ad in this slot.
+                // @ts-ignore
+                (window.adsbygoogle = window.adsbygoogle || []).push({});
+            } catch (e) {
+                console.error("AdSense error:", e);
+            }
+        }, 50);
+
+        return () => clearTimeout(timer); // Cleanup on unmount
+    }, []);
 
     return (
         <ins className="adsbygoogle"
-             style={{ display: 'block' }}
+             style={{ display: 'block', width: '100%', minHeight: '250px' }}
              data-ad-client="ca-pub-7029279570287128"
              data-ad-slot="9123765567"
              data-ad-format="auto"
@@ -39,7 +43,7 @@ const PreviewPanel: React.FC = () => {
                             The preview will appear here. In the meantime, here's a word from our sponsors.
                          </p>
                     </div>
-                    <div className="w-full max-w-lg h-auto min-h-[250px] bg-white border border-dashed border-gray-300 rounded-lg flex items-center justify-center p-2">
+                    <div className="w-full max-w-lg h-auto min-h-[250px] bg-white border border-dashed border-gray-300 rounded-lg p-2">
                         <AdUnit />
                     </div>
                 </div>
