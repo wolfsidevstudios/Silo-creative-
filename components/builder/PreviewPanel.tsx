@@ -3,11 +3,11 @@ import { useAppContext } from '../../context/AppContext';
 import { FlashcardDisplay } from '../builder/FlashcardDisplay';
 import { ClipboardIcon, CheckIcon } from '../common/Icons';
 
-// Add QRCode and StackBlitzSDK to window interface to avoid TypeScript errors
+// Add QRCode and Sucrase to window interface to avoid TypeScript errors
 declare global {
     interface Window {
         QRCode: any;
-        StackBlitzSDK: any;
+        sucrase: any;
     }
 }
 
@@ -28,18 +28,18 @@ const getQRCodeLibrary = (): Promise<any> => {
   });
 };
 
-// Helper function to wait for the StackBlitz SDK to load.
-const getStackBlitzSDK = (): Promise<any> => {
+// Helper function to wait for the Sucrase library to load.
+const getSucrase = (): Promise<any> => {
   return new Promise((resolve, reject) => {
-    if (window.StackBlitzSDK) return resolve(window.StackBlitzSDK);
+    if (window.sucrase) return resolve(window.sucrase);
     let attempts = 0;
     const intervalId = setInterval(() => {
-      if (window.StackBlitzSDK) {
+      if (window.sucrase) {
         clearInterval(intervalId);
-        resolve(window.StackBlitzSDK);
+        resolve(window.sucrase);
       } else if (attempts++ > 20) { // Try for ~5 seconds
         clearInterval(intervalId);
-        reject(new Error('StackBlitz SDK failed to load.'));
+        reject(new Error('Sucrase preview builder failed to load.'));
       }
     }, 250);
   });
@@ -89,51 +89,101 @@ const PreviewPanel: React.FC = () => {
     const [qrCodeUrl, setQrCodeUrl] = useState('');
     const [qrError, setQrError] = useState<string | null>(null);
     const [isQrLoading, setIsQrLoading] = useState(false);
-    const stackblitzRef = useRef<HTMLDivElement>(null);
     const [selectedFile, setSelectedFile] = useState('src/App.tsx');
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [isPreviewBuilding, setIsPreviewBuilding] = useState(false);
+    const [previewError, setPreviewError] = useState<string | null>(null);
+    const blobUrlsRef = useRef<string[]>([]);
+
+    // Cleanup blob URLs on unmount or when new ones are created
+    useEffect(() => {
+      return () => {
+        blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+        blobUrlsRef.current = [];
+      };
+    }, []);
 
     useEffect(() => {
         setViewMode('app');
     }, [appMode]);
-
+    
+    // In-browser build process for React web apps
     useEffect(() => {
-        if (appMode === 'react_web' && generatedFileTree && viewMode === 'app' && stackblitzRef.current) {
-            // Clear previous content and show loading message
-            if (stackblitzRef.current) {
-                stackblitzRef.current.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500">Loading StackBlitz VM...</div>';
-            }
+        if (appMode === 'react_web' && generatedFileTree && viewMode === 'app') {
+            const buildPreview = async () => {
+                setIsPreviewBuilding(true);
+                setPreviewError(null);
+                setPreviewUrl(null);
+                
+                blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+                blobUrlsRef.current = [];
 
-            getStackBlitzSDK().then(sdk => {
-                if (stackblitzRef.current) { // Check ref again inside promise
-                    sdk.embedProject(
-                        stackblitzRef.current,
-                        {
-                            title: 'Silo Generated App',
-                            description: prompt,
-                            template: 'node',
-                            files: generatedFileTree,
-                            dependencies: {
-                                "react": "latest",
-                                "react-dom": "latest",
-                            }
-                        },
-                        {
-                            openFile: 'src/App.tsx',
-                            view: 'preview',
-                            height: '100%',
-                            hideExplorer: false,
-                            terminalHeight: 50,
+                try {
+                    const sucrase = await getSucrase();
+                    const fileUrlMap = new Map<string, string>();
+                    const newBlobUrls: string[] = [];
+
+                    for (const path in generatedFileTree) {
+                        const content = generatedFileTree[path];
+                        let blob: Blob;
+
+                        if (path.endsWith('.tsx') || path.endsWith('.ts')) {
+                            const transformed = sucrase.transform(content, {
+                                transforms: ['typescript', 'jsx'],
+                                production: true,
+                            }).code;
+                            blob = new Blob([transformed], { type: 'application/javascript' });
+                        } else {
+                            const mimeType = path.endsWith('.css') ? 'text/css' :
+                                             path.endsWith('.js') ? 'application/javascript' :
+                                             'text/plain';
+                            blob = new Blob([content], { type: mimeType });
                         }
-                    );
+                        
+                        const url = URL.createObjectURL(blob);
+                        fileUrlMap.set(`/${path}`, url);
+                        newBlobUrls.push(url);
+                    }
+                    blobUrlsRef.current = newBlobUrls;
+
+                    const importMap = { imports: {} as Record<string, string> };
+                    const pkgJson = generatedFileTree['package.json'];
+                    if (pkgJson) {
+                        const pkg = JSON.parse(pkgJson);
+                        const dependencies = { ...pkg.dependencies, ...pkg.devDependencies };
+                        for (const dep in dependencies) {
+                           importMap.imports[dep] = `https://esm.sh/${dep}@${dependencies[dep]}`;
+                           importMap.imports[`${dep}/`] = `https://esm.sh/${dep}@${dependencies[dep]}/`;
+                        }
+                    }
+
+                    let htmlContent = generatedFileTree['index.html'];
+                    if (!htmlContent) throw new Error('index.html not found in the project.');
+
+                    htmlContent = htmlContent.replace(/(src|href)="(\/[^"]+)"/g, (match, attr, path) => {
+                        return fileUrlMap.has(path) ? `${attr}="${fileUrlMap.get(path)}"` : match;
+                    });
+
+                    const importMapScript = `<script type="importmap">${JSON.stringify(importMap)}</script>`;
+                    htmlContent = htmlContent.replace('</head>', `${importMapScript}</head>`);
+                    
+                    const finalHtmlBlob = new Blob([htmlContent], { type: 'text/html' });
+                    const finalUrl = URL.createObjectURL(finalHtmlBlob);
+                    blobUrlsRef.current.push(finalUrl);
+
+                    setPreviewUrl(finalUrl);
+
+                } catch (error: any) {
+                    console.error("Failed to build preview:", error);
+                    setPreviewError(error.message || "An unknown error occurred while building the preview.");
+                } finally {
+                    setIsPreviewBuilding(false);
                 }
-            }).catch((error: Error) => {
-                console.error(error);
-                if (stackblitzRef.current) {
-                    stackblitzRef.current.innerHTML = `<div class="flex items-center justify-center h-full text-red-500 p-4 text-center">${error.message}. Please try refreshing the page.</div>`;
-                }
-            });
+            };
+
+            buildPreview();
         }
-    }, [generatedFileTree, viewMode, appMode, prompt]);
+    }, [generatedFileTree, viewMode, appMode]);
 
     useEffect(() => {
         if (appMode === 'native' && generatedCode) {
@@ -175,7 +225,16 @@ const PreviewPanel: React.FC = () => {
     const renderReactWebMode = () => {
         if (!generatedFileTree) return <AdPlaceholder title="Your React app is being planned..." />;
         if (viewMode === 'app') {
-            return <div ref={stackblitzRef} className="w-full h-full bg-gray-200"></div>;
+            if (isPreviewBuilding) {
+                return <div className="flex items-center justify-center h-full text-gray-500">Building preview...</div>;
+            }
+            if (previewError) {
+                return <div className="flex items-center justify-center h-full text-red-500 p-4 text-center">{previewError}</div>;
+            }
+            if (previewUrl) {
+                return <iframe src={previewUrl} title="React App Preview" className="w-full h-full border-0" sandbox="allow-scripts allow-forms allow-same-origin" />;
+            }
+            return <div className="flex items-center justify-center h-full text-gray-500">Preparing preview environment...</div>;
         }
         return <FileExplorerViewer fileTree={generatedFileTree} selectedFile={selectedFile} setSelectedFile={setSelectedFile} onCopy={handleCopy} isCopied={isCopied} />;
     };
