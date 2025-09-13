@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { generateAppPlan, generateAppCode, generateFlashcards, generateFormPlan, generateFormCode, refineAppCode } from '../../services/geminiService';
+import { generateAppPlan, generateAppCode, generateFlashcards, generateFormPlan, generateFormCode, refineAppCode, generateNativeAppCode, refineNativeAppCode } from '../../services/geminiService';
 import { saveApp, saveFlashcards } from '../../services/storageService';
 import type { Message, AppPlan, FormPlan } from '../../types';
 
@@ -134,7 +134,7 @@ const ChatPanel: React.FC = () => {
             .catch(error => handleErrors(error, 'flashcards'))
             .finally(() => setIsLoading(false));
 
-      } else if (appMode === 'build') {
+      } else if (appMode === 'build' || appMode === 'native') {
         generateAppPlan(prompt, agentInstruction)
           .then(plan => {
               setCurrentPlan(plan);
@@ -224,6 +224,32 @@ const ChatPanel: React.FC = () => {
           endBuildProcess();
       }
   };
+  
+  const handleGenerateNativeCode = async (plan: AppPlan) => {
+      if (isCodeGenerated) return;
+      startBuildProcess([
+          "Drafting native components...",
+          ...plan.features.map(feature => `Implementing: ${feature}`),
+          "Writing stylesheets...",
+          "Finalizing the Expo app..."
+      ]);
+      
+      try {
+          const agentInstruction = selectedAgent?.systemInstruction;
+          const code = await generateNativeAppCode(plan, agentInstruction);
+          setGeneratedCode(code);
+          saveApp(plan.title, code);
+          setIsCodeGenerated(true);
+          const successMessage: Message = { role: 'model', content: "I've generated the native app for you. Scan the QR code in the preview panel with Expo Go to run it!" };
+          setMessages(prev => [...prev, successMessage]);
+      } catch (error) {
+          console.error("Error generating native code:", error);
+          const errorMessage: Message = { role: 'model', content: "Sorry, there was an error generating the native app code. Please try again." };
+          setMessages(prev => [...prev, errorMessage]);
+      } finally {
+          endBuildProcess();
+      }
+  };
 
   const handleGenerateForm = async (plan: FormPlan) => {
     if (isCodeGenerated) return;
@@ -271,7 +297,10 @@ const ChatPanel: React.FC = () => {
 
         try {
             const agentInstruction = selectedAgent?.systemInstruction;
-            const newCode = await refineAppCode(generatedCode, currentInput, agentInstruction);
+            const newCode = appMode === 'native'
+                ? await refineNativeAppCode(generatedCode, currentInput, agentInstruction)
+                : await refineAppCode(generatedCode, currentInput, agentInstruction);
+
             setGeneratedCode(newCode);
             // Save the new version to history
             const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
@@ -308,7 +337,14 @@ const ChatPanel: React.FC = () => {
                 {msg.planType === 'app' ? (
                     <PlanDisplay 
                         plan={JSON.parse(msg.content)} 
-                        onGenerate={() => handleGenerateCode(JSON.parse(msg.content))}
+                        onGenerate={() => {
+                            const plan = JSON.parse(msg.content);
+                            if (appMode === 'native') {
+                                handleGenerateNativeCode(plan);
+                            } else {
+                                handleGenerateCode(plan);
+                            }
+                        }}
                         isGenerated={isCodeGenerated}
                     />
                 ) : (

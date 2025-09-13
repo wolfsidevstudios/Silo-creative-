@@ -250,6 +250,79 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
   }
 };
 
+export const generateNativeAppCode = async (plan: AppPlan, agentSystemInstruction?: string): Promise<string> => {
+  console.log(`Generating native code for app: "${plan.title}"`);
+
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+
+  const featuresString = plan.features.map(f => `- ${f}`).join('\n');
+  const taskPrompt = `
+    You are an expert React Native developer specializing in creating mobile applications with Expo.
+    Based on the following plan, generate a single, complete, and runnable App.js file.
+
+    **Application Plan:**
+    - **Title:** ${plan.title}
+    - **Description:** ${plan.description}
+    - **Features:**
+    ${featuresString}
+
+    **CRITICAL REQUIREMENTS:**
+    1.  **Single File:** The entire application must be contained within a single file.
+    2.  **React Native & Expo:** Use React for the application logic and UI. Import components ONLY from 'react-native'. Do not import from 'react-native-web' or any other web-specific library.
+    3.  **Standard Components:** Use standard React Native components like \`View\`, \`Text\`, \`Button\`, \`StyleSheet\`, \`TextInput\`, \`Image\`, etc.
+    4.  **Styling:** Use \`StyleSheet.create()\` for all styles. Do not use inline styles.
+    5.  **Functional Components:** The root component must be a functional component named \`App\`. Use React hooks like \`useState\` and \`useEffect\`.
+    6.  **No Explanations:** The output must ONLY be the raw JavaScript/JSX code. Do not include any markdown (\`\`\`javascript\`), comments, or explanations outside of the code.
+    7.  **Functionality:** The final app must be fully functional and implement all features from the plan. It should be visually appealing and well-structured.
+    8.  **Default Export:** The file must end with \`export default App;\`.
+    `;
+
+    const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+
+  try {
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: taskPrompt,
+        config: config
+    });
+    return response.text;
+  } catch (error) {
+      console.error("Error generating native code with Gemini:", error);
+      return `
+        import React from 'react';
+        import { View, Text, StyleSheet } from 'react-native';
+
+        export default function App() {
+          return (
+            <View style={styles.container}>
+              <Text style={styles.title}>Error</Text>
+              <Text style={styles.text}>Failed to generate the app code.</Text>
+            </View>
+          );
+        }
+
+        const styles = StyleSheet.create({
+          container: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: '#fee2e2',
+            padding: 20,
+          },
+          title: {
+            fontSize: 24,
+            fontWeight: 'bold',
+            color: '#b91c1c',
+            marginBottom: 10,
+          },
+          text: {
+            color: '#dc2626',
+          }
+        });
+      `;
+  }
+};
+
 export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: string): Promise<string> => {
   console.log(`Generating code for form: "${plan.title}"`);
   const ai = new GoogleGenAI({ apiKey: getApiKey() });
@@ -335,6 +408,45 @@ export const refineAppCode = async (existingCode: string, prompt: string, agentS
   } catch (error) {
       console.error("Error refining code with Gemini:", error);
       // On error, we throw so the UI can inform the user but keep the old code.
+      throw new Error("Failed to refine the application code.");
+  }
+};
+
+export const refineNativeAppCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<string> => {
+  console.log(`Refining native code with prompt: "${prompt}"`);
+
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+
+  const taskPrompt = `
+    You are an expert React Native developer modifying an existing single-file mobile application built for Expo.
+    You will be given the application's complete current code and a user's request for a change.
+
+    **User's Change Request:**
+    "${prompt}"
+
+    **Existing Application Code:**
+    \`\`\`javascript
+    ${existingCode}
+    \`\`\`
+
+    **CRITICAL INSTRUCTIONS:**
+    1.  **Apply the Change:** Your primary goal is to accurately implement the user's requested change into the provided code.
+    2.  **Return the Full Code:** You MUST return the entire, complete, and updated file. Do NOT provide only the changed snippets, explanations, or markdown formatting. Your response should be only the raw code.
+    3.  **Maintain Structure:** The application must remain a single file. Continue to use standard React Native components and \`StyleSheet\` for styling.
+    4.  **Preserve Functionality:** Ensure that the existing functionality of the application remains intact unless the user's request specifically asks to change or remove it.
+    `;
+    
+    const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+
+  try {
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: taskPrompt,
+        config: config
+    });
+    return response.text;
+  } catch (error) {
+      console.error("Error refining native code with Gemini:", error);
       throw new Error("Failed to refine the application code.");
   }
 };

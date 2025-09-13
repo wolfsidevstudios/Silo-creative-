@@ -1,5 +1,5 @@
 
-export type AppMode = 'build' | 'study' | 'form';
+export type AppMode = 'build' | 'study' | 'form' | 'native';
 
 export interface Message {
   role: 'user' | 'model';
@@ -49,7 +49,7 @@ export interface StoredApp {
 }
 
 export interface StoredFlashcards {
-    id: string;
+    id:string;
     topic: string;
     cards: Flashcard[];
     timestamp: number;
