@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppPlan, Flashcard, FormPlan } from '../types';
 import { getApiKey } from './apiKeyService';
@@ -188,8 +189,8 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
 
   const featuresString = plan.features.map(f => `- ${f}`).join('\n');
   const taskPrompt = `
-    You are an expert web developer tasked with creating a single-file web application.
-    Based on the following plan, generate a complete HTML file.
+    You are an expert web developer specializing in creating modern, single-file web applications using React and Tailwind CSS.
+    Based on the following plan, generate a complete, single HTML file.
 
     **Application Plan:**
     - **Title:** ${plan.title}
@@ -197,13 +198,24 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
     - **Features:**
     ${featuresString}
 
-    **Requirements:**
-    1.  The output must be a single, complete HTML file.
-    2.  Use Tailwind CSS for styling. Include the Tailwind CDN script in the <head>: <script src="https://cdn.tailwindcss.com"></script>.
-    3.  All JavaScript logic must be included within <script> tags inside the HTML file.
-    4.  The code should be well-formatted and easy to read.
-    5.  Do not include any explanations, comments, or markdown formatting like \`\`\`html outside of the HTML code itself. The output should be only the raw HTML code.
-    6.  Ensure the application is functional and implements all the features described in the plan.
+    **CRITICAL REQUIREMENTS:**
+    1.  **Single HTML File:** The entire application must be contained within a single HTML file.
+    2.  **React with HTM:** Use React for the application logic and UI. Since there's no build step, use the "HTM" library to enable JSX-like syntax.
+    3.  **CDN Scripts:** Include these exact scripts in the <head> in this order:
+        - React: <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+        - ReactDOM: <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+        - HTM: <script src="https://unpkg.com/htm@3/dist/htm.umd.js"></script>
+        - Tailwind CSS: <script src="https://cdn.tailwindcss.com"></script>
+    4.  **Body Structure:** The <body> must contain a single root element: <div id="root"></div>.
+    5.  **JavaScript Logic:** All JavaScript code must be within a SINGLE <script type="module"> tag at the end of the <body>.
+    6.  **Code Structure within Script:**
+        - First, initialize htm: const html = htm.bind(React.createElement);
+        - Define your main React component (e.g., function App() { ... }).
+        - Use React hooks like useState and useEffect for state and side effects.
+        - Use the 'html' tagged template literal for rendering, like so: return html\`<div className="bg-blue-500">Hello \${name}</div>\`;
+        - Finally, render your main component to the root div: ReactDOM.render(html\`<\${App} />\`, document.getElementById('root'));
+    7.  **No Explanations:** The output must ONLY be the raw HTML code. Do not include any markdown, comments, or explanations outside of the code.
+    8.  **Functionality:** The final app must be fully functional and implement all features from the plan. It should be visually appealing and well-styled with Tailwind CSS.
     `;
     
     const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
@@ -245,7 +257,7 @@ export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: 
   const fieldsString = plan.fields.map(f => `- ${f.name} (type: ${f.type}, required: ${f.required})`).join('\n');
 
   const taskPrompt = `
-    You are an expert web developer who creates beautiful, accessible, and functional web forms.
+    You are an expert web developer who creates beautiful, accessible, and highly functional web forms with a modern aesthetic.
     Based on the following plan, generate a complete, single-file HTML document.
 
     **Form Plan:**
@@ -255,13 +267,15 @@ export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: 
     ${fieldsString}
 
     **CRITICAL REQUIREMENTS:**
-    1.  The output must be a single, complete HTML file.
-    2.  Use Tailwind CSS for styling. Include the CDN script: <script src="https://cdn.tailwindcss.com"></script>.
-    3.  The form MUST be compatible with Netlify Forms. This means the <form> tag must include the 'data-netlify="true"' attribute.
-    4.  Also include a honeypot field for spam prevention: <p class="hidden"><label>Don’t fill this out if you’re human: <input name="bot-field" /></label></p>.
-    5.  Implement client-side validation using JavaScript within a <script> tag. The form should not submit if required fields are empty. Show simple error messages.
-    6.  The form should be aesthetically pleasing, with good layout, spacing, and modern input styling.
-    7.  Do NOT include any explanations, comments, or markdown like \`\`\`html. The output must be ONLY the raw HTML code.
+    1.  **Single HTML File:** The output must be a single, complete HTML file.
+    2.  **Tailwind CSS:** Use Tailwind CSS for styling. Include the CDN script: <script src="https://cdn.tailwindcss.com"></script>.
+    3.  **Netlify Forms Compatibility:** The <form> tag MUST include the 'data-netlify="true"' attribute. Also include a honeypot field for spam prevention: <p class="hidden"><label>Don’t fill this out if you’re human: <input name="bot-field" /></label></p>.
+    4.  **Advanced Client-Side Validation:** Implement robust client-side validation using vanilla JavaScript within a <script> tag.
+        - The form should not submit if required fields are empty or if email fields are invalid.
+        - Display clear, user-friendly error messages next to the invalid fields, not using generic alerts. Style these error messages (e.g., red text).
+        - Add and remove error states/styles dynamically as the user interacts with the form.
+    5.  **Aesthetics & UX:** The form should be visually appealing, with excellent layout, spacing, and modern input styling. Use transitions for a smoother user experience.
+    6.  **No Explanations:** The output must be ONLY the raw HTML code. Do not include any markdown like \`\`\`html.
     `;
     
   const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
