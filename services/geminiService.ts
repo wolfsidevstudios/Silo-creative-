@@ -335,13 +335,6 @@ ${plan.files.map(f => `    - \`${f.name}\`: ${f.description}`).join('\n')}
     5.  **JSON Output:** Your entire response MUST be a single JSON object. The keys must be the full file paths (e.g., "src/App.tsx"), and the values must be the complete code for that file as a string. Do not include any other text, explanations, or markdown.
     `;
     
-  // Define a generic schema that accepts any string key
-  const schema = {
-    type: Type.OBJECT,
-    properties: {},
-    additionalProperties: { type: Type.STRING },
-  };
-
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -349,11 +342,11 @@ ${plan.files.map(f => `    - \`${f.name}\`: ${f.description}`).join('\n')}
       config: {
         systemInstruction: agentSystemInstruction,
         responseMimeType: "application/json",
-        responseSchema: schema,
       },
     });
     const codeJson = response.text.trim();
-    return JSON.parse(codeJson);
+    const sanitizedJson = codeJson.replace(/^```json\n/, '').replace(/\n```$/, '');
+    return JSON.parse(sanitizedJson);
   } catch (error) {
     console.error("Error generating React app code:", error);
     throw new Error("Failed to generate React app code.");
@@ -546,12 +539,6 @@ export const refineReactAppCode = async (fileTree: { [fileName: string]: string 
     4.  **Preserve Functionality:** Ensure that existing functionality remains intact unless the user's request specifically asks to change it.
   `;
   
-  const schema = {
-    type: Type.OBJECT,
-    properties: {},
-    additionalProperties: { type: Type.STRING },
-  };
-
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -559,11 +546,11 @@ export const refineReactAppCode = async (fileTree: { [fileName: string]: string 
       config: {
         systemInstruction: agentSystemInstruction,
         responseMimeType: "application/json",
-        responseSchema: schema,
       },
     });
     const codeJson = response.text.trim();
-    return JSON.parse(codeJson);
+    const sanitizedJson = codeJson.replace(/^```json\n/, '').replace(/\n```$/, '');
+    return JSON.parse(sanitizedJson);
   } catch (error) {
     console.error("Error refining React app code:", error);
     throw new Error("Failed to refine the React application code.");
