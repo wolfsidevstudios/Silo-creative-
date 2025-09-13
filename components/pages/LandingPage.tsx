@@ -212,20 +212,16 @@ const LandingPage: React.FC = () => {
 
                  {/* Who We Are Section */}
                 <section id="about" className="py-20 sm:py-28 bg-white">
-                    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center gap-12">
-                        <div className="w-full md:w-1/2">
-                            <img 
-                                src="https://i.ibb.co/kX01Qj5/team-photo.png" 
-                                alt="Silo Creative Team" 
-                                className="rounded-2xl shadow-xl w-full h-auto"
-                            />
-                        </div>
-                        <div className="w-full md:w-1/2 text-center md:text-left">
-                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Who We Are</h2>
-                            <p className="mt-4 text-lg text-gray-600">
-                                At Silo Creative, we believe that a great idea shouldn't be limited by coding skills. We are a passionate team of developers and designers dedicated to making technology accessible to everyone. Our mission is to empower creators, entrepreneurs, and students to bring their digital ideas to life, instantly.
-                            </p>
-                        </div>
+                    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                        <img 
+                            src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
+                            alt="Silo Creative Logo" 
+                            className="w-24 h-24 rounded-full mx-auto mb-6"
+                        />
+                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Who We Are</h2>
+                        <p className="mt-4 text-lg text-gray-600">
+                            At Silo Creative, we believe that a great idea shouldn't be limited by coding skills. We are a passionate team of developers and designers dedicated to making technology accessible to everyone. Our mission is to empower creators, entrepreneurs, and students to bring their digital ideas to life, instantly.
+                        </p>
                     </div>
                 </section>
 
@@ -285,7 +281,7 @@ const LandingPage: React.FC = () => {
                                     "As a student, Silo is a game-changer. I can instantly create study tools and small apps for my projects. The unlimited student plan is amazing!"
                                 </p>
                                 <div className="mt-6 flex items-center gap-4">
-                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/VMyPzZC/avatar-2.png" alt="User avatar" />
+                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Creative Logo" />
                                     <div>
                                         <div className="font-semibold text-gray-800">Sarah L.</div>
                                         <div className="text-gray-500 text-sm">Computer Science Student</div>
@@ -297,7 +293,7 @@ const LandingPage: React.FC = () => {
                                     "This tool has supercharged my prototyping workflow. I can go from a client's idea to a working demo in minutes. It's an indispensable part of my toolkit now."
                                 </p>
                                 <div className="mt-6 flex items-center gap-4">
-                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/yQjLgP4/avatar-5.png" alt="User avatar" />
+                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Creative Logo" />
                                     <div>
                                         <div className="font-semibold text-gray-800">Mike R.</div>
                                         <div className="text-gray-500 text-sm">Freelance Developer</div>
@@ -309,7 +305,7 @@ const LandingPage: React.FC = () => {
                                     "I don't code, but I have a lot of ideas. Silo Creative bridges that gap perfectly. I can finally build and test my concepts without hiring a developer."
                                 </p>
                                 <div className="mt-6 flex items-center gap-4">
-                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/Ld1sWv1/avatar-3.png" alt="User avatar" />
+                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Creative Logo" />
                                     <div>
                                         <div className="font-semibold text-gray-800">Jessica P.</div>
                                         <div className="text-gray-500 text-sm">Product Manager</div>
