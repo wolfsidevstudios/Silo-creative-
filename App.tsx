@@ -11,6 +11,14 @@ import LoginPage from './components/pages/LoginPage';
 import LandingPage from './components/pages/LandingPage';
 import SiloOneDrivePage from './components/pages/SiloOneDrivePage';
 
+const FullPageSpinner: React.FC = () => (
+    <div className="flex items-center justify-center h-screen w-screen bg-gray-50">
+        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-indigo-500" role="status" aria-label="Loading">
+            <span className="sr-only">Loading...</span>
+        </div>
+    </div>
+);
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAppContext();
   const navigate = useNavigate();
@@ -22,7 +30,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     }
   }, [user, loading, navigate, location]);
 
-  return !loading && user ? <>{children}</> : null; // Or a loading spinner
+  if (loading) return <FullPageSpinner />;
+
+  return user ? <>{children}</> : null;
 };
 
 const LoginPageWrapper: React.FC = () => {
@@ -35,7 +45,9 @@ const LoginPageWrapper: React.FC = () => {
         }
     }, [user, loading, navigate]);
     
-    return !loading && !user ? <LoginPage /> : null; // Or a loading spinner
+    if (loading || user) return <FullPageSpinner />;
+    
+    return <LoginPage />;
 }
 
 const AppRoutes: React.FC = () => {
