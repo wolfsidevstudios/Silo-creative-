@@ -330,13 +330,11 @@ ${plan.files.map(f => `    - \`${f.name}\`: ${f.description}`).join('\n')}
     **CRITICAL REQUIREMENTS:**
     1.  **Vite + React + TypeScript:** The project must be a standard Vite project.
     2.  **Tailwind CSS:** Ensure Tailwind is correctly set up in \`tailwind.config.js\`, \`postcss.config.js\`, and imported in \`src/index.css\`. The \`tailwind.config.js\` content array must be correctly configured (e.g., \`"./index.html", "./src/**/*.{js,ts,jsx,tsx}"\`).
-    3.  **Dependencies:** The \`package.json\` must include all necessary dependencies: \`react\`, \`react-dom\`, \`@types/react\`, \`@types/react-dom\`. Dev dependencies must include: \`vite\`, \`@vitejs/plugin-react\`, \`typescript\`, \`tailwindcss\`, \`postcss\`, \`autoprefixer\`.
+    3.  **Dependencies:** The \`package.json\` must include \`react\` and \`react-dom\` in \`dependencies\`. It must include \`@types/react\`, \`@types/react-dom\`, \`vite\`, \`@vitejs/plugin-react\`, \`typescript\`, \`tailwindcss\`, \`postcss\`, and \`autoprefixer\` in \`devDependencies\`.
     4.  **Runnable Code:** All generated code must be complete, correct, and runnable.
     5.  **JSON Output:** Your entire response MUST be a single JSON object. The keys must be the full file paths (e.g., "src/App.tsx"), and the values must be the complete code for that file as a string. Do not include any other text, explanations, or markdown.
     `;
     
-  const systemInstruction = combineInstructions(agentSystemInstruction, taskPrompt);
-
   // Define a generic schema that accepts any string key
   const schema = {
     type: Type.OBJECT,
@@ -347,9 +345,9 @@ ${plan.files.map(f => `    - \`${f.name}\`: ${f.description}`).join('\n')}
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: "Generate the code based on the plan in your system instruction.",
+      contents: taskPrompt,
       config: {
-        systemInstruction,
+        systemInstruction: agentSystemInstruction,
         responseMimeType: "application/json",
         responseSchema: schema,
       },
@@ -548,8 +546,6 @@ export const refineReactAppCode = async (fileTree: { [fileName: string]: string 
     4.  **Preserve Functionality:** Ensure that existing functionality remains intact unless the user's request specifically asks to change it.
   `;
   
-  const systemInstruction = combineInstructions(agentSystemInstruction, taskPrompt);
-
   const schema = {
     type: Type.OBJECT,
     properties: {},
@@ -559,9 +555,9 @@ export const refineReactAppCode = async (fileTree: { [fileName: string]: string 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: "Apply the requested change to the code provided in your system instructions.",
+      contents: taskPrompt,
       config: {
-        systemInstruction,
+        systemInstruction: agentSystemInstruction,
         responseMimeType: "application/json",
         responseSchema: schema,
       },
