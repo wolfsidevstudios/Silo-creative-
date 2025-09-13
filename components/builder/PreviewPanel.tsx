@@ -37,6 +37,19 @@ const AdUnit: React.FC = () => {
     );
 };
 
+const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <div className="relative mx-auto border-gray-800 bg-gray-800 border-[14px] rounded-[2.5rem] h-[630px] w-[315px] shadow-xl">
+        <div className="w-[12px] h-[12px] bg-gray-800 top-[148px] -left-[17px] absolute rounded-l-lg"></div>
+        <div className="w-[12px] h-[12px] bg-gray-800 top-[198px] -left-[17px] absolute rounded-l-lg"></div>
+        <div className="w-[12px] h-[12px] bg-gray-800 top-[248px] -left-[17px] absolute rounded-l-lg"></div>
+        <div className="h-[46px] w-[3px] bg-gray-800 absolute -left-[17px] top-[100px] rounded-l-lg"></div>
+        <div className="h-[46px] w-[3px] bg-gray-800 absolute -right-[17px] top-[142px] rounded-r-lg"></div>
+        <div className="rounded-[2rem] overflow-hidden w-full h-full bg-white">
+            {children}
+        </div>
+    </div>
+);
+
 const PreviewPanel: React.FC = () => {
     const { generatedCode, appMode, generatedFlashcards, prompt } = useAppContext();
     const [viewMode, setViewMode] = useState<'app' | 'code'>('app');
@@ -141,7 +154,7 @@ const PreviewPanel: React.FC = () => {
                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto h-12 w-12 text-gray-400"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
                         <h3 className="mt-2 text-lg font-medium text-gray-900">Native App Preview</h3>
                         <p className="mt-1 text-sm text-gray-500">
-                           Your generated native app QR code will appear here.
+                           Your generated native app will appear here.
                         </p>
                     </div>
                 </div>
@@ -149,59 +162,63 @@ const PreviewPanel: React.FC = () => {
         }
 
         if (viewMode === 'app') {
-            const snackUrl = `https://snack.expo.dev/?code=${encodeURIComponent(generatedCode)}`;
+            const snackUrl = `https://snack.expo.dev/embedded?platform=web&preview=true&theme=light&waitForData=true&code=${encodeURIComponent(generatedCode)}`;
+            const snackDirectUrl = `https://snack.expo.dev/?code=${encodeURIComponent(generatedCode)}`;
             
             return (
-                <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gray-50 text-center overflow-y-auto">
-                    <div className="w-full max-w-lg">
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">Scan to Preview</h3>
-                        <p className="text-gray-600 mb-4 max-w-sm mx-auto">
-                            Use the <a href="https://expo.dev/go" target="_blank" rel="noopener noreferrer" className="text-indigo-600 font-medium underline">Expo Go</a> app on your iOS or Android device to scan the QR code.
-                        </p>
-                        <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200 inline-block">
-                            {qrCodeUrl ? (
-                                <img src={qrCodeUrl} alt="Expo Snack QR Code" width="256" height="256" />
-                            ) : (
-                                <div className="w-64 h-64 bg-gray-100 flex items-center justify-center text-center text-sm text-gray-500 p-4 rounded-md">
-                                    {qrError ? (
-                                        <span className="text-red-600">{qrError}</span>
-                                    ) : (
-                                        'Generating QR Code...'
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        <a href={snackUrl} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-900 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                            Open in Expo Snack
-                        </a>
+                <div className="w-full h-full flex flex-col lg:flex-row items-center justify-center p-4 bg-gray-100 gap-8 overflow-y-auto">
+                    {/* Left side: Phone simulator */}
+                    <div className="flex-shrink-0">
+                        <PhoneFrame>
+                            <iframe
+                                src={snackUrl}
+                                title="Native App Preview"
+                                className="w-full h-full border-0"
+                                sandbox="allow-scripts allow-same-origin allow-popups allow-presentation"
+                            />
+                        </PhoneFrame>
                     </div>
-
-                    <div className="mt-8 border-t border-gray-200 w-full max-w-lg pt-6">
-                        <h4 className="font-bold text-lg text-gray-800">Run Locally</h4>
-                        <p className="text-gray-600 mt-1 mb-4 max-w-sm mx-auto">
-                            Follow these steps in your terminal to run the app on your own machine.
-                        </p>
-                        <div className="text-left bg-gray-200/60 p-4 rounded-lg text-sm text-gray-800 space-y-3 font-mono max-w-md mx-auto">
-                            <p>
-                                <span className="select-none text-green-600 mr-2">$</span>
-                                <span>npx create-expo-app my-app</span>
+                    
+                    {/* Right side: QR and instructions */}
+                    <div className="flex-grow max-w-md w-full space-y-6">
+                        {/* QR Code Section */}
+                        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center">
+                            <h3 className="text-lg font-bold text-gray-800 mb-1">Test on Your Device</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Use the <a href="https://expo.dev/go" target="_blank" rel="noopener noreferrer" className="text-indigo-600 font-medium underline">Expo Go</a> app to get a true native preview.
                             </p>
-                            <p>
-                                <span className="select-none text-green-600 mr-2">$</span>
-                                <span>cd my-app</span>
+                            <div className="bg-white p-2 rounded-lg border border-gray-200 inline-block">
+                                {qrCodeUrl ? (
+                                    <img src={qrCodeUrl} alt="Expo Snack QR Code" width="160" height="160" />
+                                ) : (
+                                    <div className="w-40 h-40 bg-gray-100 flex items-center justify-center text-center text-xs text-gray-500 p-2 rounded-md">
+                                        {qrError ? <span className="text-red-600">{qrError}</span> : 'Generating QR Code...'}
+                                    </div>
+                                )}
+                            </div>
+                            <a href={snackDirectUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-900 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                Open in Expo Snack
+                            </a>
+                        </div>
+                        
+                        {/* Local Run Section */}
+                        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                             <h4 className="font-bold text-lg text-gray-800">Run Locally</h4>
+                            <p className="text-sm text-gray-600 mt-1 mb-4">
+                                Follow these steps in your terminal to run the app on your own machine.
                             </p>
-                            <p className="text-gray-500 italic pl-5">
-                                // Copy the code from the 'Code' tab into App.js
-                            </p>
-                            <p>
-                                <span className="select-none text-green-600 mr-2">$</span>
-                                <span>npm run expo</span>
-                            </p>
+                            <div className="text-left bg-gray-100 p-4 rounded-lg text-xs text-gray-800 space-y-2 font-mono">
+                                <p><span className="select-none text-green-600 mr-2">$</span>npx create-expo-app my-app</p>
+                                <p><span className="select-none text-green-600 mr-2">$</span>cd my-app</p>
+                                <p className="text-gray-500 italic pl-5">// Copy code into App.js</p>
+                                <p><span className="select-none text-green-600 mr-2">$</span>npm run expo</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             );
+
         } else { // 'code' view
             return (
                 <div className="relative w-full h-full bg-gray-900 text-white font-mono text-sm overflow-auto">
