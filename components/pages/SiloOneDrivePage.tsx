@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../common/Sidebar';
@@ -6,12 +7,6 @@ import Banner from '../common/Banner';
 import { getRecentApps, getRecentFlashcards } from '../../services/storageService';
 import { StoredApp, StoredFlashcards } from '../../types';
 import { useAppContext } from '../../context/AppContext';
-
-declare global {
-    interface Window {
-        JSZip: any;
-    }
-}
 
 const TimeAgo: React.FC<{ timestamp: number }> = ({ timestamp }) => {
     const [timeAgo, setTimeAgo] = useState('');
@@ -45,7 +40,7 @@ const SiloOneDrivePage: React.FC = () => {
     const [recentApps, setRecentApps] = useState<StoredApp[]>([]);
     const [recentFlashcards, setRecentFlashcards] = useState<StoredFlashcards[]>([]);
     const navigate = useNavigate();
-    const { setGeneratedFlashcards, setPrompt, setAppMode, setGeneratedCode, setGeneratedFileTree } = useAppContext();
+    const { setGeneratedFlashcards, setPrompt, setAppMode, setGeneratedCode } = useAppContext();
 
     useEffect(() => {
         setRecentApps(getRecentApps());
@@ -54,35 +49,16 @@ const SiloOneDrivePage: React.FC = () => {
 
     const handleDownload = (app: StoredApp) => {
         const filename = app.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-
-        if (app.appMode === 'react_web' && typeof app.content === 'object') {
-            // Use JSZip to create and download a zip file
-            const zip = new window.JSZip();
-            Object.entries(app.content).forEach(([filePath, fileContent]) => {
-                zip.file(filePath, fileContent);
-            });
-            zip.generateAsync({ type: 'blob' }).then((blob: Blob) => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${filename}.zip`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            });
-        } else if (typeof app.content === 'string') {
-            // Handle single-file download
-            const blob = new Blob([app.content], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${filename}.html`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
+        
+        const blob = new Blob([app.content], { type: app.appMode === 'native' ? 'text/javascript' : 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filename}.${app.appMode === 'native' ? 'js' : 'html'}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     };
 
     const handleViewFlashcards = (deck: StoredFlashcards) => {
@@ -90,7 +66,6 @@ const SiloOneDrivePage: React.FC = () => {
         setPrompt(deck.topic);
         setGeneratedFlashcards(deck.cards);
         setGeneratedCode('');
-        setGeneratedFileTree(null);
         navigate('/build');
     };
 

@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { FlashcardDisplay } from '../builder/FlashcardDisplay';
-import { ClipboardIcon, CheckIcon, FolderIcon, ChevronRightIcon, FileTextIcon, ReactIcon, ViteIcon, TailwindIcon, JsonIcon, HtmlIcon, CssIcon, TsIcon } from '../common/Icons';
+import { ClipboardIcon, CheckIcon } from '../common/Icons';
 
-// Add QRCode and Sucrase to window interface to avoid TypeScript errors
+// Add QRCode to window interface to avoid TypeScript errors
 declare global {
     interface Window {
         QRCode: any;
-        sucrase: any;
     }
 }
 
@@ -23,23 +22,6 @@ const getQRCodeLibrary = (): Promise<any> => {
       } else if (attempts++ > 20) {
         clearInterval(intervalId);
         reject(new Error('QR Code library failed to load.'));
-      }
-    }, 250);
-  });
-};
-
-// Helper function to wait for the Sucrase library to load.
-const getSucrase = (): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    if (window.sucrase) return resolve(window.sucrase);
-    let attempts = 0;
-    const intervalId = setInterval(() => {
-      if (window.sucrase) {
-        clearInterval(intervalId);
-        resolve(window.sucrase);
-      } else if (attempts++ > 40) { // Try for ~10 seconds
-        clearInterval(intervalId);
-        reject(new Error('Sucrase preview builder failed to load. Please check your network connection and try refreshing the page.'));
       }
     }, 250);
   });
@@ -83,108 +65,17 @@ const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 const PreviewPanel: React.FC = () => {
-    const { generatedCode, appMode, generatedFlashcards, prompt, generatedFileTree } = useAppContext();
+    const { generatedCode, appMode, generatedFlashcards, prompt } = useAppContext();
     const [viewMode, setViewMode] = useState<'app' | 'code'>('app');
     const [isCopied, setIsCopied] = useState(false);
     const [qrCodeUrl, setQrCodeUrl] = useState('');
     const [qrError, setQrError] = useState<string | null>(null);
     const [isQrLoading, setIsQrLoading] = useState(false);
-    const [selectedFile, setSelectedFile] = useState('src/App.tsx');
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [isPreviewBuilding, setIsPreviewBuilding] = useState(false);
-    const [previewError, setPreviewError] = useState<string | null>(null);
-    const blobUrlsRef = useRef<string[]>([]);
-
-    // Cleanup blob URLs on unmount or when new ones are created
-    useEffect(() => {
-      return () => {
-        blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
-        blobUrlsRef.current = [];
-      };
-    }, []);
 
     useEffect(() => {
         setViewMode('app');
     }, [appMode]);
     
-    // In-browser build process for React web apps
-    useEffect(() => {
-        if (appMode === 'react_web' && generatedFileTree && viewMode === 'app') {
-            const buildPreview = async () => {
-                setIsPreviewBuilding(true);
-                setPreviewError(null);
-                setPreviewUrl(null);
-                
-                blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
-                blobUrlsRef.current = [];
-
-                try {
-                    const sucrase = await getSucrase();
-                    const fileUrlMap = new Map<string, string>();
-                    const newBlobUrls: string[] = [];
-
-                    for (const path in generatedFileTree) {
-                        const content = generatedFileTree[path];
-                        let blob: Blob;
-
-                        if (path.endsWith('.tsx') || path.endsWith('.ts')) {
-                            const transformed = sucrase.transform(content, {
-                                transforms: ['typescript', 'jsx'],
-                                production: true,
-                            }).code;
-                            blob = new Blob([transformed], { type: 'application/javascript' });
-                        } else {
-                            const mimeType = path.endsWith('.css') ? 'text/css' :
-                                             path.endsWith('.js') ? 'application/javascript' :
-                                             'text/plain';
-                            blob = new Blob([content], { type: mimeType });
-                        }
-                        
-                        const url = URL.createObjectURL(blob);
-                        fileUrlMap.set(`/${path}`, url);
-                        newBlobUrls.push(url);
-                    }
-                    blobUrlsRef.current = newBlobUrls;
-
-                    const importMap = { imports: {} as Record<string, string> };
-                    const pkgJson = generatedFileTree['package.json'];
-                    if (pkgJson) {
-                        const pkg = JSON.parse(pkgJson);
-                        const dependencies = { ...pkg.dependencies, ...pkg.devDependencies };
-                        for (const dep in dependencies) {
-                           importMap.imports[dep] = `https://esm.sh/${dep}@${dependencies[dep]}`;
-                           importMap.imports[`${dep}/`] = `https://esm.sh/${dep}@${dependencies[dep]}/`;
-                        }
-                    }
-
-                    let htmlContent = generatedFileTree['index.html'];
-                    if (!htmlContent) throw new Error('index.html not found in the project.');
-
-                    htmlContent = htmlContent.replace(/(src|href)="(\/[^"]+)"/g, (match, attr, path) => {
-                        return fileUrlMap.has(path) ? `${attr}="${fileUrlMap.get(path)}"` : match;
-                    });
-
-                    const importMapScript = `<script type="importmap">${JSON.stringify(importMap)}</script>`;
-                    htmlContent = htmlContent.replace('</head>', `${importMapScript}</head>`);
-                    
-                    const finalHtmlBlob = new Blob([htmlContent], { type: 'text/html' });
-                    const finalUrl = URL.createObjectURL(finalHtmlBlob);
-                    blobUrlsRef.current.push(finalUrl);
-
-                    setPreviewUrl(finalUrl);
-
-                } catch (error: any) {
-                    console.error("Failed to build preview:", error);
-                    setPreviewError(error.message || "An unknown error occurred while building the preview.");
-                } finally {
-                    setIsPreviewBuilding(false);
-                }
-            };
-
-            buildPreview();
-        }
-    }, [generatedFileTree, viewMode, appMode]);
-
     useEffect(() => {
         if (appMode === 'native' && generatedCode) {
             setIsQrLoading(true);
@@ -207,9 +98,8 @@ const PreviewPanel: React.FC = () => {
     }, [generatedCode, appMode]);
 
     const handleCopy = () => {
-        const codeToCopy = appMode === 'react_web' ? generatedFileTree?.[selectedFile] : generatedCode;
-        if (!codeToCopy) return;
-        navigator.clipboard.writeText(codeToCopy);
+        if (!generatedCode) return;
+        navigator.clipboard.writeText(generatedCode);
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 2000);
     };
@@ -220,23 +110,6 @@ const PreviewPanel: React.FC = () => {
             return <iframe srcDoc={generatedCode} title="App Preview" className="w-full h-full border-0" sandbox="allow-scripts allow-forms" />;
         }
         return <CodeViewer code={generatedCode} onCopy={handleCopy} isCopied={isCopied} />;
-    };
-    
-    const renderReactWebMode = () => {
-        if (!generatedFileTree) return <AdPlaceholder title="Your React app is being planned..." />;
-        if (viewMode === 'app') {
-            if (isPreviewBuilding) {
-                return <div className="flex items-center justify-center h-full text-gray-500">Building preview...</div>;
-            }
-            if (previewError) {
-                return <div className="flex items-center justify-center h-full text-red-500 p-4 text-center">{previewError}</div>;
-            }
-            if (previewUrl) {
-                return <iframe src={previewUrl} title="React App Preview" className="w-full h-full border-0" sandbox="allow-scripts allow-forms allow-same-origin" />;
-            }
-            return <div className="flex items-center justify-center h-full text-gray-500">Preparing preview environment...</div>;
-        }
-        return <FileExplorerViewer fileTree={generatedFileTree} selectedFile={selectedFile} setSelectedFile={setSelectedFile} onCopy={handleCopy} isCopied={isCopied} />;
     };
     
     const renderNativeMode = () => {
@@ -256,11 +129,10 @@ const PreviewPanel: React.FC = () => {
     
     const getHeaderText = () => {
         switch(appMode) {
-            case 'build': return 'Single-File Web App';
+            case 'build': return 'Web App Preview';
             case 'form': return 'Form Preview';
             case 'native': return 'Native App Preview';
             case 'study': return 'Study Deck';
-            case 'react_web': return 'React App Preview';
             default: return 'Preview';
         }
     }
@@ -269,14 +141,13 @@ const PreviewPanel: React.FC = () => {
         switch(appMode) {
             case 'build':
             case 'form': return renderBuildMode();
-            case 'react_web': return renderReactWebMode();
             case 'native': return renderNativeMode();
             case 'study': return renderStudyMode();
             default: return <div className="p-6">Select a mode to get started.</div>;
         }
     };
     
-    const showViewModeToggle = (appMode === 'build' || appMode === 'form' || appMode === 'native' || appMode === 'react_web') && (generatedCode || generatedFileTree);
+    const showViewModeToggle = (appMode === 'build' || appMode === 'form' || appMode === 'native') && generatedCode;
 
     return (
         <div className="w-1/2 flex flex-col h-full bg-white">
@@ -311,129 +182,6 @@ const CodeViewer: React.FC<{ code: string; onCopy: () => void; isCopied: boolean
         <pre className="p-4 pt-12"><code>{code}</code></pre>
     </div>
 );
-
-// --- File Explorer Components for React App Code View ---
-interface FileTreeNode {
-  name: string;
-  type: 'file' | 'folder';
-  path: string;
-  children?: { [key: string]: FileTreeNode };
-}
-
-const buildFileTree = (filePaths: string[]): FileTreeNode => {
-  const root: FileTreeNode = { name: 'root', type: 'folder', path: '', children: {} };
-
-  filePaths.forEach(path => {
-    let currentNode = root;
-    const parts = path.split('/');
-    parts.forEach((part, index) => {
-      if (!currentNode.children) {
-        currentNode.children = {};
-      }
-      if (!currentNode.children[part]) {
-        const isLastPart = index === parts.length - 1;
-        currentNode.children[part] = {
-          name: part,
-          type: isLastPart ? 'file' : 'folder',
-          path: parts.slice(0, index + 1).join('/'),
-        };
-      }
-      currentNode = currentNode.children[part];
-    });
-  });
-  return root;
-};
-
-const FileTypeIcon: React.FC<{ fileName: string; className?: string }> = ({ fileName, className = 'w-4 h-4 flex-shrink-0' }) => {
-    const extension = fileName.split('.').pop();
-    if (fileName.includes('vite.config')) return <ViteIcon className={`${className} text-purple-400`} />;
-    if (fileName.includes('tailwind.config')) return <TailwindIcon className={`${className} text-cyan-400`} />;
-
-    switch (extension) {
-        case 'tsx': return <ReactIcon className={`${className} text-cyan-400`} />;
-        case 'ts': return <TsIcon className={`${className} text-blue-400`} />;
-        case 'html': return <HtmlIcon className={`${className} text-orange-400`} />;
-        case 'css': return <CssIcon className={`${className} text-blue-500`} />;
-        case 'json': return <JsonIcon className={`${className} text-yellow-400`} />;
-        default: return <FileTextIcon className={`${className} text-gray-400`} />;
-    }
-};
-
-interface FileTreeProps {
-  node: FileTreeNode;
-  selectedFile: string;
-  onFileSelect: (path: string) => void;
-  level: number;
-}
-
-const FileTree: React.FC<FileTreeProps> = ({ node, selectedFile, onFileSelect, level }) => {
-    const [isExpanded, setIsExpanded] = useState(true);
-    
-    if (node.type === 'file') {
-        return (
-            <button 
-                onClick={() => onFileSelect(node.path)}
-                className={`w-full text-left flex items-center gap-2 px-2 py-1 rounded transition-colors ${selectedFile === node.path ? 'bg-indigo-500/30 text-white' : 'text-gray-300 hover:bg-white/10'}`}
-                style={{ paddingLeft: `${level * 1.25 + 0.5}rem` }}
-            >
-                <FileTypeIcon fileName={node.name} />
-                <span className="text-xs truncate">{node.name}</span>
-            </button>
-        );
-    }
-    
-    const sortedChildren = Object.values(node.children || {}).sort((a, b) => {
-        if (a.type === 'folder' && b.type === 'file') return -1;
-        if (a.type === 'file' && b.type === 'folder') return 1;
-        return a.name.localeCompare(b.name);
-    });
-
-    return (
-        <div>
-            <button 
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full text-left flex items-center gap-2 px-2 py-1 text-gray-300 hover:bg-white/10 rounded"
-                style={{ paddingLeft: `${level * 1.25 + 0.5}rem` }}
-            >
-                <ChevronRightIcon className={`w-4 h-4 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                <FolderIcon className="w-4 h-4 flex-shrink-0 text-yellow-400" />
-                <span className="text-xs font-semibold">{node.name}</span>
-            </button>
-            {isExpanded && (
-                <div>
-                    {sortedChildren.map(child => (
-                        <FileTree key={child.path} node={child} selectedFile={selectedFile} onFileSelect={onFileSelect} level={level + 1} />
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-};
-
-const FileExplorerViewer: React.FC<{ fileTree: { [key: string]: string }, selectedFile: string, setSelectedFile: (file: string) => void, onCopy: () => void, isCopied: boolean }> = ({ fileTree: flatFileTree, selectedFile, setSelectedFile, onCopy, isCopied }) => {
-    const fileTreeRoot = useMemo(() => buildFileTree(Object.keys(flatFileTree)), [flatFileTree]);
-    
-    const sortedRootChildren = Object.values(fileTreeRoot.children || {}).sort((a, b) => {
-        if (a.type === 'folder' && b.type === 'file') return -1;
-        if (a.type === 'file' && b.type === 'folder') return 1;
-        return a.name.localeCompare(b.name);
-    });
-
-    return (
-        <div className="w-full h-full flex bg-gray-800 text-white font-mono text-sm">
-            <div className="w-60 h-full bg-[#1e1e1e] border-r border-gray-700/50 overflow-y-auto p-2">
-                <h4 className="text-xs text-gray-400 uppercase font-sans font-bold px-2 mb-2">Explorer</h4>
-                {sortedRootChildren.map(node => (
-                    <FileTree key={node.path} node={node} selectedFile={selectedFile} onFileSelect={setSelectedFile} level={0} />
-                ))}
-            </div>
-            <div className="flex-1 relative h-full">
-                <CodeViewer code={flatFileTree[selectedFile] || ''} onCopy={onCopy} isCopied={isCopied} />
-            </div>
-        </div>
-    );
-};
-
 
 const AdPlaceholder: React.FC<{ title: string }> = ({ title }) => (
     <div className="w-full h-full flex flex-col items-center justify-center p-4">

@@ -11,8 +11,6 @@ interface AppContextType {
   setPrompt: (prompt: string) => void;
   generatedCode: string;
   setGeneratedCode: (code: string) => void;
-  generatedFileTree: { [fileName: string]: string } | null;
-  setGeneratedFileTree: (files: { [fileName: string]: string } | null) => void;
   generatedFlashcards: Flashcard[] | null;
   setGeneratedFlashcards: (flashcards: Flashcard[] | null) => void;
   isStudent: boolean;
@@ -38,7 +36,6 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [prompt, setPrompt] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
-  const [generatedFileTree, setGeneratedFileTree] = useState<{ [fileName: string]: string } | null>(null);
   const [generatedFlashcards, setGeneratedFlashcards] = useState<Flashcard[] | null>(null);
   const [isStudent, setIsStudentState] = useState(false);
   const [appMode, setAppMode] = useState<AppMode>('build');
@@ -159,7 +156,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const resetApp = () => {
     setPrompt('');
     setGeneratedCode('');
-    setGeneratedFileTree(null);
     setGeneratedFlashcards(null);
   };
 
@@ -167,7 +163,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     <AppContext.Provider value={{ 
         prompt, setPrompt, 
         generatedCode, setGeneratedCode, 
-        generatedFileTree, setGeneratedFileTree,
         generatedFlashcards, setGeneratedFlashcards, 
         isStudent, setIsStudent, 
         resetApp, 

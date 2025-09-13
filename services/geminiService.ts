@@ -1,7 +1,7 @@
 
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { AppPlan, Flashcard, FormPlan, ReactAppPlan } from '../types';
+import { AppPlan, Flashcard, FormPlan } from '../types';
 import { getApiKey } from './apiKeyService';
 
 const combineInstructions = (agentInstruction: string | undefined, taskInstruction: string): string => {
@@ -66,68 +66,6 @@ You must respond with only a JSON object that strictly follows this structure:
     throw new Error("Failed to generate an app plan from the AI model.");
   }
 };
-
-export const generateReactAppPlan = async (prompt: string, agentSystemInstruction?: string): Promise<ReactAppPlan> => {
-  console.log(`Generating React app plan for prompt: "${prompt}"`);
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-
-  const taskInstruction = `You are an expert software architect planning a React web application using Vite, TypeScript, and Tailwind CSS. Based on the user's prompt, create a plan. The plan must include a title, description, key features, and a detailed file structure.
-
-The file structure must always include these essential files:
-- \`index.html\`: The main HTML entry point.
-- \`package.json\`: For dependencies and scripts.
-- \`vite.config.ts\`: Vite configuration.
-- \`tsconfig.json\`: TypeScript configuration.
-- \`tailwind.config.js\`: Tailwind CSS configuration.
-- \`postcss.config.js\`: PostCSS configuration.
-- \`src/main.tsx\`: The main React render entry point.
-- \`src/App.tsx\`: The root App component.
-- \`src/index.css\`: For global styles and Tailwind imports.
-
-You can also add other files like components (e.g., \`src/components/Header.tsx\`) or utility files as needed.
-
-You must respond with only a JSON object.`;
-
-  const systemInstruction = combineInstructions(agentSystemInstruction, taskInstruction);
-  const schema = {
-    type: Type.OBJECT,
-    properties: {
-      title: { type: Type.STRING },
-      description: { type: Type.STRING },
-      features: { type: Type.ARRAY, items: { type: Type.STRING } },
-      files: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            name: { type: Type.STRING, description: 'Full path of the file, e.g., src/components/Button.tsx' },
-            description: { type: Type.STRING, description: 'A brief description of the file\'s purpose.' },
-          },
-          required: ['name', 'description'],
-        },
-      },
-    },
-    required: ['title', 'description', 'features', 'files'],
-  };
-
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-        responseSchema: schema,
-      },
-    });
-    const planJson = response.text.trim();
-    return JSON.parse(planJson);
-  } catch (error) {
-    console.error("Error generating React app plan:", error);
-    throw new Error("Failed to generate a React app plan.");
-  }
-};
-
 
 export const generateFormPlan = async (prompt: string, agentSystemInstruction?: string): Promise<FormPlan> => {
     console.log(`Generating form plan for prompt: "${prompt}"`);
@@ -312,48 +250,6 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
   }
 };
 
-export const generateReactAppCode = async (plan: ReactAppPlan, agentSystemInstruction?: string): Promise<{ [fileName: string]: string }> => {
-  console.log(`Generating React app code for: "${plan.title}"`);
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-
-  const taskPrompt = `
-    You are an expert full-stack developer. Based on the following plan, generate the code for a complete React web application.
-
-    **Application Plan:**
-    - **Title:** ${plan.title}
-    - **Description:** ${plan.description}
-    - **Features:**
-${plan.features.map(f => `    - ${f}`).join('\n')}
-    - **File Structure:**
-${plan.files.map(f => `    - \`${f.name}\`: ${f.description}`).join('\n')}
-
-    **CRITICAL REQUIREMENTS:**
-    1.  **Vite + React + TypeScript:** The project must be a standard Vite project.
-    2.  **Tailwind CSS:** Ensure Tailwind is correctly set up in \`tailwind.config.js\`, \`postcss.config.js\`, and imported in \`src/index.css\`. The \`tailwind.config.js\` content array must be correctly configured (e.g., \`"./index.html", "./src/**/*.{js,ts,jsx,tsx}"\`).
-    3.  **Dependencies:** The \`package.json\` must include \`react\` and \`react-dom\` in \`dependencies\`. It must include \`@types/react\`, \`@types/react-dom\`, \`vite\`, \`@vitejs/plugin-react\`, \`typescript\`, \`tailwindcss\`, \`postcss\`, and \`autoprefixer\` in \`devDependencies\`.
-    4.  **Runnable Code:** All generated code must be complete, correct, and runnable.
-    5.  **JSON Output:** Your entire response MUST be a single JSON object. The keys must be the full file paths (e.g., "src/App.tsx"), and the values must be the complete code for that file as a string. Do not include any other text, explanations, or markdown.
-    `;
-    
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: taskPrompt,
-      config: {
-        systemInstruction: agentSystemInstruction,
-        responseMimeType: "application/json",
-      },
-    });
-    const codeJson = response.text.trim();
-    const sanitizedJson = codeJson.replace(/^```json\n/, '').replace(/\n```$/, '');
-    return JSON.parse(sanitizedJson);
-  } catch (error) {
-    console.error("Error generating React app code:", error);
-    throw new Error("Failed to generate React app code.");
-  }
-};
-
-
 export const generateNativeAppCode = async (plan: AppPlan, agentSystemInstruction?: string): Promise<string> => {
   console.log(`Generating native code for app: "${plan.title}"`);
 
@@ -515,48 +411,6 @@ export const refineAppCode = async (existingCode: string, prompt: string, agentS
       throw new Error("Failed to refine the application code.");
   }
 };
-
-export const refineReactAppCode = async (fileTree: { [fileName: string]: string }, prompt: string, agentSystemInstruction?: string): Promise<{ [fileName: string]: string }> => {
-  console.log(`Refining React app code with prompt: "${prompt}"`);
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  
-  const taskPrompt = `
-    You are an expert full-stack developer modifying an existing React web application.
-    You will be given the application's complete file structure and code as a JSON object, and a user's request for a change.
-
-    **User's Change Request:**
-    "${prompt}"
-
-    **Existing Application Code (as JSON):**
-    \`\`\`json
-    ${JSON.stringify(fileTree, null, 2)}
-    \`\`\`
-
-    **CRITICAL INSTRUCTIONS:**
-    1.  **Apply the Change:** Accurately implement the user's change. This might involve modifying existing files, adding new files, or deleting files.
-    2.  **Return the Full Project:** You MUST return the entire, complete, and updated file tree as a single JSON object. The keys must be the file paths and values must be the full code for that file.
-    3.  **Maintain Structure:** The project must remain a standard Vite + React + TypeScript project.
-    4.  **Preserve Functionality:** Ensure that existing functionality remains intact unless the user's request specifically asks to change it.
-  `;
-  
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: taskPrompt,
-      config: {
-        systemInstruction: agentSystemInstruction,
-        responseMimeType: "application/json",
-      },
-    });
-    const codeJson = response.text.trim();
-    const sanitizedJson = codeJson.replace(/^```json\n/, '').replace(/\n```$/, '');
-    return JSON.parse(sanitizedJson);
-  } catch (error) {
-    console.error("Error refining React app code:", error);
-    throw new Error("Failed to refine the React application code.");
-  }
-};
-
 
 export const refineNativeAppCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<string> => {
   console.log(`Refining native code with prompt: "${prompt}"`);
