@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { FlashcardDisplay } from '../builder/FlashcardDisplay';
-import { ClipboardIcon, CheckIcon } from '../common/Icons';
+import { ClipboardIcon, CheckIcon, MousePointerClickIcon } from '../common/Icons';
+import VisualEditBar from './VisualEditBar';
 
 // Add QRCode to window interface to avoid TypeScript errors
 declare global {
@@ -64,17 +65,144 @@ const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     </div>
 );
 
-const PreviewPanel: React.FC = () => {
+interface PreviewPanelProps {
+  onVisualEditSubmit: (prompt: string) => void;
+}
+
+
+const PreviewPanel: React.FC<PreviewPanelProps> = ({ onVisualEditSubmit }) => {
     const { generatedCode, appMode, generatedFlashcards, prompt } = useAppContext();
     const [viewMode, setViewMode] = useState<'app' | 'code'>('app');
     const [isCopied, setIsCopied] = useState(false);
     const [qrCodeUrl, setQrCodeUrl] = useState('');
     const [qrError, setQrError] = useState<string | null>(null);
     const [isQrLoading, setIsQrLoading] = useState(false);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+    const [isVisualEditMode, setIsVisualEditMode] = useState(false);
+    const [selectedElementData, setSelectedElementData] = useState<{ selector: string; rect: DOMRect; } | null>(null);
+
+    const visualEditScript = `
+    <script>
+        let visualEditEnabled = false;
+        let currentOverlay = document.createElement('div');
+        currentOverlay.style.position = 'absolute';
+        currentOverlay.style.border = '2px solid #4f46e5';
+        currentOverlay.style.backgroundColor = 'rgba(79, 70, 229, 0.2)';
+        currentOverlay.style.borderRadius = '3px';
+        currentOverlay.style.pointerEvents = 'none';
+        currentOverlay.style.zIndex = '9999';
+        currentOverlay.style.display = 'none';
+        document.body.appendChild(currentOverlay);
+
+        function getCssSelector(el) {
+            if (!(el instanceof Element)) return 'body';
+            if (el.id) return '#' + el.id;
+            
+            const path = [];
+            while (el && el.nodeType === Node.ELEMENT_NODE) {
+                let selector = el.nodeName.toLowerCase();
+                if (el.id) {
+                    selector = '#' + el.id;
+                    path.unshift(selector);
+                    break;
+                } else {
+                    let sib = el;
+                    let nth = 1;
+                    while (sib = sib.previousElementSibling) {
+                        if (sib.nodeName.toLowerCase() === selector) nth++;
+                    }
+                    if (nth !== 1) {
+                        selector += ':nth-of-type(' + nth + ')';
+                    }
+                }
+                path.unshift(selector);
+                el = el.parentNode;
+                if (el === document.body) {
+                    path.unshift('body');
+                    break;
+                }
+            }
+            return path.join(' > ');
+        }
+
+        const handleMouseOver = e => {
+            if (!visualEditEnabled || e.target === document.body) return;
+            const rect = e.target.getBoundingClientRect();
+            currentOverlay.style.display = 'block';
+            currentOverlay.style.width = rect.width + 'px';
+            currentOverlay.style.height = rect.height + 'px';
+            currentOverlay.style.top = rect.top + window.scrollY + 'px';
+            currentOverlay.style.left = rect.left + window.scrollX + 'px';
+        };
+
+        const handleMouseOut = e => {
+            if (!visualEditEnabled) return;
+            currentOverlay.style.display = 'none';
+        }
+
+        const handleClick = e => {
+            if (!visualEditEnabled) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const selector = getCssSelector(e.target);
+            const rect = e.target.getBoundingClientRect();
+            window.parent.postMessage({ type: 'ELEMENT_SELECTED', selector, rect: JSON.parse(JSON.stringify(rect)) }, '*');
+        };
+
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'VISUAL_EDIT_MODE_STATUS') {
+                visualEditEnabled = event.data.enabled;
+                if (!visualEditEnabled) {
+                    currentOverlay.style.display = 'none';
+                }
+            }
+        });
+        
+        document.addEventListener('mouseover', handleMouseOver);
+        document.addEventListener('mouseout', handleMouseOut);
+        document.addEventListener('click', handleClick, true); // Use capture to prevent other clicks
+    </script>
+    `;
+
+    const getSrcDoc = () => {
+        if (!generatedCode) return '';
+        if (generatedCode.includes('</body>')) {
+            return generatedCode.replace('</body>', `${visualEditScript}</body>`);
+        }
+        return generatedCode + visualEditScript;
+    };
+
 
     useEffect(() => {
         setViewMode('app');
     }, [appMode]);
+    
+     useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.source !== iframeRef.current?.contentWindow) return;
+            if (event.data.type === 'ELEMENT_SELECTED') {
+                setSelectedElementData({ selector: event.data.selector, rect: event.data.rect });
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
+
+    useEffect(() => {
+        // When generatedCode updates or mode changes, inform the iframe
+        iframeRef.current?.contentWindow?.postMessage({
+            type: 'VISUAL_EDIT_MODE_STATUS',
+            enabled: isVisualEditMode
+        }, '*');
+    }, [isVisualEditMode, generatedCode]);
+    
+    // When switching out of visual edit mode, clear selection
+    useEffect(() => {
+        if (!isVisualEditMode) {
+            setSelectedElementData(null);
+        }
+    }, [isVisualEditMode]);
     
     useEffect(() => {
         if (appMode === 'native' && generatedCode) {
@@ -104,10 +232,34 @@ const PreviewPanel: React.FC = () => {
         setTimeout(() => setIsCopied(false), 2000);
     };
 
+    const handleVisualEditSubmit = (prompt: string) => {
+        if (!selectedElementData) return;
+        const finalPrompt = `Using the existing code, make the following change to the element identified by the selector "${selectedElementData.selector}": ${prompt}`;
+        onVisualEditSubmit(finalPrompt);
+        setSelectedElementData(null); // Hide bar after submission
+    };
+
     const renderBuildMode = () => {
         if (!generatedCode) return <AdPlaceholder title="Your app is being planned..." />;
         if (viewMode === 'app') {
-            return <iframe srcDoc={generatedCode} title="App Preview" className="w-full h-full border-0" sandbox="allow-scripts allow-forms" />;
+            return (
+                <div className="w-full h-full relative" onClick={() => selectedElementData && setSelectedElementData(null)}>
+                    <iframe
+                        ref={iframeRef}
+                        srcDoc={getSrcDoc()}
+                        title="App Preview"
+                        className={`w-full h-full border-0 ${isVisualEditMode ? 'pointer-events-auto' : ''}`}
+                        sandbox="allow-scripts allow-forms"
+                    />
+                     {isVisualEditMode && selectedElementData && (
+                        <VisualEditBar
+                            position={{...selectedElementData.rect, top: selectedElementData.rect.top + selectedElementData.rect.height}}
+                            onSubmit={handleVisualEditSubmit}
+                            onClose={() => setSelectedElementData(null)}
+                        />
+                    )}
+                </div>
+            );
         }
         return <CodeViewer code={generatedCode} onCopy={handleCopy} isCopied={isCopied} />;
     };
@@ -148,6 +300,7 @@ const PreviewPanel: React.FC = () => {
     };
     
     const showViewModeToggle = (appMode === 'build' || appMode === 'form' || appMode === 'native') && generatedCode;
+    const showVisualEditToggle = (appMode === 'build' || appMode === 'form') && generatedCode && viewMode === 'app';
 
     return (
         <div className="w-1/2 flex flex-col h-full bg-white">
@@ -160,6 +313,15 @@ const PreviewPanel: React.FC = () => {
                             <button onClick={() => setViewMode('code')} className={`px-4 py-1.5 rounded-full transition-all duration-200 ${viewMode === 'code' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>Code</button>
                         </div>
                      )}
+                     {showVisualEditToggle && (
+                        <button
+                            onClick={() => setIsVisualEditMode(!isVisualEditMode)}
+                            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-full transition-all ${isVisualEditMode ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                        >
+                            <MousePointerClickIcon className="w-4 h-4" />
+                            <span>Visual Edit</span>
+                        </button>
+                     )}
                 </div>
                 <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
@@ -167,7 +329,7 @@ const PreviewPanel: React.FC = () => {
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 </div>
             </header>
-            <div className="flex-1 bg-gray-100 overflow-hidden">{renderContent()}</div>
+            <div className="flex-1 bg-gray-100 overflow-hidden relative">{renderContent()}</div>
         </div>
     );
 };

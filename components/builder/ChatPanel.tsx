@@ -1,6 +1,4 @@
-
-
-import React, { useState, useEffect, useRef, FormEvent } from 'react';
+import React, { useState, useEffect, useRef, FormEvent, forwardRef, useImperativeHandle } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { generateAppPlan, generateAppCode, generateFlashcards, generateFormPlan, generateFormCode, refineAppCode, generateNativeAppCode, refineNativeAppCode } from '../../services/geminiService';
@@ -87,7 +85,11 @@ const BuildStatusCard: React.FC<BuildStatusCardProps> = ({ status, countdown }) 
     </div>
 );
 
-const ChatPanel: React.FC = () => {
+export interface ChatPanelRef {
+  submitRefinement: (prompt: string) => void;
+}
+
+const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
   const { 
     prompt, 
     generatedCode, setGeneratedCode, 
@@ -278,52 +280,65 @@ const ChatPanel: React.FC = () => {
     } finally {
         endBuildProcess();
     }
-};
+  };
+
+  const submitRefinement = async (refinementPrompt: string) => {
+    if (!generatedCode) {
+      console.log("Cannot refine: No code has been generated yet.");
+      return;
+    }
+
+    const userMessage: Message = { role: 'user', content: refinementPrompt };
+    setMessages(prev => [...prev, userMessage]);
+    
+    startBuildProcess([
+        `Understanding refinement...`,
+        "Analyzing existing code...",
+        "Applying modifications...",
+        "Finalizing new version..."
+    ]);
+
+    try {
+      const agentInstruction = selectedAgent?.systemInstruction;
+      let successMessage: Message;
+
+      if (appMode === 'native' && generatedCode) {
+          const newCode = await refineNativeAppCode(generatedCode, refinementPrompt, agentInstruction);
+          setGeneratedCode(newCode);
+          const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
+          saveApp(title, newCode, 'native');
+          successMessage = { role: 'model', content: "I've updated the native app." };
+      } else if (generatedCode) { // build or form
+          const newCode = await refineAppCode(generatedCode, refinementPrompt, agentInstruction);
+          setGeneratedCode(newCode);
+          const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
+          saveApp(title, newCode, appMode as 'build' | 'form');
+          successMessage = { role: 'model', content: "I've updated the app with your changes. Take a look!" };
+      } else {
+          throw new Error("No code available to refine.");
+      }
+      setMessages(prev => [...prev, successMessage]);
+    } catch (error) {
+        console.error("Error refining code:", error);
+        const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't apply those changes. The previous version is still active." };
+        setMessages(prev => [...prev, errorMessage]);
+    } finally {
+        endBuildProcess();
+    }
+  };
+  
+  useImperativeHandle(ref, () => ({
+    submitRefinement
+  }));
   
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
     if (isCodeGenerated && generatedCode) {
-        const userMessage: Message = { role: 'user', content: input };
-        setMessages(prev => [...prev, userMessage]);
         const currentInput = input;
         setInput('');
-
-        startBuildProcess([
-            `Understanding: "${currentInput}"`,
-            "Analyzing existing code...",
-            "Applying modifications...",
-            "Finalizing new version..."
-        ]);
-
-        try {
-            const agentInstruction = selectedAgent?.systemInstruction;
-            let successMessage: Message;
-
-            if (appMode === 'native' && generatedCode) {
-                const newCode = await refineNativeAppCode(generatedCode, currentInput, agentInstruction);
-                setGeneratedCode(newCode);
-                const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
-                saveApp(title, newCode, 'native');
-                successMessage = { role: 'model', content: "I've updated the native app." };
-            } else if (generatedCode) { // build or form
-                const newCode = await refineAppCode(generatedCode, currentInput, agentInstruction);
-                setGeneratedCode(newCode);
-                const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
-                saveApp(title, newCode, appMode as 'build' | 'form');
-                successMessage = { role: 'model', content: "I've updated the app with your changes. Take a look!" };
-            } else {
-                throw new Error("No code available to refine.");
-            }
-             setMessages(prev => [...prev, successMessage]);
-        } catch (error) {
-            console.error("Error refining code:", error);
-            const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't apply those changes. The previous version is still active." };
-            setMessages(prev => [...prev, errorMessage]);
-        } finally {
-            endBuildProcess();
-        }
+        await submitRefinement(currentInput);
     } else {
       console.log("Cannot send message. App not generated yet.");
     }
@@ -410,6 +425,6 @@ const ChatPanel: React.FC = () => {
       </div>
     </div>
   );
-};
+});
 
 export default ChatPanel;
