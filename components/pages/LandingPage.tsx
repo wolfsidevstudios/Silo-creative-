@@ -221,18 +221,31 @@ const LandingPage: React.FC = () => {
                     </div>
                 </div>
 
-                 {/* Who We Are Section */}
+                {/* Who We Are Section */}
                 <section id="about" className="relative isolate py-20 sm:py-28">
-                    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                         <img 
                             src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
                             alt="Silo Creative Logo" 
                             className="w-24 h-24 rounded-full mx-auto mb-6"
                         />
                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Who We Are</h2>
-                        <p className="mt-4 text-lg text-gray-600">
+                        <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
                             At Silo Creative, we believe that a great idea shouldn't be limited by coding skills. We are a passionate team of developers and designers dedicated to making technology accessible to everyone. Our mission is to empower creators, entrepreneurs, and students to bring their digital ideas to life, instantly.
                         </p>
+                        
+                        <div className="mt-20">
+                             <h3 className="text-2xl font-semibold text-gray-800 mb-8">Meet the Founder</h3>
+                             <div className="inline-block bg-white/50 backdrop-blur-sm border border-gray-200/80 rounded-2xl shadow-lg p-8">
+                                <img 
+                                    src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
+                                    alt="Emanuel Martinez" 
+                                    className="w-28 h-28 rounded-full mx-auto mb-4"
+                                />
+                                <h4 className="text-xl font-semibold text-gray-800">Emanuel Martinez</h4>
+                                <p className="text-indigo-600 font-medium">Founder</p>
+                            </div>
+                        </div>
                     </div>
                 </section>
 

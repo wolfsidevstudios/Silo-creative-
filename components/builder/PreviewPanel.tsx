@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
-import { FlashcardDisplay } from '../common/FlashcardDisplay';
+import { FlashcardDisplay } from './FlashcardDisplay';
 import { ClipboardIcon, CheckIcon } from '../common/Icons';
 
 // Add QRCode to window interface to avoid TypeScript errors
