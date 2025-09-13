@@ -189,7 +189,7 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
 
   const featuresString = plan.features.map(f => `- ${f}`).join('\n');
   const taskPrompt = `
-    You are an expert web developer specializing in creating modern, single-file web applications using React and Tailwind CSS.
+    You are an expert web developer specializing in creating modern, single-file web applications using advanced HTML5, Tailwind CSS, and vanilla JavaScript.
     Based on the following plan, generate a complete, single HTML file.
 
     **Application Plan:**
@@ -200,20 +200,17 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
 
     **CRITICAL REQUIREMENTS:**
     1.  **Single HTML File:** The entire application must be contained within a single HTML file.
-    2.  **React with HTM:** Use React for the application logic and UI. Since there's no build step, use the "HTM" library to enable JSX-like syntax.
-    3.  **CDN Scripts:** Include these exact scripts in the <head> in this order:
-        - React: <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-        - ReactDOM: <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-        - HTM: <script src="https://unpkg.com/htm@3/dist/htm.umd.js"></script>
-        - Tailwind CSS: <script src="https://cdn.tailwindcss.com"></script>
-    4.  **Body Structure:** The <body> must contain a single root element: <div id="root"></div>.
-    5.  **JavaScript Logic:** All JavaScript code must be within a SINGLE <script type="module"> tag at the end of the <body>.
-    6.  **Code Structure within Script:**
-        - First, initialize htm: const html = htm.bind(React.createElement);
-        - Define your main React component (e.g., function App() { ... }).
-        - Use React hooks like useState and useEffect for state and side effects.
-        - Use the 'html' tagged template literal for rendering, like so: return html\`<div className="bg-blue-500">Hello \${name}</div>\`;
-        - Finally, render your main component to the root div: ReactDOM.render(html\`<\${App} />\`, document.getElementById('root'));
+    2.  **Vanilla JavaScript:** Use modern, vanilla JavaScript (ES6+) for all application logic and interactivity. DO NOT use React, Vue, Angular, or any other framework.
+    3.  **Tailwind CSS:** Use Tailwind CSS for all styling. Include the CDN script in the <head>: <script src="https://cdn.tailwindcss.com"></script>.
+    4.  **Structure:**
+        - The HTML should be semantic and well-structured in the <body>.
+        - All JavaScript code must be within a SINGLE <script> tag at the end of the <body>.
+    5.  **JavaScript Logic:**
+        - Select DOM elements using \`document.getElementById\` or \`document.querySelector\`.
+        - Add event listeners (\`.addEventListener\`) to handle user interactions.
+        - Manipulate the DOM directly to update the UI (e.g., changing \`textContent\`, \`innerHTML\`, or adding/removing classes).
+        - Manage application state using plain JavaScript variables or objects.
+    6.  **No Build Step:** The code must run directly in the browser without any build process. Do not use JSX or any syntax that requires compilation.
     7.  **No Explanations:** The output must ONLY be the raw HTML code. Do not include any markdown, comments, or explanations outside of the code.
     8.  **Functionality:** The final app must be fully functional and implement all features from the plan. It should be visually appealing and well-styled with Tailwind CSS.
     `;
@@ -378,7 +375,7 @@ export const refineAppCode = async (existingCode: string, prompt: string, agentS
   const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
   const taskPrompt = `
-    You are an expert web developer tasked with modifying an existing single-file web application built with React, HTM, and Tailwind CSS.
+    You are an expert web developer tasked with modifying an existing single-file web application built with HTML, Tailwind CSS, and vanilla JavaScript.
     You will be given the application's complete current HTML code and a user's request for a change.
 
     **User's Change Request:**
@@ -392,7 +389,7 @@ export const refineAppCode = async (existingCode: string, prompt: string, agentS
     **CRITICAL INSTRUCTIONS:**
     1.  **Apply the Change:** Your primary goal is to accurately implement the user's requested change into the provided code.
     2.  **Return the Full Code:** You MUST return the entire, complete, and updated HTML file. Do NOT provide only the changed snippets, explanations, or markdown formatting. Your response should be only the raw HTML code.
-    3.  **Maintain Structure:** The application must remain a single HTML file with React, ReactDOM, HTM, and Tailwind CSS loaded from CDN. All JavaScript logic must be within the single \`<script type="module">\`.
+    3.  **Maintain Structure:** The application must remain a single HTML file with Tailwind CSS loaded from a CDN and all JavaScript logic within a single \`<script>\` tag. DO NOT introduce any build steps or frameworks like React.
     4.  **Preserve Functionality:** Ensure that the existing functionality of the application remains intact unless the user's request specifically asks to change or remove it.
     `;
     
