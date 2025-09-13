@@ -28,6 +28,24 @@ const getQRCodeLibrary = (): Promise<any> => {
   });
 };
 
+// Helper function to wait for the StackBlitz SDK to load.
+const getStackBlitzSDK = (): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    if (window.StackBlitzSDK) return resolve(window.StackBlitzSDK);
+    let attempts = 0;
+    const intervalId = setInterval(() => {
+      if (window.StackBlitzSDK) {
+        clearInterval(intervalId);
+        resolve(window.StackBlitzSDK);
+      } else if (attempts++ > 20) { // Try for ~5 seconds
+        clearInterval(intervalId);
+        reject(new Error('StackBlitz SDK failed to load.'));
+      }
+    }, 250);
+  });
+};
+
+
 const AdUnit: React.FC = () => {
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -80,26 +98,40 @@ const PreviewPanel: React.FC = () => {
 
     useEffect(() => {
         if (appMode === 'react_web' && generatedFileTree && viewMode === 'app' && stackblitzRef.current) {
-            window.StackBlitzSDK.embedProject(
-                stackblitzRef.current,
-                {
-                    title: 'Silo Generated App',
-                    description: prompt,
-                    template: 'node',
-                    files: generatedFileTree,
-                    dependencies: {
-                        "react": "latest",
-                        "react-dom": "latest",
-                    }
-                },
-                {
-                    openFile: 'src/App.tsx',
-                    view: 'preview',
-                    height: '100%',
-                    hideExplorer: false,
-                    terminalHeight: 50,
+            // Clear previous content and show loading message
+            if (stackblitzRef.current) {
+                stackblitzRef.current.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500">Loading StackBlitz VM...</div>';
+            }
+
+            getStackBlitzSDK().then(sdk => {
+                if (stackblitzRef.current) { // Check ref again inside promise
+                    sdk.embedProject(
+                        stackblitzRef.current,
+                        {
+                            title: 'Silo Generated App',
+                            description: prompt,
+                            template: 'node',
+                            files: generatedFileTree,
+                            dependencies: {
+                                "react": "latest",
+                                "react-dom": "latest",
+                            }
+                        },
+                        {
+                            openFile: 'src/App.tsx',
+                            view: 'preview',
+                            height: '100%',
+                            hideExplorer: false,
+                            terminalHeight: 50,
+                        }
+                    );
                 }
-            );
+            }).catch((error: Error) => {
+                console.error(error);
+                if (stackblitzRef.current) {
+                    stackblitzRef.current.innerHTML = `<div class="flex items-center justify-center h-full text-red-500 p-4 text-center">${error.message}. Please try refreshing the page.</div>`;
+                }
+            });
         }
     }, [generatedFileTree, viewMode, appMode, prompt]);
 
