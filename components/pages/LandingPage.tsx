@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GitHubIcon, DiscordIcon, BrainCircuitIcon, CodeIcon, UsersIcon, AtSignIcon } from '../common/Icons';
 import GoogleSignInButton from '../auth/GoogleSignInButton';
@@ -60,36 +60,85 @@ const Footer: React.FC = () => (
     </footer>
 );
 
-const AppPreview: React.FC = () => (
-    <div className="w-full max-w-3xl mx-auto mt-16 rounded-2xl shadow-2xl ring-1 ring-gray-900/10 bg-[#1e1e1e] font-mono text-sm overflow-hidden h-72">
-        <div className="bg-gray-700/50 px-4 py-3 flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+const AppPreview: React.FC = () => {
+  const [step, setStep] = useState(0); // 0: typing, 1: showing app
+  const [typedText, setTypedText] = useState('');
+  const fullText = "Create a simple pomodoro timer";
+
+  useEffect(() => {
+    if (step === 0) {
+      const typingInterval = setInterval(() => {
+        setTypedText(prev => {
+          if (prev.length < fullText.length) {
+            return fullText.substring(0, prev.length + 1);
+          } else {
+            clearInterval(typingInterval);
+            setTimeout(() => setStep(1), 1000); // Wait a bit before showing app
+            return prev;
+          }
+        });
+      }, 100);
+
+      return () => clearInterval(typingInterval);
+    }
+  }, [step]);
+
+  return (
+    <div className="w-full max-w-3xl mx-auto mt-16 rounded-2xl shadow-2xl ring-1 ring-gray-900/10 bg-[#2a2734] font-mono text-sm overflow-hidden h-80 flex flex-col">
+      <div className="bg-gray-700/50 px-4 py-3 flex items-center gap-2 flex-shrink-0">
+        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+      </div>
+      <div className="relative flex-1 p-6 overflow-hidden">
+        {/* Step 0: Typing prompt */}
+        <div className={`absolute inset-0 p-6 transition-opacity duration-500 ${step === 0 ? 'opacity-100' : 'opacity-0'}`}>
+          <p className="text-gray-300">
+            <span className="text-green-400">&gt; </span>{typedText}
+            <span className="inline-block w-2 h-4 bg-green-400 ml-1 animate-pulse"></span>
+          </p>
         </div>
-        <div className="p-6 text-gray-300 animate-pulse-slow">
-            <pre><code>
-<span className="text-pink-400">&lt;!DOCTYPE <span className="text-sky-300">html</span>&gt;</span>
-<span className="text-pink-400">&lt;html <span className="text-sky-300">lang</span>="<span className="text-yellow-300">en</span>"&gt;</span>
-  <span className="text-pink-400">&lt;head&gt;</span>
-    <span className="text-pink-400">&lt;script <span className="text-sky-300">src</span>="<span className="text-yellow-300">https://cdn.tailwindcss.com</span>"&gt;&lt;/script&gt;</span>
-  <span className="text-pink-400">&lt;/head&gt;</span>
-  <span className="text-pink-400">&lt;body <span className="text-sky-300">class</span>="<span className="text-yellow-300">bg-gray-900 text-white</span>"&gt;</span>
-    <span className="text-pink-400">&lt;h1 <span className="text-sky-300">class</span>="<span className="text-yellow-300">text-4xl</span>"&gt;</span>Hello, Silo!<span className="text-pink-400">&lt;/h1&gt;</span>
-  <span className="text-pink-400">&lt;/body&gt;</span>
-<span className="text-pink-400">&lt;/html&gt;</span>
-            </code></pre>
+
+        {/* Step 1: Showing generated app */}
+        <div className={`absolute inset-0 transition-opacity duration-500 ${step === 1 ? 'opacity-100' : 'opacity-0'}`}>
+            <div className="w-full h-full bg-gradient-to-br from-red-500 to-orange-400 rounded-lg flex flex-col items-center justify-center p-4 font-sans animate-fade-in">
+                <div className="text-white text-center opacity-0 animate-slide-in-up" style={{ animationDelay: '200ms' }}>
+                    <p className="text-lg font-medium tracking-wider">POMODORO</p>
+                    <h2 className="text-7xl font-bold tracking-tighter my-2">25:00</h2>
+                </div>
+                <div className="flex space-x-4 mt-6 opacity-0 animate-slide-in-up" style={{ animationDelay: '400ms' }}>
+                    <button className="px-6 py-2 bg-white/30 text-white font-semibold rounded-full hover:bg-white/40 transition-colors">Start</button>
+                    <button className="px-6 py-2 bg-white/30 text-white font-semibold rounded-full hover:bg-white/40 transition-colors">Reset</button>
+                </div>
+                 <div className="mt-6 w-full max-w-xs bg-white/20 p-3 rounded-lg text-left text-white opacity-0 animate-slide-in-up" style={{ animationDelay: '600ms' }}>
+                    <h3 className="font-bold mb-2">Tasks:</h3>
+                    <ul className="text-sm space-y-1">
+                        <li>- Design landing page</li>
+                        <li>- Implement animation</li>
+                    </ul>
+                </div>
+            </div>
         </div>
-        <style>{`
-            @keyframes pulse-slow {
-                50% { opacity: 0.8; }
+      </div>
+       <style>{`
+            @keyframes fade-in {
+                from { opacity: 0; }
+                to { opacity: 1; }
             }
-            .animate-pulse-slow {
-                animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            .animate-fade-in {
+                animation: fade-in 0.5s ease-out forwards;
+            }
+            @keyframes slide-in-up {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .animate-slide-in-up {
+                animation: slide-in-up 0.6s ease-out forwards;
             }
         `}</style>
     </div>
-);
+  );
+};
 
 
 const LandingPage: React.FC = () => {
