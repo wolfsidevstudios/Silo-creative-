@@ -22,7 +22,7 @@ const PrivacyPolicyPage: React.FC = () => {
                         </header>
 
                         <div className="prose prose-indigo max-w-none text-gray-700">
-                            <p>Welcome to Silo Creative App Builder ("we," "our," or "us"). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our application.</p>
+                            <p>Welcome to Silo Create App Builder ("we," "our," or "us"). We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our application.</p>
                             
                             <h2>1. Information We Collect</h2>
                             <p>We may collect information that you provide directly to us, such as:</p>

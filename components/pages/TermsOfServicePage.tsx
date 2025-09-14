@@ -22,7 +22,7 @@ const TermsOfServicePage: React.FC = () => {
                         </header>
 
                         <div className="prose prose-indigo max-w-none text-gray-700">
-                            <p>Please read these Terms of Service ("Terms", "Terms of Service") carefully before using the Silo Creative App Builder application (the "Service") operated by Silo Creative ("us", "we", or "our").</p>
+                            <p>Please read these Terms of Service ("Terms", "Terms of Service") carefully before using the Silo Create App Builder application (the "Service") operated by Silo Create ("us", "we", or "our").</p>
                             <p>Your access to and use of the Service is conditioned on your acceptance of and compliance with these Terms. These Terms apply to all visitors, users, and others who access or use the Service.</p>
                             
                             <h2>1. Accounts</h2>

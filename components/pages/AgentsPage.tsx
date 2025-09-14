@@ -36,7 +36,7 @@ const AgentsPage: React.FC = () => {
 
             <div className="space-y-12">
                 <section>
-                    <h2 className="text-2xl font-semibold text-gray-700 mb-4 pb-2 border-b border-gray-200">Silo Agents</h2>
+                    <h2 className="text-2xl font-semibold text-gray-700 mb-4 pb-2 border-b border-gray-200">Silo Create Agents</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {siloAgents.map(agent => (
                             <AgentCard

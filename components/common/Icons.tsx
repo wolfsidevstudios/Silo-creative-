@@ -3,7 +3,7 @@ import React from 'react';
 export const LogoIcon: React.FC = () => (
     <img 
         src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
-        alt="Silo Creative Logo" 
+        alt="Silo Create Logo" 
         width="80" 
         height="80" 
         className="mb-8 rounded-full" 

@@ -35,7 +35,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, isSelected, onSelec
       </p>
        {!agent.isCustom && (
         <div className="mt-3 bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1">
-            <StarIcon className="w-3 h-3" /> Silo Agent
+            <StarIcon className="w-3 h-3" /> Silo Create Agent
         </div>
       )}
     </div>

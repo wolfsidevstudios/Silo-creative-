@@ -19,7 +19,7 @@ const Header: React.FC = () => {
             <nav>
                 <div className="flex items-center justify-between gap-4 bg-white/70 backdrop-blur-md rounded-full shadow-lg ring-1 ring-black/5 px-4 py-2 sm:px-6 sm:py-3">
                     <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-                        <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Creative Logo" className="w-8 h-8 rounded-full" />
+                        <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Create Logo" className="w-8 h-8 rounded-full" />
                     </Link>
                     <div className="hidden sm:flex items-center gap-6 text-sm font-medium text-gray-600">
                          <button onClick={() => scrollToSection('features')} className="hover:text-indigo-600 transition-colors">Features</button>
@@ -40,7 +40,7 @@ const Footer: React.FC = () => (
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
                 <div className="text-sm text-gray-500">
-                    &copy; {new Date().getFullYear()} Silo Creative. All rights reserved.
+                    &copy; {new Date().getFullYear()} Silo Create. All rights reserved.
                 </div>
                 <div className="flex items-center gap-4 text-gray-500">
                     <Link to="/terms" className="hover:text-indigo-600">Terms of Service</Link>
@@ -225,7 +225,7 @@ const LandingPage: React.FC = () => {
                                 <img src="https://i.ibb.co/pvVQHjkw/Gemini-2-5-cover.webp" alt="Gemini 2.5 Flash Logo" className="h-12 w-auto mx-auto rounded-md shadow-sm" />
                             </a>
                             <p className="mt-4 text-gray-600 max-w-xl mx-auto">
-                                Silo Creative is built on Gemini 2.5 Flash, bringing you state-of-the-art speed and intelligence in AI-powered app generation.
+                                Silo Create is built on Gemini 2.5 Flash, bringing you state-of-the-art speed and intelligence in AI-powered app generation.
                             </p>
                         </div>
 
@@ -238,12 +238,12 @@ const LandingPage: React.FC = () => {
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                         <img 
                             src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
-                            alt="Silo Creative Logo" 
+                            alt="Silo Create Logo" 
                             className="w-24 h-24 rounded-full mx-auto mb-6"
                         />
                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Who We Are</h2>
                         <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
-                            At Silo Creative, we believe that a great idea shouldn't be limited by coding skills. We are a passionate team of developers and designers dedicated to making technology accessible to everyone. Our mission is to empower creators, entrepreneurs, and students to bring their digital ideas to life, instantly.
+                            At Silo Create, we believe that a great idea shouldn't be limited by coding skills. We are a passionate team of developers and designers dedicated to making technology accessible to everyone. Our mission is to empower creators, entrepreneurs, and students to bring their digital ideas to life, instantly.
                         </p>
                         
                         <div className="mt-20">
@@ -261,52 +261,11 @@ const LandingPage: React.FC = () => {
                     </div>
                 </section>
 
-                {/* Rebranding Announcement Section */}
-                <section id="rebranding" className="relative isolate py-20 sm:py-28">
-                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-                            The Next Evolution is Coming
-                        </h2>
-                        <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
-                            We're thrilled to announce that Silo Creative is becoming{' '}
-                            <span className="font-bold text-indigo-600">Silo Create</span>.
-                            Get ready for <span className="font-bold text-indigo-600">V2</span>, a completely redesigned and more powerful version of the platform.
-                        </p>
-                        <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
-                            <div className="flex items-center gap-3">
-                                <img 
-                                    src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
-                                    alt="Silo Creative Logo" 
-                                    className="w-12 h-12 rounded-full opacity-60"
-                                />
-                                <span className="text-xl font-semibold text-gray-500">Silo Creative</span>
-                            </div>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-gray-400 transform sm:rotate-0 rotate-90">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                            </svg>
-                            <div className="flex items-center gap-3 relative">
-                                 <div className="absolute -top-2 -right-3">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-600 text-white">
-                                        V2
-                                    </span>
-                                </div>
-                                <img 
-                                    src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
-                                    alt="Silo Create Logo" 
-                                    className="w-12 h-12 rounded-full"
-                                />
-                                <span className="text-xl font-bold text-gray-800">Silo Create</span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
                 {/* Features Section */}
                 <section id="features" className="relative isolate py-20 sm:py-28 bg-gray-50/50 backdrop-blur-sm">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center">
-                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Why Choose Silo Creative?</h2>
+                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Why Choose Silo Create?</h2>
                             <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
                                 We combine powerful AI with an intuitive interface to make app development accessible to everyone.
                             </p>
@@ -358,7 +317,7 @@ const LandingPage: React.FC = () => {
                                     "As a student, Silo is a game-changer. I can instantly create study tools and small apps for my projects. The unlimited student plan is amazing!"
                                 </p>
                                 <div className="mt-6 flex items-center gap-4">
-                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Creative Logo" />
+                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Create Logo" />
                                     <div>
                                         <div className="font-semibold text-gray-800">Sarah L.</div>
                                         <div className="text-gray-500 text-sm">Computer Science Student</div>
@@ -370,7 +329,7 @@ const LandingPage: React.FC = () => {
                                     "This tool has supercharged my prototyping workflow. I can go from a client's idea to a working demo in minutes. It's an indispensable part of my toolkit now."
                                 </p>
                                 <div className="mt-6 flex items-center gap-4">
-                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Creative Logo" />
+                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Create Logo" />
                                     <div>
                                         <div className="font-semibold text-gray-800">Mike R.</div>
                                         <div className="text-gray-500 text-sm">Freelance Developer</div>
@@ -379,10 +338,10 @@ const LandingPage: React.FC = () => {
                             </div>
                              <div className="bg-gray-50 p-8 rounded-2xl border border-gray-200/80">
                                 <p className="text-gray-700 relative">
-                                    "I don't code, but I have a lot of ideas. Silo Creative bridges that gap perfectly. I can finally build and test my concepts without hiring a developer."
+                                    "I don't code, but I have a lot of ideas. Silo Create bridges that gap perfectly. I can finally build and test my concepts without hiring a developer."
                                 </p>
                                 <div className="mt-6 flex items-center gap-4">
-                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Creative Logo" />
+                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Create Logo" />
                                     <div>
                                         <div className="font-semibold text-gray-800">Jessica P.</div>
                                         <div className="text-gray-500 text-sm">Product Manager</div>
@@ -474,8 +433,8 @@ const LandingPage: React.FC = () => {
                             </p>
                         </div>
                         <div className="mt-12">
-                            <FaqItem question="What is Silo Creative?">
-                                <p>Silo Creative is an AI-powered platform that lets you build simple, single-page web applications just by describing them. It's designed for makers, students, and developers who want to quickly prototype and build ideas without writing code from scratch.</p>
+                            <FaqItem question="What is Silo Create?">
+                                <p>Silo Create is an AI-powered platform that lets you build simple, single-page web applications just by describing them. It's designed for makers, students, and developers who want to quickly prototype and build ideas without writing code from scratch.</p>
                             </FaqItem>
                             <FaqItem question="Do I need to know how to code?">
                                 <p>Not at all! You can generate complete, functional applications just by writing a prompt. If you are a developer, you can also view and download the generated HTML and Tailwind CSS code to customize it further.</p>
@@ -519,7 +478,7 @@ const LandingPage: React.FC = () => {
                      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
                         <h2 className="text-3xl sm:text-4xl font-bold">Ready to Build Your Idea?</h2>
                         <p className="mt-4 text-lg text-indigo-200 max-w-2xl mx-auto">
-                           Stop wondering and start building. Join Silo Creative today and turn your vision into reality.
+                           Stop wondering and start building. Join Silo Create today and turn your vision into reality.
                         </p>
                         <div className="mt-10">
                             <button onClick={() => navigate('/login')} className="px-8 py-3.5 bg-white text-indigo-600 font-semibold rounded-full hover:bg-gray-100 transition-colors shadow-lg text-lg">

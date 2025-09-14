@@ -40,8 +40,8 @@ const Sidebar: React.FC = () => {
       </button>
 
       <div className={`flex items-center h-20 border-b border-gray-200 transition-all duration-300 ${isExpanded ? 'justify-start px-6' : 'justify-center'}`}>
-        <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Creative Logo" className="w-10 h-10 rounded-full flex-shrink-0" />
-        {isExpanded && <span className="ml-3 text-xl font-bold text-gray-800 whitespace-nowrap">Silo Creative</span>}
+        <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Create Logo" className="w-10 h-10 rounded-full flex-shrink-0" />
+        {isExpanded && <span className="ml-3 text-xl font-bold text-gray-800 whitespace-nowrap">Silo Create</span>}
       </div>
 
       <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto">

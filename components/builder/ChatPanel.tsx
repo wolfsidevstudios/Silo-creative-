@@ -69,7 +69,7 @@ interface BuildStatusCardProps {
 const BuildStatusCard: React.FC<BuildStatusCardProps> = ({ status, countdown }) => (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
         <div className="flex justify-between items-center mb-2">
-            <h4 className="font-semibold text-gray-800">Silo is building...</h4>
+            <h4 className="font-semibold text-gray-800">Silo Create is building...</h4>
             <span className="text-sm text-gray-500 font-mono">~{countdown}s left</span>
         </div>
         <div className="relative w-full bg-gray-200 rounded-full h-2 overflow-hidden">
@@ -394,7 +394,7 @@ const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
                     <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
                     <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse [animation-delay:0.1s]"></div>
                     <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse [animation-delay:0.2s]"></div>
-                    <span className="ml-2 text-sm text-gray-600">Silo is thinking...</span>
+                    <span className="ml-2 text-sm text-gray-600">Silo Create is thinking...</span>
                 </div>
              </div>
            </div>
