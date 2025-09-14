@@ -30,7 +30,10 @@ const AdUnit: React.FC = () => {
         }, 50);
         return () => clearTimeout(timer);
     }, []);
-    return <ins className="adsbygoogle" style={{ display: 'block', width: '100%', minHeight: '250px' }} data-ad-client="ca-pub-7029279570287128" data-ad-slot="9123765567" data-ad-format="auto" data-full-width-responsive="true"></ins>;
+    return <ins className="adsbygoogle"
+     style={{display:'inline-block',width:'300px',height:'300px'}}
+     data-ad-client="ca-pub-7029279570287128"
+     data-ad-slot="4642676642"></ins>;
 };
 
 const PhoneFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -348,7 +351,7 @@ const CodeWorkspace: React.FC<{ code: string }> = ({ code }) => {
 const AdPlaceholder: React.FC<{ title: string }> = ({ title }) => (
     <div className="w-full h-full flex flex-col items-center justify-center p-4">
         <div className="text-center text-gray-500 mb-4"><h3 className="text-lg font-medium text-gray-900">{title}</h3><p className="mt-1 text-sm text-gray-500">The preview will appear here. In the meantime, here's a word from our sponsors.</p></div>
-        <div className="w-full max-w-lg h-auto min-h-[250px] bg-white border border-dashed border-gray-300 rounded-lg p-2"><AdUnit /></div>
+        <div className="w-[300px] h-[300px] bg-white border border-dashed border-gray-300 rounded-lg flex items-center justify-center"><AdUnit /></div>
     </div>
 );
 
