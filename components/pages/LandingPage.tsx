@@ -217,6 +217,18 @@ const LandingPage: React.FC = () => {
                                 <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1015728&theme=light&t=1757771222673" alt="Silo&#0032;Creative&#0032;App&#0032;Builder - AI&#0032;app&#0032;builder | Product Hunt" style={{width: '250px', height: '54px'}} width="250" height="54" />
                             </a>
                         </div>
+                        
+                        {/* Gemini Section */}
+                        <div className="mt-12 text-center">
+                            <p className="text-sm font-semibold text-gray-500 tracking-wide uppercase">POWERED BY</p>
+                            <a href="https://deepmind.google/technologies/gemini/" target="_blank" rel="noopener noreferrer" className="mt-4 inline-block transition-transform hover:scale-105">
+                                <img src="https://i.ibb.co/pvVQHjkw/Gemini-2-5-cover.webp" alt="Gemini 2.5 Flash Logo" className="h-12 w-auto mx-auto rounded-md shadow-sm" />
+                            </a>
+                            <p className="mt-4 text-gray-600 max-w-xl mx-auto">
+                                Silo Creative is built on Gemini 2.5 Flash, bringing you state-of-the-art speed and intelligence in AI-powered app generation.
+                            </p>
+                        </div>
+
                         <AppPreview />
                     </div>
                 </div>
