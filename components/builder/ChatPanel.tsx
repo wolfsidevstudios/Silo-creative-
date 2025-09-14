@@ -1,52 +1,42 @@
 import React, { useState, useEffect, useRef, FormEvent, forwardRef, useImperativeHandle } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { generateAppPlan, generateAppCode, generateFlashcards, generateFormPlan, generateFormCode, refineAppCode, generateNativeAppCode, refineNativeAppCode, chatAboutCode } from '../../services/geminiService';
+import { 
+    generateAppPlan, generateAppCode, generateFlashcards, 
+    generateFormPlan, generateFormCode, refineAppCode, 
+    generateNativeAppCode, refineNativeAppCode, chatAboutCode,
+    selfCorrectCode, getPrimaryAction
+} from '../../services/geminiService';
 import { saveApp } from '../../services/storageService';
 import type { Message, AppPlan, FormPlan, RefinementResult } from '../../types';
-import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon } from '../common/Icons';
+import { AgentTestAction } from '../pages/AppBuilderPage';
+import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon, BotIcon } from '../common/Icons';
 
-// --- Inlined ChangeSummaryDisplay Component ---
+// --- Sub-components for message types ---
 
 const getFileIcon = (filename: string) => {
     const extension = filename.split('.').pop()?.toLowerCase();
     switch (extension) {
-        case 'html':
-            return <HtmlIcon className="w-5 h-5 text-orange-500" />;
-        case 'css':
-            return <CssIcon className="w-5 h-5 text-blue-500" />;
+        case 'html': return <HtmlIcon className="w-5 h-5 text-orange-500" />;
+        case 'css': return <CssIcon className="w-5 h-5 text-blue-500" />;
         case 'js':
-            if (filename.toLowerCase() === 'app.js') {
-                return <ReactIcon className="w-5 h-5 text-blue-400" />;
-            }
+            if (filename.toLowerCase() === 'app.js') return <ReactIcon className="w-5 h-5 text-blue-400" />;
             return <TsIcon className="w-5 h-5 text-yellow-500" />;
-        default:
-            return <FileTextIcon className="w-5 h-5 text-gray-500" />;
+        default: return <FileTextIcon className="w-5 h-5 text-gray-500" />;
     }
 };
 
-interface ChangeSummaryDisplayProps {
-  data: {
-    summary: string;
-    files: string[];
-  };
-}
-
-const ChangeSummaryDisplay: React.FC<ChangeSummaryDisplayProps> = ({ data }) => {
-  const { summary, files } = data;
-
-  return (
+const ChangeSummaryDisplay: React.FC<{ data: { summary: string; files: string[] } }> = ({ data }) => (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="p-4 bg-gray-50 border-b border-gray-200">
             <h3 className="text-lg font-bold text-gray-800">Changes Applied</h3>
             <p className="text-sm text-gray-600">Here's a summary of the updates made to your app.</p>
         </div>
         <div className="p-4 space-y-4">
-            <p className="text-gray-700 whitespace-pre-wrap">{summary}</p>
+            <p className="text-gray-700 whitespace-pre-wrap">{data.summary}</p>
             <div>
                 <h4 className="text-sm font-semibold text-gray-500 mb-2">Files Edited</h4>
                 <ul className="space-y-2">
-                    {files.map((file, index) => (
+                    {data.files.map((file, index) => (
                         <li key={index} className="flex items-center gap-3 bg-gray-100 p-2 rounded-md">
                             {getFileIcon(file)}
                             <span className="font-mono text-sm text-gray-800">{file}</span>
@@ -56,36 +46,21 @@ const ChangeSummaryDisplay: React.FC<ChangeSummaryDisplayProps> = ({ data }) => 
             </div>
         </div>
     </div>
-  );
-};
+);
 
-// --- End of Inlined Component ---
-
-interface PlanDisplayProps {
-  plan: AppPlan;
-  onGenerate: () => void;
-  isGenerated: boolean;
-}
-
-const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan, onGenerate, isGenerated }) => (
+const PlanDisplay: React.FC<{ plan: AppPlan; onGenerate: () => void; isGenerated: boolean; }> = ({ plan, onGenerate, isGenerated }) => (
     <div className="bg-white border border-gray-200 rounded-lg p-6">
         <h3 className="text-xl font-bold mb-2 text-gray-800">{plan.title}</h3>
         <p className="text-gray-600 mb-4">{plan.description}</p>
         <ul className="space-y-2 mb-6">
             {plan.features.map((feature, index) => (
                 <li key={index} className="flex items-start">
-                    <svg className="w-5 h-5 text-indigo-500 mr-2 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
-                    </svg>
+                    <svg className="w-5 h-5 text-indigo-500 mr-2 flex-shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
                     <span className="text-gray-700">{feature}</span>
                 </li>
             ))}
         </ul>
-        <button
-            onClick={onGenerate}
-            disabled={isGenerated}
-            className="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
+        <button onClick={onGenerate} disabled={isGenerated} className="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
             {isGenerated ? 'App Generated' : 'Looks good, create the app!'}
         </button>
     </div>
@@ -104,51 +79,42 @@ const FormPlanDisplay: React.FC<{ plan: FormPlan, onGenerate: () => void, isGene
                 </li>
             ))}
         </ul>
-        <button
-            onClick={onGenerate}
-            disabled={isGenerated}
-            className="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-        >
+        <button onClick={onGenerate} disabled={isGenerated} className="w-full bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
             {isGenerated ? 'Form Generated' : 'Looks good, create the form!'}
         </button>
     </div>
 );
 
-
-const ESTIMATED_BUILD_TIME = 20; // 20 seconds
-
-interface BuildStatusCardProps {
-  status: string;
-  countdown: number;
-}
-
-const BuildStatusCard: React.FC<BuildStatusCardProps> = ({ status, countdown }) => (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <div className="flex justify-between items-center mb-2">
-            <h4 className="font-semibold text-gray-800">Silo Create is building...</h4>
-            <span className="text-sm text-gray-500 font-mono">~{countdown}s left</span>
+const AgentActivityMessage: React.FC<{ content: string }> = ({ content }) => (
+    <div className="flex items-start gap-3 text-gray-700">
+        <div className="w-8 h-8 flex-shrink-0 bg-indigo-100 rounded-full flex items-center justify-center">
+            <BotIcon className="w-5 h-5 text-indigo-600" />
         </div>
-        <div className="relative w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-            <div 
-                className="bg-indigo-500 h-full rounded-full absolute top-0 left-0 transition-all duration-1000 ease-linear" 
-                style={{ width: `${((ESTIMATED_BUILD_TIME - countdown) / ESTIMATED_BUILD_TIME) * 100}%` }}
-            ></div>
-        </div>
-        <div className="flex items-center mt-3 text-gray-600">
-             <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse mr-3"></div>
-             <span className="text-sm">{status}</span>
-        </div>
+        <p className="pt-1.5 italic">{content}</p>
     </div>
 );
 
+const ScreenshotMessage: React.FC<{ imageUrl: string }> = ({ imageUrl }) => (
+    <div className="border bg-white p-2 rounded-lg">
+        <img src={imageUrl} alt="App screenshot" className="rounded-md w-full" />
+    </div>
+);
+
+// --- Main ChatPanel Component ---
+
 export interface ChatPanelRef {
   submitRefinement: (prompt: string) => void;
+  reviewScreenshot: (dataUrl: string) => void;
+  finalizeTest: () => void;
 }
 
-const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
+interface ChatPanelProps {
+    onStartAgentTest: (action: AgentTestAction) => void;
+}
+
+const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest }, ref) => {
   const { 
-    prompt, 
-    generatedCode, setGeneratedCode, 
+    prompt, generatedCode, setGeneratedCode, 
     appMode, setGeneratedFlashcards, agents, selectedAgentId 
   } = useAppContext();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -156,12 +122,9 @@ const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
   const [input, setInput] = useState('');
   const [isCodeGenerated, setIsCodeGenerated] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<AppPlan | FormPlan | null>(null);
-  const [countdown, setCountdown] = useState(0);
-  const [buildStatus, setBuildStatus] = useState('');
   const [chatMode, setChatMode] = useState<'refine' | 'ask'>('refine');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const buildIntervalRef = useRef<number | null>(null);
-
+  
   const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
   
   const scrollToBottom = () => {
@@ -217,207 +180,119 @@ const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
           .finally(() => setIsLoading(false));
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prompt, appMode]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, buildStatus]);
+  useEffect(scrollToBottom, [messages]);
   
-  useEffect(() => {
-    let timer: number;
-    if (isLoading && countdown > 0) {
-        timer = window.setTimeout(() => {
-            setCountdown(prev => prev - 1);
-        }, 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [isLoading, countdown]);
-
-  const startBuildProcess = (steps: string[]) => {
-      setIsLoading(true);
-      setCountdown(ESTIMATED_BUILD_TIME);
-      
-      let stepIndex = 0;
-      setBuildStatus(steps[stepIndex]);
-
-      const stepDuration = (ESTIMATED_BUILD_TIME * 1000) / steps.length;
-      
-      if (buildIntervalRef.current) clearInterval(buildIntervalRef.current);
-
-      buildIntervalRef.current = window.setInterval(() => {
-          stepIndex++;
-          if (stepIndex < steps.length) {
-              setBuildStatus(steps[stepIndex]);
-          } else {
-              if (buildIntervalRef.current) clearInterval(buildIntervalRef.current);
-          }
-      }, stepDuration);
-  }
-
-  const endBuildProcess = () => {
-    setIsLoading(false);
-    if (buildIntervalRef.current) clearInterval(buildIntervalRef.current);
-    setBuildStatus('');
-  }
-  
-  const handleGenerateCode = async (plan: AppPlan) => {
+  const generateCode = async (plan: AppPlan | FormPlan, generationFn: (p: any, i?: string) => Promise<string>) => {
       if (isCodeGenerated) return;
-      startBuildProcess([
-          "Laying the foundation...",
-          ...plan.features.map(feature => `Implementing: ${feature}`),
-          "Styling the components...",
-          "Finalizing the script..."
-      ]);
+      setIsLoading(true);
+      const agentInstruction = selectedAgent?.systemInstruction;
       
       try {
-          const agentInstruction = selectedAgent?.systemInstruction;
-          const code = await generateAppCode(plan, agentInstruction);
-          setGeneratedCode(code);
-          saveApp(plan.title, code, 'build');
+          const code = await generationFn(plan, agentInstruction);
+          setGeneratedCode(code); // This triggers PreviewPanel to render and take a screenshot
+          saveApp(plan.title, code, appMode as 'build' | 'form' | 'native');
           setIsCodeGenerated(true);
-          const successMessage: Message = { role: 'model', content: "I've generated the app for you. You can see it in the preview panel!" };
-          setMessages(prev => [...prev, successMessage]);
       } catch (error) {
           console.error("Error generating code:", error);
           const errorMessage: Message = { role: 'model', content: "Sorry, there was an error generating the code. Please try again." };
           setMessages(prev => [...prev, errorMessage]);
-      } finally {
-          endBuildProcess();
-      }
-  };
-  
-  const handleGenerateNativeCode = async (plan: AppPlan) => {
-      if (isCodeGenerated) return;
-      startBuildProcess([
-          "Drafting native components...",
-          ...plan.features.map(feature => `Implementing: ${feature}`),
-          "Writing stylesheets...",
-          "Finalizing the Expo app..."
-      ]);
-      
-      try {
-          const agentInstruction = selectedAgent?.systemInstruction;
-          const code = await generateNativeAppCode(plan, agentInstruction);
-          setGeneratedCode(code);
-          saveApp(plan.title, code, 'native');
-          setIsCodeGenerated(true);
-          const successMessage: Message = { role: 'model', content: "I've generated the native app for you. Scan the QR code in the preview panel with Expo Go to run it!" };
-          setMessages(prev => [...prev, successMessage]);
-      } catch (error) {
-          console.error("Error generating native code:", error);
-          const errorMessage: Message = { role: 'model', content: "Sorry, there was an error generating the native app code. Please try again." };
-          setMessages(prev => [...prev, errorMessage]);
-      } finally {
-          endBuildProcess();
+          setIsLoading(false);
       }
   };
 
-  const handleGenerateForm = async (plan: FormPlan) => {
-    if (isCodeGenerated) return;
-    startBuildProcess([
-        "Drafting the HTML structure...",
-        ...plan.fields.map(field => `Adding field: ${field.name}`),
-        "Applying Tailwind styles...",
-        "Setting up Netlify integration..."
-    ]);
-
+  const reviewScreenshot = async (dataUrl: string) => {
+    setMessages(prev => [...prev, { role: 'model', content: '', imageUrl: dataUrl }]);
+    setMessages(prev => [...prev, { role: 'model', content: 'Let me double-check my work...', isAgentActivity: true }]);
+    
     try {
-        const agentInstruction = selectedAgent?.systemInstruction;
-        const code = await generateFormCode(plan, agentInstruction);
-        setGeneratedCode(code);
-        saveApp(plan.title, code, 'form');
-        setIsCodeGenerated(true);
-        const successMessage: Message = { role: 'model', content: "I've generated the form for you. It's ready for Netlify!" };
-        setMessages(prev => [...prev, successMessage]);
+        const result = await selfCorrectCode(prompt, generatedCode, dataUrl.split(',')[1], selectedAgent?.systemInstruction);
+        if (result.summary === 'NO_CHANGES_NEEDED') {
+            setMessages(prev => [...prev, { role: 'model', content: 'Looks good to me!', isAgentActivity: true }]);
+            startAgentTestingPhase();
+        } else {
+            setGeneratedCode(result.code);
+            const summaryMessage: Message = { 
+                role: 'model', 
+                content: JSON.stringify({ summary: `I found a small issue and fixed it: ${result.summary}`, files: result.files_edited }),
+                isChangeSummary: true,
+            };
+            setMessages(prev => [...prev, summaryMessage]);
+            // The new code will trigger a new screenshot and review. To prevent loops, we'll proceed after one correction.
+            startAgentTestingPhase();
+        }
     } catch (error) {
-        console.error("Error generating form code:", error);
-        const errorMessage: Message = { role: 'model', content: "Sorry, there was an error generating the form code." };
-        setMessages(prev => [...prev, errorMessage]);
-    } finally {
-        endBuildProcess();
+        console.error("Error during self-correction:", error);
+        setMessages(prev => [...prev, { role: 'model', content: "I had trouble reviewing my work, but you can check it out.", isAgentActivity: true }]);
+        setIsLoading(false);
     }
   };
+
+  const startAgentTestingPhase = async () => {
+      setMessages(prev => [...prev, { role: 'model', content: 'Now, I\'ll quickly test the main functionality.', isAgentActivity: true }]);
+      try {
+          const action = await getPrimaryAction(generatedCode, selectedAgent?.systemInstruction);
+          onStartAgentTest(action);
+      } catch(error) {
+          console.error("Could not get primary action:", error);
+          setMessages(prev => [...prev, { role: 'model', content: "I couldn't figure out how to test this app automatically, but it's ready for you.", isAgentActivity: true }]);
+          setIsLoading(false);
+      }
+  };
+
+  useImperativeHandle(ref, () => ({
+    submitRefinement,
+    reviewScreenshot,
+    finalizeTest: () => {
+        setMessages(prev => [...prev, { role: 'model', content: 'Everything seems to be working! The app is now ready for you to use.' }]);
+        setIsLoading(false);
+    }
+  }));
 
   const submitRefinement = async (refinementPrompt: string) => {
-    if (!generatedCode) {
-      console.log("Cannot refine: No code has been generated yet.");
-      return;
-    }
-
-    const userMessage: Message = { role: 'user', content: refinementPrompt };
-    setMessages(prev => [...prev, userMessage]);
-    
-    startBuildProcess([
-        `Understanding refinement...`,
-        "Analyzing existing code...",
-        "Applying modifications...",
-        "Finalizing new version..."
-    ]);
-
+    if (!generatedCode) return;
+    setMessages(prev => [...prev, { role: 'user', content: refinementPrompt }]);
+    setIsLoading(true);
     try {
       const agentInstruction = selectedAgent?.systemInstruction;
-      let refinementResult: RefinementResult;
-
-      if (appMode === 'native') {
-          refinementResult = await refineNativeAppCode(generatedCode, refinementPrompt, agentInstruction);
-      } else { // build or form
-          refinementResult = await refineAppCode(generatedCode, refinementPrompt, agentInstruction);
-      }
-      
-      setGeneratedCode(refinementResult.code);
-      const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
-      saveApp(title, refinementResult.code, appMode as 'build' | 'form' | 'native');
-      
-      const summaryMessage: Message = { 
+      const result = await refineAppCode(generatedCode, refinementPrompt, agentInstruction);
+      setGeneratedCode(result.code);
+      saveApp(currentPlan?.title || "Updated App", result.code, appMode as 'build' | 'form');
+      setMessages(prev => [...prev, { 
           role: 'model', 
-          content: JSON.stringify({ summary: refinementResult.summary, files: refinementResult.files_edited }),
+          content: JSON.stringify({ summary: result.summary, files: result.files_edited }),
           isChangeSummary: true,
-      };
-      setMessages(prev => [...prev, summaryMessage]);
-
+      }]);
     } catch (error) {
         console.error("Error refining code:", error);
-        const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't apply those changes. The previous version is still active." };
-        setMessages(prev => [...prev, errorMessage]);
+        setMessages(prev => [...prev, { role: 'model', content: "Sorry, I couldn't apply those changes." }]);
     } finally {
-        endBuildProcess();
+        setIsLoading(false);
     }
   };
-  
-  useImperativeHandle(ref, () => ({
-    submitRefinement
-  }));
   
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-
     const currentInput = input;
     setInput('');
     
     if (isCodeGenerated && generatedCode) {
         if (chatMode === 'refine') {
             await submitRefinement(currentInput);
-        } else { // 'ask' mode
-            const userMessage: Message = { role: 'user', content: currentInput };
-            setMessages(prev => [...prev, userMessage]);
+        } else {
+            setMessages(prev => [...prev, { role: 'user', content: currentInput }]);
             setIsLoading(true);
             try {
-                const agentInstruction = selectedAgent?.systemInstruction;
-                const responseText = await chatAboutCode(generatedCode, currentInput, agentInstruction);
-                const modelMessage: Message = { role: 'model', content: responseText };
-                setMessages(prev => [...prev, modelMessage]);
+                const responseText = await chatAboutCode(generatedCode, currentInput, selectedAgent?.systemInstruction);
+                setMessages(prev => [...prev, { role: 'model', content: responseText }]);
             } catch (error) {
-                console.error("Error asking about code:", error);
-                const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't answer that question right now." };
-                setMessages(prev => [...prev, errorMessage]);
+                setMessages(prev => [...prev, { role: 'model', content: "Sorry, I couldn't answer that right now." }]);
             } finally {
                 setIsLoading(false);
             }
         }
-    } else {
-      console.log("Cannot send message. App not generated yet.");
     }
   };
 
@@ -425,50 +300,35 @@ const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
     <div className="w-1/2 flex flex-col h-full bg-gray-50">
       <header className="p-4 border-b border-gray-200 flex items-center">
         <div className="flex items-center gap-3">
-          {selectedAgent && (
-            <img src={selectedAgent.imageUrl} alt={selectedAgent.name} className="w-10 h-10 rounded-full" />
-          )}
+          {selectedAgent && <img src={selectedAgent.imageUrl} alt={selectedAgent.name} className="w-10 h-10 rounded-full" />}
           <h2 className="text-xl font-semibold">{selectedAgent ? selectedAgent.name : "Conversation"}</h2>
         </div>
       </header>
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            {msg.isPlan ? (
-              <div className="w-full max-w-lg">
-                {msg.planType === 'app' ? (
-                    <PlanDisplay 
-                        plan={JSON.parse(msg.content)} 
-                        onGenerate={() => {
-                            const plan = JSON.parse(msg.content);
-                            if (appMode === 'native') {
-                                handleGenerateNativeCode(plan);
-                            } else {
-                                handleGenerateCode(plan);
-                            }
-                        }}
-                        isGenerated={isCodeGenerated}
-                    />
+             <div className="w-full max-w-lg">
+                {msg.isPlan ? (
+                    msg.planType === 'app' ? (
+                        <PlanDisplay plan={JSON.parse(msg.content)} onGenerate={() => generateCode(JSON.parse(msg.content), appMode === 'native' ? generateNativeAppCode : generateAppCode)} isGenerated={isCodeGenerated} />
+                    ) : (
+                        <FormPlanDisplay plan={JSON.parse(msg.content)} onGenerate={() => generateCode(JSON.parse(msg.content), generateFormCode)} isGenerated={isCodeGenerated} />
+                    )
+                ) : msg.isChangeSummary ? (
+                    <ChangeSummaryDisplay data={JSON.parse(msg.content)} />
+                ) : msg.imageUrl ? (
+                    <ScreenshotMessage imageUrl={msg.imageUrl} />
+                ) : msg.isAgentActivity ? (
+                    <AgentActivityMessage content={msg.content} />
                 ) : (
-                    <FormPlanDisplay
-                        plan={JSON.parse(msg.content)}
-                        onGenerate={() => handleGenerateForm(JSON.parse(msg.content))}
-                        isGenerated={isCodeGenerated}
-                    />
+                  <div className={`inline-block max-w-lg p-4 rounded-2xl ${msg.role === 'user' ? 'bg-indigo-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  </div>
                 )}
               </div>
-            ) : msg.isChangeSummary ? (
-                <div className="w-full max-w-lg">
-                    <ChangeSummaryDisplay data={JSON.parse(msg.content)} />
-                </div>
-            ) : (
-              <div className={`max-w-lg p-4 rounded-2xl ${msg.role === 'user' ? 'bg-indigo-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>
-                <p className="whitespace-pre-wrap">{msg.content}</p>
-              </div>
-            )}
           </div>
         ))}
-        {isLoading && !buildStatus && (
+        {isLoading && !messages.some(m => m.isAgentActivity) && (
            <div className="flex justify-start">
              <div className="max-w-lg p-4 rounded-2xl bg-gray-200 text-gray-800 rounded-bl-none">
                 <div className="flex items-center space-x-2">
@@ -480,30 +340,13 @@ const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
              </div>
            </div>
         )}
-        {isLoading && buildStatus && (
-            <div className="flex justify-start">
-                <div className="w-full max-w-lg">
-                    <BuildStatusCard status={buildStatus} countdown={countdown} />
-                </div>
-            </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
       <div className="p-4 border-t border-gray-200">
         {isCodeGenerated && (
             <div className="flex items-center gap-2 mb-3">
-                <button
-                    onClick={() => setChatMode('refine')}
-                    className={`px-3 py-1 text-sm font-medium rounded-full transition-colors ${chatMode === 'refine' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-                >
-                    Refine App
-                </button>
-                <button
-                    onClick={() => setChatMode('ask')}
-                    className={`px-3 py-1 text-sm font-medium rounded-full transition-colors ${chatMode === 'ask' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-                >
-                    Ask About Code
-                </button>
+                <button onClick={() => setChatMode('refine')} className={`px-3 py-1 text-sm font-medium rounded-full transition-colors ${chatMode === 'refine' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>Refine App</button>
+                <button onClick={() => setChatMode('ask')} className={`px-3 py-1 text-sm font-medium rounded-full transition-colors ${chatMode === 'ask' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>Ask About Code</button>
             </div>
         )}
         <form onSubmit={handleSendMessage} className="relative">

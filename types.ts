@@ -7,6 +7,8 @@ export interface Message {
   isPlan?: boolean;
   planType?: 'app' | 'form';
   isChangeSummary?: boolean;
+  imageUrl?: string; // For screenshots
+  isAgentActivity?: boolean; // For status messages
 }
 
 export interface AppPlan {
