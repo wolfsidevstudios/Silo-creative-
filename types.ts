@@ -6,6 +6,7 @@ export interface Message {
   content: string;
   isPlan?: boolean;
   planType?: 'app' | 'form';
+  isChangeSummary?: boolean;
 }
 
 export interface AppPlan {
@@ -18,6 +19,12 @@ export interface FormPlan {
     title: string;
     description: string;
     fields: { name: string; type: string; required: boolean }[];
+}
+
+export interface RefinementResult {
+  code: string;
+  summary: string;
+  files_edited: string[];
 }
 
 export interface Flashcard {

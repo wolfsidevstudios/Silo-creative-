@@ -3,7 +3,63 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import { generateAppPlan, generateAppCode, generateFlashcards, generateFormPlan, generateFormCode, refineAppCode, generateNativeAppCode, refineNativeAppCode, chatAboutCode } from '../../services/geminiService';
 import { saveApp } from '../../services/storageService';
-import type { Message, AppPlan, FormPlan } from '../../types';
+import type { Message, AppPlan, FormPlan, RefinementResult } from '../../types';
+import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon } from '../common/Icons';
+
+// --- Inlined ChangeSummaryDisplay Component ---
+
+const getFileIcon = (filename: string) => {
+    const extension = filename.split('.').pop()?.toLowerCase();
+    switch (extension) {
+        case 'html':
+            return <HtmlIcon className="w-5 h-5 text-orange-500" />;
+        case 'css':
+            return <CssIcon className="w-5 h-5 text-blue-500" />;
+        case 'js':
+            if (filename.toLowerCase() === 'app.js') {
+                return <ReactIcon className="w-5 h-5 text-blue-400" />;
+            }
+            return <TsIcon className="w-5 h-5 text-yellow-500" />;
+        default:
+            return <FileTextIcon className="w-5 h-5 text-gray-500" />;
+    }
+};
+
+interface ChangeSummaryDisplayProps {
+  data: {
+    summary: string;
+    files: string[];
+  };
+}
+
+const ChangeSummaryDisplay: React.FC<ChangeSummaryDisplayProps> = ({ data }) => {
+  const { summary, files } = data;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="p-4 bg-gray-50 border-b border-gray-200">
+            <h3 className="text-lg font-bold text-gray-800">Changes Applied</h3>
+            <p className="text-sm text-gray-600">Here's a summary of the updates made to your app.</p>
+        </div>
+        <div className="p-4 space-y-4">
+            <p className="text-gray-700 whitespace-pre-wrap">{summary}</p>
+            <div>
+                <h4 className="text-sm font-semibold text-gray-500 mb-2">Files Edited</h4>
+                <ul className="space-y-2">
+                    {files.map((file, index) => (
+                        <li key={index} className="flex items-center gap-3 bg-gray-100 p-2 rounded-md">
+                            {getFileIcon(file)}
+                            <span className="font-mono text-sm text-gray-800">{file}</span>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </div>
+    </div>
+  );
+};
+
+// --- End of Inlined Component ---
 
 interface PlanDisplayProps {
   plan: AppPlan;
@@ -301,24 +357,25 @@ const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
 
     try {
       const agentInstruction = selectedAgent?.systemInstruction;
-      let successMessage: Message;
+      let refinementResult: RefinementResult;
 
-      if (appMode === 'native' && generatedCode) {
-          const newCode = await refineNativeAppCode(generatedCode, refinementPrompt, agentInstruction);
-          setGeneratedCode(newCode);
-          const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
-          saveApp(title, newCode, 'native');
-          successMessage = { role: 'model', content: "I've updated the native app." };
-      } else if (generatedCode) { // build or form
-          const newCode = await refineAppCode(generatedCode, refinementPrompt, agentInstruction);
-          setGeneratedCode(newCode);
-          const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
-          saveApp(title, newCode, appMode as 'build' | 'form');
-          successMessage = { role: 'model', content: "I've updated the app with your changes. Take a look!" };
-      } else {
-          throw new Error("No code available to refine.");
+      if (appMode === 'native') {
+          refinementResult = await refineNativeAppCode(generatedCode, refinementPrompt, agentInstruction);
+      } else { // build or form
+          refinementResult = await refineAppCode(generatedCode, refinementPrompt, agentInstruction);
       }
-      setMessages(prev => [...prev, successMessage]);
+      
+      setGeneratedCode(refinementResult.code);
+      const title = currentPlan?.title ? `Update: ${currentPlan.title}` : 'Updated App';
+      saveApp(title, refinementResult.code, appMode as 'build' | 'form' | 'native');
+      
+      const summaryMessage: Message = { 
+          role: 'model', 
+          content: JSON.stringify({ summary: refinementResult.summary, files: refinementResult.files_edited }),
+          isChangeSummary: true,
+      };
+      setMessages(prev => [...prev, summaryMessage]);
+
     } catch (error) {
         console.error("Error refining code:", error);
         const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't apply those changes. The previous version is still active." };
@@ -400,6 +457,10 @@ const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
                     />
                 )}
               </div>
+            ) : msg.isChangeSummary ? (
+                <div className="w-full max-w-lg">
+                    <ChangeSummaryDisplay data={JSON.parse(msg.content)} />
+                </div>
             ) : (
               <div className={`max-w-lg p-4 rounded-2xl ${msg.role === 'user' ? 'bg-indigo-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>
                 <p className="whitespace-pre-wrap">{msg.content}</p>

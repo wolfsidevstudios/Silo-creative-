@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { AppPlan, Flashcard, FormPlan } from '../types';
+import { AppPlan, Flashcard, FormPlan, RefinementResult } from '../types';
 import { getApiKey } from './apiKeyService';
 
 const combineInstructions = (agentInstruction: string | undefined, taskInstruction: string): string => {
@@ -387,7 +387,7 @@ export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: 
   }
 };
 
-export const refineAppCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<string> => {
+export const refineAppCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<RefinementResult> => {
   console.log(`Refining code with prompt: "${prompt}"`);
 
   const ai = new GoogleGenAI({ apiKey: getApiKey() });
@@ -406,32 +406,54 @@ export const refineAppCode = async (existingCode: string, prompt: string, agentS
 
     **CRITICAL INSTRUCTIONS:**
     1.  **Apply the Change:** Your primary goal is to accurately implement the user's requested change into the provided code.
-    2.  **Improve Quality:** While applying the change, you must also maintain or improve the overall quality of the code. This includes:
-        - Enhancing the visual design and user experience.
-        - Ensuring the code remains clean, readable, and well-structured.
-        - Maintaining responsiveness and accessibility.
-    3.  **Return the Full Code:** You MUST return the entire, complete, and updated HTML file. Do NOT provide only snippets, explanations, or markdown. Your response should be only raw HTML code.
-    4.  **Maintain Structure:** The application must remain a single HTML file with Tailwind CSS (from CDN) and all JavaScript in one \`<script>\` tag. Do not introduce build steps or frameworks.
+    2.  **Analyze and Summarize:** After applying the change, provide a brief, user-friendly summary of what you did. Also, list the conceptual "files" you edited (e.g., "index.html", "script.js", "styles.css").
+    3.  **Return JSON:** You MUST respond with a single JSON object with the following structure:
+        {
+          "code": "The entire, complete, and updated HTML file content as a single string.",
+          "summary": "A friendly summary of the changes you made.",
+          "files_edited": ["A list of the conceptual files you edited, e.g., 'index.html', 'script.js']
+        }
+    4.  **Maintain Structure:** The application code within the 'code' property must remain a single HTML file with Tailwind CSS (from CDN) and all JavaScript in one \`<script>\` tag. Do not introduce build steps or frameworks.
     5.  **Preserve Functionality:** Ensure existing functionality remains intact unless the user specifically asks to change or remove it.
     `;
-    
-    const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+  
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            code: { type: Type.STRING },
+            summary: { type: Type.STRING },
+            files_edited: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.STRING,
+                },
+            },
+        },
+        required: ['code', 'summary', 'files_edited'],
+    };
 
-  try {
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: taskPrompt,
-        config: config
-    });
-    return response.text;
-  } catch (error) {
-      console.error("Error refining code with Gemini:", error);
-      // On error, we throw so the UI can inform the user but keep the old code.
-      throw new Error("Failed to refine the application code.");
-  }
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: taskPrompt,
+            config: {
+                // Fix: Correctly pass agentSystemInstruction to systemInstruction property.
+                ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
+                responseMimeType: "application/json",
+                responseSchema: schema,
+            },
+        });
+
+        const resultJson = response.text.trim();
+        const result: RefinementResult = JSON.parse(resultJson);
+        return result;
+    } catch (error) {
+        console.error("Error refining code with Gemini:", error);
+        throw new Error("Failed to refine the application code.");
+    }
 };
 
-export const refineNativeAppCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<string> => {
+export const refineNativeAppCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<RefinementResult> => {
   console.log(`Refining native code with prompt: "${prompt}"`);
 
   const ai = new GoogleGenAI({ apiKey: getApiKey() });
@@ -450,27 +472,50 @@ export const refineNativeAppCode = async (existingCode: string, prompt: string, 
 
     **CRITICAL INSTRUCTIONS:**
     1.  **Apply the Change:** Your primary goal is to accurately implement the user's requested change into the provided code.
-    2.  **Improve Quality:** While applying the change, you must also maintain or improve the overall quality of the code. This includes:
-        - Enhancing the visual design and user experience.
-        - Ensuring the code remains clean, readable, and well-structured, following React Native best practices.
-    3.  **Return the Full Code:** You MUST return the entire, complete, and updated file. Do NOT provide only snippets, explanations, or markdown. Your response should be only raw code.
+    2.  **Analyze and Summarize:** After applying the change, provide a brief, user-friendly summary of what you did. Since this is a single file, the "files_edited" array should just contain "App.js".
+    3.  **Return JSON:** You MUST respond with a single JSON object with the following structure:
+        {
+          "code": "The entire, complete, and updated App.js file content as a single string.",
+          "summary": "A friendly summary of the changes you made.",
+          "files_edited": ["App.js"]
+        }
     4.  **Maintain Structure:** The application must remain a single file. Continue to use standard React Native components and \`StyleSheet\` for styling.
     5.  **Preserve Functionality:** Ensure existing functionality remains intact unless the user specifically asks to change or remove it.
     `;
     
-    const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            code: { type: Type.STRING },
+            summary: { type: Type.STRING },
+            files_edited: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.STRING,
+                },
+            },
+        },
+        required: ['code', 'summary', 'files_edited'],
+    };
 
-  try {
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: taskPrompt,
-        config: config
-    });
-    return response.text;
-  } catch (error) {
-      console.error("Error refining native code with Gemini:", error);
-      throw new Error("Failed to refine the application code.");
-  }
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: taskPrompt,
+            config: {
+                // Fix: Correctly pass agentSystemInstruction to systemInstruction property.
+                ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
+                responseMimeType: "application/json",
+                responseSchema: schema,
+            },
+        });
+        const resultJson = response.text.trim();
+        const result: RefinementResult = JSON.parse(resultJson);
+        return result;
+    } catch (error) {
+        console.error("Error refining native code with Gemini:", error);
+        throw new Error("Failed to refine the application code.");
+    }
 };
 
 export const chatAboutCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<string> => {
