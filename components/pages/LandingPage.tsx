@@ -57,7 +57,7 @@ const Header: React.FC = () => {
         <header className="fixed top-4 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl">
             <nav>
                 <div className="flex items-center justify-between gap-4 bg-white/70 backdrop-blur-md rounded-full shadow-lg ring-1 ring-black/5 px-4 py-2 sm:px-6 sm:py-3">
-                    <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+                    <Link to="/" className="flex items-center gap-2 flex-shrink-0" aria-label="Silo Create Home">
                         <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Create Logo" className="w-8 h-8 rounded-full" />
                     </Link>
                     <div className="hidden sm:flex items-center gap-6 text-sm font-medium text-gray-600">
@@ -70,7 +70,7 @@ const Header: React.FC = () => {
                            <DiscordIcon className="h-5 w-5 text-[#5865F2]" />
                            <span>Join Discord</span>
                         </a>
-                        <a href="https://discord.gg/sPt7bZAB" target="_blank" rel="noopener noreferrer" className="sm:hidden flex items-center justify-center w-10 h-10 bg-white/80 rounded-full text-gray-700 hover:bg-white transition-colors shadow-sm ring-1 ring-gray-200">
+                        <a href="https://discord.gg/sPt7bZAB" target="_blank" rel="noopener noreferrer" className="sm:hidden flex items-center justify-center w-10 h-10 bg-white/80 rounded-full text-gray-700 hover:bg-white transition-colors shadow-sm ring-1 ring-gray-200" aria-label="Join our Discord">
                             <DiscordIcon className="h-5 w-5 text-[#5865F2]" />
                         </a>
                         <button onClick={() => navigate('/login')} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-sm">
@@ -95,11 +95,11 @@ const Footer: React.FC = () => (
                     <Link to="/privacy" className="hover:text-indigo-600">Privacy Policy</Link>
                 </div>
                  <div className="flex space-x-6">
-                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-500">
+                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-500" aria-label="Silo Create on GitHub">
                         <span className="sr-only">GitHub</span>
                         <GitHubIcon className="h-6 w-6" />
                     </a>
-                    <a href="https://discord.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-500">
+                    <a href="https://discord.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-500" aria-label="Join the Silo Create Discord">
                         <span className="sr-only">Discord</span>
                         <DiscordIcon className="h-6 w-6" />
                     </a>
@@ -150,6 +150,7 @@ const AppPreview: React.FC = () => {
 
         {/* Step 1: Showing generated app */}
         <div className={`absolute inset-0 transition-opacity duration-500 ${step === 1 ? 'opacity-100' : 'opacity-0'}`}>
+            <span className="sr-only">An animation showing an AI generating a Pomodoro timer app from a text prompt. The final app shows a timer set to 25:00 with start and reset buttons.</span>
             <div className="w-full h-full bg-gradient-to-br from-red-500 to-orange-400 rounded-lg flex flex-col items-center justify-center p-4 font-sans animate-fade-in">
                 <div className="text-white text-center opacity-0 animate-slide-in-up" style={{ animationDelay: '200ms' }}>
                     <p className="text-lg font-medium tracking-wider">POMODORO</p>
@@ -286,7 +287,7 @@ const LandingPage: React.FC = () => {
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                         <img 
                             src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
-                            alt="Silo Create Logo" 
+                            alt="Silo Create company logo" 
                             className="w-24 h-24 rounded-full mx-auto mb-6"
                         />
                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Who We Are</h2>
@@ -299,7 +300,7 @@ const LandingPage: React.FC = () => {
                              <div className="inline-block bg-white/50 backdrop-blur-sm border border-gray-200/80 rounded-2xl shadow-lg p-8">
                                 <img 
                                     src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
-                                    alt="Emanuel Martinez" 
+                                    alt="Emanuel Martinez, Founder of Silo Create" 
                                     className="w-28 h-28 rounded-full mx-auto mb-4"
                                 />
                                 <h4 className="text-xl font-semibold text-gray-800">Emanuel Martinez</h4>
@@ -379,7 +380,7 @@ const LandingPage: React.FC = () => {
                                     "As a student, Silo is a game-changer. I can instantly create study tools and small apps for my projects. The unlimited student plan is amazing!"
                                 </p>
                                 <div className="mt-6 flex items-center gap-4">
-                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Create Logo" />
+                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Testimonial from Sarah L." />
                                     <div>
                                         <div className="font-semibold text-gray-800">Sarah L.</div>
                                         <div className="text-gray-500 text-sm">Computer Science Student</div>
@@ -391,7 +392,7 @@ const LandingPage: React.FC = () => {
                                     "This tool has supercharged my prototyping workflow. I can go from a client's idea to a working demo in minutes. It's an indispensable part of my toolkit now."
                                 </p>
                                 <div className="mt-6 flex items-center gap-4">
-                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Create Logo" />
+                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Testimonial from Mike R." />
                                     <div>
                                         <div className="font-semibold text-gray-800">Mike R.</div>
                                         <div className="text-gray-500 text-sm">Freelance Developer</div>
@@ -403,7 +404,7 @@ const LandingPage: React.FC = () => {
                                     "I don't code, but I have a lot of ideas. Silo Create bridges that gap perfectly. I can finally build and test my concepts without hiring a developer."
                                 </p>
                                 <div className="mt-6 flex items-center gap-4">
-                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Create Logo" />
+                                    <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Testimonial from Jessica P." />
                                     <div>
                                         <div className="font-semibold text-gray-800">Jessica P.</div>
                                         <div className="text-gray-500 text-sm">Product Manager</div>
