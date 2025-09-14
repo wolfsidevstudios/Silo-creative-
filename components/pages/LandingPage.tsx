@@ -4,6 +4,24 @@ import { GitHubIcon, DiscordIcon, BrainCircuitIcon, CodeIcon, UsersIcon, AtSignI
 import GoogleSignInButton from '../auth/GoogleSignInButton';
 import { useAppContext } from '../../context/AppContext';
 
+const AdsterraComponent: React.FC = () => {
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.async = true;
+        script.setAttribute('data-cfasync', 'false');
+        script.src = "//pl27645175.revenuecpmgate.com/ac8891c2936e472b346ece4166edfa19/invoke.js";
+        
+        const container = document.getElementById('container-ac8891c2936e472b346ece4166edfa19');
+        if (container) {
+            container.appendChild(script);
+        }
+    }, []);
+
+    return (
+        <div id="container-ac8891c2936e472b346ece4166edfa19"></div>
+    );
+};
+
 const AdComponent: React.FC = () => {
     useEffect(() => {
         try {
@@ -335,6 +353,13 @@ const LandingPage: React.FC = () => {
                 <section className="py-10 bg-gray-50/50 backdrop-blur-sm">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <AdComponent />
+                    </div>
+                </section>
+
+                {/* Adsterra Ad Section */}
+                <section className="py-10 bg-gray-50/50 backdrop-blur-sm">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center">
+                        <AdsterraComponent />
                     </div>
                 </section>
 
