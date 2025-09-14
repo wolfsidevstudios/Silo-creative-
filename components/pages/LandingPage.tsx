@@ -6,19 +6,20 @@ import { useAppContext } from '../../context/AppContext';
 
 const AdsterraComponent: React.FC = () => {
     useEffect(() => {
-        const script = document.createElement('script');
-        script.async = true;
-        script.setAttribute('data-cfasync', 'false');
-        script.src = "//pl27645175.revenuecpmgate.com/ac8891c2936e472b346ece4166edfa19/invoke.js";
+        const containerId = 'container-e9754facbac6b493647ba99f86d63a4c';
+        const container = document.getElementById(containerId);
         
-        const container = document.getElementById('container-ac8891c2936e472b346ece4166edfa19');
-        if (container) {
+        if (container && !container.querySelector('script')) {
+            const script = document.createElement('script');
+            script.async = true;
+            script.setAttribute('data-cfasync', 'false');
+            script.src = "//pl27645172.revenuecpmgate.com/e9754facbac6b493647ba99f86d63a4c/invoke.js";
             container.appendChild(script);
         }
     }, []);
 
     return (
-        <div id="container-ac8891c2936e472b346ece4166edfa19"></div>
+        <div id="container-e9754facbac6b493647ba99f86d63a4c"></div>
     );
 };
 
