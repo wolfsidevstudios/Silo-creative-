@@ -73,7 +73,6 @@ interface PreviewPanelProps {
 const PreviewPanel: React.FC<PreviewPanelProps> = ({ onVisualEditSubmit }) => {
     const { generatedCode, appMode, generatedFlashcards, prompt } = useAppContext();
     const [viewMode, setViewMode] = useState<'app' | 'code'>('app');
-    const [isCopied, setIsCopied] = useState(false);
     const [qrCodeUrl, setQrCodeUrl] = useState('');
     const [qrError, setQrError] = useState<string | null>(null);
     const [isQrLoading, setIsQrLoading] = useState(false);
@@ -225,13 +224,6 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ onVisualEditSubmit }) => {
         }
     }, [generatedCode, appMode]);
 
-    const handleCopy = () => {
-        if (!generatedCode) return;
-        navigator.clipboard.writeText(generatedCode);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
-    };
-
     const handleVisualEditSubmit = (prompt: string) => {
         if (!selectedElementData) return;
         const finalPrompt = `Using the existing code, make the following change to the element identified by the selector "${selectedElementData.selector}": ${prompt}`;
@@ -261,13 +253,13 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ onVisualEditSubmit }) => {
                 </div>
             );
         }
-        return <CodeViewer code={generatedCode} onCopy={handleCopy} isCopied={isCopied} />;
+        return <CodeWorkspace code={generatedCode} />;
     };
     
     const renderNativeMode = () => {
         if (!generatedCode) return <NativePlaceholder />;
         if (viewMode === 'app') return <NativePreview generatedCode={generatedCode} qrCodeUrl={qrCodeUrl} qrError={qrError} isQrLoading={isQrLoading} />;
-        return <CodeViewer code={generatedCode} onCopy={handleCopy} isCopied={isCopied} />;
+        return <CodeViewer code={generatedCode} />;
     };
 
     const renderStudyMode = () => {
@@ -336,14 +328,102 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ onVisualEditSubmit }) => {
 
 // --- Sub-components for cleaner rendering logic ---
 
-const CodeViewer: React.FC<{ code: string; onCopy: () => void; isCopied: boolean }> = ({ code, onCopy, isCopied }) => (
-    <div className="relative w-full h-full bg-gray-900 text-white font-mono text-sm overflow-auto">
-        <button onClick={onCopy} className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md text-xs transition-colors">
-            {isCopied ? <><CheckIcon className="w-4 h-4 text-green-400" /><span>Copied!</span></> : <><ClipboardIcon className="w-4 h-4" /><span>Copy Code</span></>}
+const CodeViewer: React.FC<{ code: string }> = ({ code }) => {
+    const [isCopied, setIsCopied] = useState(false);
+    const handleCopy = () => {
+        if (!code) return;
+        navigator.clipboard.writeText(code);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
+
+    return (
+        <div className="relative w-full h-full bg-gray-900 text-white font-mono text-sm overflow-auto">
+            <button onClick={handleCopy} className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md text-xs transition-colors">
+                {isCopied ? <><CheckIcon className="w-4 h-4 text-green-400" /><span>Copied!</span></> : <><ClipboardIcon className="w-4 h-4" /><span>Copy Code</span></>}
+            </button>
+            <pre className="p-4 pt-12"><code>{code}</code></pre>
+        </div>
+    );
+};
+
+const CodeWorkspace: React.FC<{ code: string }> = ({ code }) => {
+    type Tab = 'html' | 'css' | 'js';
+    const [activeTab, setActiveTab] = useState<Tab>('html');
+    const [html, setHtml] = useState('');
+    const [css, setCss] = useState('');
+    const [js, setJs] = useState('');
+    const [isCopied, setIsCopied] = useState(false);
+
+    useEffect(() => {
+        if (!code) return;
+
+        const jsRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/i;
+        const jsMatch = code.match(jsRegex);
+        const jsContent = jsMatch && jsMatch[1] ? jsMatch[1].trim() : '// No JavaScript found in script tag.';
+        setJs(jsContent);
+
+        const cssRegex = /<style\b[^>]*>([\s\S]*?)<\/style>/i;
+        const cssMatch = code.match(cssRegex);
+        const cssContent = cssMatch && cssMatch[1] ? cssMatch[1].trim() : '/*\n This app uses Tailwind CSS for styling.\n Styles are applied directly as classes in the HTML tab.\n*/';
+        setCss(cssContent);
+
+        const htmlContent = code.replace(jsRegex, '').replace(cssRegex, '').trim();
+        setHtml(htmlContent);
+
+        setActiveTab('html');
+    }, [code]);
+
+    const handleCopy = () => {
+        let contentToCopy = '';
+        if (activeTab === 'html') contentToCopy = html;
+        else if (activeTab === 'css') contentToCopy = css;
+        else if (activeTab === 'js') contentToCopy = js;
+
+        navigator.clipboard.writeText(contentToCopy);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
+
+    const TabButton: React.FC<{ tab: Tab; label: string }> = ({ tab, label }) => (
+        <button
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === tab
+                    ? 'text-white border-b-2 border-indigo-400'
+                    : 'text-gray-400 hover:text-white'
+            }`}
+        >
+            {label}
         </button>
-        <pre className="p-4 pt-12"><code>{code}</code></pre>
-    </div>
-);
+    );
+
+    const CodeBlock: React.FC<{ language: string, children: string }> = ({ language, children }) => (
+        <div className="h-full overflow-auto">
+             <pre className="p-4 h-full"><code className={`language-${language}`}>{children}</code></pre>
+        </div>
+    );
+    
+    return (
+        <div className="w-full h-full bg-gray-900 text-white font-mono text-sm flex flex-col">
+            <header className="flex-shrink-0 bg-gray-800 flex justify-between items-center border-b border-gray-700">
+                <div className="flex">
+                    <TabButton tab="html" label="HTML" />
+                    <TabButton tab="css" label="CSS" />
+                    <TabButton tab="js" label="JavaScript" />
+                </div>
+                <button onClick={handleCopy} className="mr-3 flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md text-xs transition-colors">
+                    {isCopied ? <><CheckIcon className="w-4 h-4 text-green-400" /><span>Copied!</span></> : <><ClipboardIcon className="w-4 h-4" /><span>Copy</span></>}
+                </button>
+            </header>
+            <div className="flex-1 relative overflow-hidden">
+                {activeTab === 'html' && <CodeBlock language="html">{html}</CodeBlock>}
+                {activeTab === 'css' && <CodeBlock language="css">{css}</CodeBlock>}
+                {activeTab === 'js' && <CodeBlock language="javascript">{js}</CodeBlock>}
+            </div>
+        </div>
+    );
+};
 
 const AdPlaceholder: React.FC<{ title: string }> = ({ title }) => (
     <div className="w-full h-full flex flex-col items-center justify-center p-4">
