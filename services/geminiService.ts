@@ -1,5 +1,3 @@
-
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppPlan, Flashcard, FormPlan } from '../types';
 import { getApiKey } from './apiKeyService';
@@ -216,7 +214,7 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
         - Ensure good color contrast and keyboard navigability.
     7.  **No Build Step:** The code must run directly in the browser without any compilation.
     8.  **No Explanations:** The output must ONLY be the raw HTML code. Do not include markdown, comments, or explanations outside the code itself.
-    9.  **Functionality:** The final app must be fully functional, implementing all features from the plan.
+    9.  **Functionality:** The final app must be fully functional, implementing all features from the plan. All interactive elements MUST be wired up with vanilla JavaScript in the script tag to make the app work as described.
     `;
     
     const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
@@ -472,5 +470,44 @@ export const refineNativeAppCode = async (existingCode: string, prompt: string, 
   } catch (error) {
       console.error("Error refining native code with Gemini:", error);
       throw new Error("Failed to refine the application code.");
+  }
+};
+
+export const chatAboutCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<string> => {
+  console.log(`Chatting about code with prompt: "${prompt}"`);
+
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+
+  const taskPrompt = `
+    You are an expert developer and helpful AI assistant. A user has a question about a piece of code they are working on. Your task is to provide a clear, concise, and helpful answer.
+
+    **User's Question:**
+    "${prompt}"
+
+    **The Code in Question:**
+    \`\`\`
+    ${existingCode}
+    \`\`\`
+
+    **Instructions:**
+    1.  Analyze the user's question in the context of the provided code.
+    2.  Provide a direct answer to the question.
+    3.  If appropriate, you can include small code snippets to illustrate your point, but do not return the full code.
+    4.  Keep your explanation easy to understand for someone who might not be an expert.
+    5.  Your response should be conversational and helpful. Do not respond in JSON or any other structured format.
+    `;
+    
+    const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+
+  try {
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: taskPrompt,
+        config: config
+    });
+    return response.text;
+  } catch (error) {
+      console.error("Error chatting about code with Gemini:", error);
+      throw new Error("Failed to get a response from the AI model.");
   }
 };

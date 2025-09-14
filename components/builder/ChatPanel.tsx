@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, FormEvent, forwardRef, useImperativeHandle } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { generateAppPlan, generateAppCode, generateFlashcards, generateFormPlan, generateFormCode, refineAppCode, generateNativeAppCode, refineNativeAppCode } from '../../services/geminiService';
+import { generateAppPlan, generateAppCode, generateFlashcards, generateFormPlan, generateFormCode, refineAppCode, generateNativeAppCode, refineNativeAppCode, chatAboutCode } from '../../services/geminiService';
 import { saveApp } from '../../services/storageService';
 import type { Message, AppPlan, FormPlan } from '../../types';
 
@@ -102,6 +102,7 @@ const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
   const [currentPlan, setCurrentPlan] = useState<AppPlan | FormPlan | null>(null);
   const [countdown, setCountdown] = useState(0);
   const [buildStatus, setBuildStatus] = useState('');
+  const [chatMode, setChatMode] = useState<'refine' | 'ask'>('refine');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const buildIntervalRef = useRef<number | null>(null);
 
@@ -335,10 +336,29 @@ const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
+    const currentInput = input;
+    setInput('');
+    
     if (isCodeGenerated && generatedCode) {
-        const currentInput = input;
-        setInput('');
-        await submitRefinement(currentInput);
+        if (chatMode === 'refine') {
+            await submitRefinement(currentInput);
+        } else { // 'ask' mode
+            const userMessage: Message = { role: 'user', content: currentInput };
+            setMessages(prev => [...prev, userMessage]);
+            setIsLoading(true);
+            try {
+                const agentInstruction = selectedAgent?.systemInstruction;
+                const responseText = await chatAboutCode(generatedCode, currentInput, agentInstruction);
+                const modelMessage: Message = { role: 'model', content: responseText };
+                setMessages(prev => [...prev, modelMessage]);
+            } catch (error) {
+                console.error("Error asking about code:", error);
+                const errorMessage: Message = { role: 'model', content: "Sorry, I couldn't answer that question right now." };
+                setMessages(prev => [...prev, errorMessage]);
+            } finally {
+                setIsLoading(false);
+            }
+        }
     } else {
       console.log("Cannot send message. App not generated yet.");
     }
@@ -387,7 +407,7 @@ const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
             )}
           </div>
         ))}
-        {isLoading && !isCodeGenerated && (
+        {isLoading && !buildStatus && (
            <div className="flex justify-start">
              <div className="max-w-lg p-4 rounded-2xl bg-gray-200 text-gray-800 rounded-bl-none">
                 <div className="flex items-center space-x-2">
@@ -409,12 +429,28 @@ const ChatPanel = forwardRef<ChatPanelRef, {}>((props, ref) => {
         <div ref={messagesEndRef} />
       </div>
       <div className="p-4 border-t border-gray-200">
+        {isCodeGenerated && (
+            <div className="flex items-center gap-2 mb-3">
+                <button
+                    onClick={() => setChatMode('refine')}
+                    className={`px-3 py-1 text-sm font-medium rounded-full transition-colors ${chatMode === 'refine' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                >
+                    Refine App
+                </button>
+                <button
+                    onClick={() => setChatMode('ask')}
+                    className={`px-3 py-1 text-sm font-medium rounded-full transition-colors ${chatMode === 'ask' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                >
+                    Ask About Code
+                </button>
+            </div>
+        )}
         <form onSubmit={handleSendMessage} className="relative">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isCodeGenerated ? "Ask for modifications..." : "Describe your app to start..."}
+            placeholder={isCodeGenerated ? (chatMode === 'refine' ? "Ask for modifications..." : "Ask a question about your code...") : "Describe your app to start..."}
             className="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-400"
             disabled={isLoading || (!isCodeGenerated && appMode !== 'study')}
           />
