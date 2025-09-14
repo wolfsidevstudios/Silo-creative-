@@ -189,7 +189,7 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
 
   const featuresString = plan.features.map(f => `- ${f}`).join('\n');
   const taskPrompt = `
-    You are an expert web developer specializing in creating modern, single-file web applications using advanced HTML5, Tailwind CSS, and vanilla JavaScript.
+    You are an expert web developer specializing in creating modern, single-file web applications using advanced HTML5, Tailwind CSS, and vanilla JavaScript. Your mission is to produce high-quality, production-ready applications that are not only functional but also beautiful and user-friendly.
     Based on the following plan, generate a complete, single HTML file.
 
     **Application Plan:**
@@ -200,19 +200,23 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
 
     **CRITICAL REQUIREMENTS:**
     1.  **Single HTML File:** The entire application must be contained within a single HTML file.
-    2.  **Vanilla JavaScript:** Use modern, vanilla JavaScript (ES6+) for all application logic and interactivity. DO NOT use React, Vue, Angular, or any other framework.
-    3.  **Tailwind CSS:** Use Tailwind CSS for all styling. Include the CDN script in the <head>: <script src="https://cdn.tailwindcss.com"></script>.
-    4.  **Structure:**
-        - The HTML should be semantic and well-structured in the <body>.
-        - All JavaScript code must be within a SINGLE <script> tag at the end of the <body>.
-    5.  **JavaScript Logic:**
-        - Select DOM elements using \`document.getElementById\` or \`document.querySelector\`.
-        - Add event listeners (\`.addEventListener\`) to handle user interactions.
-        - Manipulate the DOM directly to update the UI (e.g., changing \`textContent\`, \`innerHTML\`, or adding/removing classes).
-        - Manage application state using plain JavaScript variables or objects.
-    6.  **No Build Step:** The code must run directly in the browser without any build process. Do not use JSX or any syntax that requires compilation.
-    7.  **No Explanations:** The output must ONLY be the raw HTML code. Do not include any markdown, comments, or explanations outside of the code.
-    8.  **Functionality:** The final app must be fully functional and implement all features from the plan. It should be visually appealing and well-styled with Tailwind CSS.
+    2.  **Vanilla JavaScript:** Use modern, vanilla JavaScript (ES6+) for all application logic. DO NOT use React, Vue, or any other framework.
+    3.  **Tailwind CSS:** Use Tailwind CSS for all styling. Include the CDN script: <script src="https://cdn.tailwindcss.com"></script>.
+    4.  **High-Quality Aesthetics & UX:**
+        - The application must be visually appealing with a modern, clean design.
+        - Pay close attention to layout, spacing, typography, and color schemes.
+        - Ensure a smooth and intuitive user experience. Use subtle transitions and animations where appropriate to enhance usability.
+        - The app should be fully responsive and look great on all screen sizes, from mobile to desktop.
+    5.  **Clean & Readable Code:**
+        - The HTML should be semantic and well-structured.
+        - The JavaScript code must be clean, well-commented, and organized. Use clear variable names and break logic into small, reusable functions.
+        - All JavaScript must be within a SINGLE <script> tag at the end of the <body>.
+    6.  **Accessibility (A11y):**
+        - Use proper ARIA attributes where necessary.
+        - Ensure good color contrast and keyboard navigability.
+    7.  **No Build Step:** The code must run directly in the browser without any compilation.
+    8.  **No Explanations:** The output must ONLY be the raw HTML code. Do not include markdown, comments, or explanations outside the code itself.
+    9.  **Functionality:** The final app must be fully functional, implementing all features from the plan.
     `;
     
     const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
@@ -254,7 +258,7 @@ export const generateNativeAppCode = async (plan: AppPlan, agentSystemInstructio
 
   const featuresString = plan.features.map(f => `- ${f}`).join('\n');
   const taskPrompt = `
-    You are an expert React Native developer specializing in creating mobile applications with Expo.
+    You are an expert React Native developer specializing in creating high-quality, production-ready mobile applications with Expo. Your code is clean, efficient, and follows best practices.
     Based on the following plan, generate a single, complete, and runnable App.js file.
 
     **Application Plan:**
@@ -265,13 +269,20 @@ export const generateNativeAppCode = async (plan: AppPlan, agentSystemInstructio
 
     **CRITICAL REQUIREMENTS:**
     1.  **Single File:** The entire application must be contained within a single file.
-    2.  **React Native & Expo:** Use React for the application logic and UI. Import components ONLY from 'react-native'. Do not import from 'react-native-web' or any other web-specific library.
-    3.  **Standard Components:** Use standard React Native components like \`View\`, \`Text\`, \`Button\`, \`StyleSheet\`, \`TextInput\`, \`Image\`, etc.
-    4.  **Styling:** Use \`StyleSheet.create()\` for all styles. Do not use inline styles.
-    5.  **Functional Components:** The root component must be a functional component named \`App\`. Use React hooks like \`useState\` and \`useEffect\`.
+    2.  **High-Quality Aesthetics & UX:**
+        - The application must be visually appealing with a modern, clean design suitable for mobile interfaces.
+        - Pay close attention to layout, spacing, and typography using the StyleSheet API.
+        - Ensure a smooth and intuitive user experience.
+    3.  **Clean & Readable Code:**
+        - The code must be well-organized, readable, and commented where necessary.
+        - Use functional components with React hooks (\`useState\`, \`useEffect\`, etc.).
+        - Define all styles using \`StyleSheet.create()\`; do not use inline styles.
+    4.  **React Native & Expo Best Practices:**
+        - Import components ONLY from 'react-native'.
+        - Use standard components like \`View\`, \`Text\`, \`Button\`, \`TextInput\`, \`ScrollView\`, etc.
+    5.  **Functionality:** The final app must be fully functional and implement all features from the plan.
     6.  **No Explanations:** The output must ONLY be the raw JavaScript/JSX code. Do not include any markdown (\`\`\`javascript\`), comments, or explanations outside of the code.
-    7.  **Functionality:** The final app must be fully functional and implement all features from the plan. It should be visually appealing and well-structured.
-    8.  **Default Export:** The file must end with \`export default App;\`.
+    7.  **Default Export:** The file must end with \`export default App;\`.
     `;
 
     const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
@@ -327,7 +338,7 @@ export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: 
   const fieldsString = plan.fields.map(f => `- ${f.name} (type: ${f.type}, required: ${f.required})`).join('\n');
 
   const taskPrompt = `
-    You are an expert web developer who creates beautiful, accessible, and highly functional web forms with a modern aesthetic.
+    You are an expert web developer who creates beautiful, accessible, and highly functional web forms with a modern, production-ready aesthetic.
     Based on the following plan, generate a complete, single-file HTML document.
 
     **Form Plan:**
@@ -339,13 +350,22 @@ export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: 
     **CRITICAL REQUIREMENTS:**
     1.  **Single HTML File:** The output must be a single, complete HTML file.
     2.  **Tailwind CSS:** Use Tailwind CSS for styling. Include the CDN script: <script src="https://cdn.tailwindcss.com"></script>.
-    3.  **Netlify Forms Compatibility:** The <form> tag MUST include the 'data-netlify="true"' attribute. Also include a honeypot field for spam prevention: <p class="hidden"><label>Don’t fill this out if you’re human: <input name="bot-field" /></label></p>.
-    4.  **Advanced Client-Side Validation:** Implement robust client-side validation using vanilla JavaScript within a <script> tag.
-        - The form should not submit if required fields are empty or if email fields are invalid.
-        - Display clear, user-friendly error messages next to the invalid fields, not using generic alerts. Style these error messages (e.g., red text).
-        - Add and remove error states/styles dynamically as the user interacts with the form.
-    5.  **Aesthetics & UX:** The form should be visually appealing, with excellent layout, spacing, and modern input styling. Use transitions for a smoother user experience.
-    6.  **No Explanations:** The output must be ONLY the raw HTML code. Do not include any markdown like \`\`\`html.
+    3.  **High-Quality Aesthetics & UX:**
+        - The form must be visually stunning, with excellent layout, spacing, and modern input styling (e.g., focus states, transitions).
+        - Ensure a smooth and professional user experience.
+        - The form must be fully responsive.
+    4.  **Advanced Client-Side Validation:**
+        - Implement robust validation using vanilla JavaScript inside a <script> tag.
+        - Prevent submission if required fields are empty or invalid (e.g., email format).
+        - Display clear, user-friendly error messages next to the invalid fields, not using generic alerts. Style these messages appropriately (e.g., red text).
+        - Dynamically add/remove error styles as the user interacts with the form.
+    5.  **Accessibility (A11y):**
+        - Use <label> tags correctly associated with their inputs.
+        - Implement ARIA attributes for validation feedback (e.g., \`aria-invalid\`).
+    6.  **Netlify Forms Compatibility:**
+        - The <form> tag MUST include the 'data-netlify="true"' attribute.
+        - Include a honeypot field for spam prevention: <p class="hidden"><label>Don’t fill this out if you’re human: <input name="bot-field" /></label></p>.
+    7.  **No Explanations:** The output must be ONLY the raw HTML code. Do not include any markdown like \`\`\`html.
     `;
     
   const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
@@ -388,9 +408,13 @@ export const refineAppCode = async (existingCode: string, prompt: string, agentS
 
     **CRITICAL INSTRUCTIONS:**
     1.  **Apply the Change:** Your primary goal is to accurately implement the user's requested change into the provided code.
-    2.  **Return the Full Code:** You MUST return the entire, complete, and updated HTML file. Do NOT provide only the changed snippets, explanations, or markdown formatting. Your response should be only the raw HTML code.
-    3.  **Maintain Structure:** The application must remain a single HTML file with Tailwind CSS loaded from a CDN and all JavaScript logic within a single \`<script>\` tag. DO NOT introduce any build steps or frameworks like React.
-    4.  **Preserve Functionality:** Ensure that the existing functionality of the application remains intact unless the user's request specifically asks to change or remove it.
+    2.  **Improve Quality:** While applying the change, you must also maintain or improve the overall quality of the code. This includes:
+        - Enhancing the visual design and user experience.
+        - Ensuring the code remains clean, readable, and well-structured.
+        - Maintaining responsiveness and accessibility.
+    3.  **Return the Full Code:** You MUST return the entire, complete, and updated HTML file. Do NOT provide only snippets, explanations, or markdown. Your response should be only raw HTML code.
+    4.  **Maintain Structure:** The application must remain a single HTML file with Tailwind CSS (from CDN) and all JavaScript in one \`<script>\` tag. Do not introduce build steps or frameworks.
+    5.  **Preserve Functionality:** Ensure existing functionality remains intact unless the user specifically asks to change or remove it.
     `;
     
     const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
@@ -428,9 +452,12 @@ export const refineNativeAppCode = async (existingCode: string, prompt: string, 
 
     **CRITICAL INSTRUCTIONS:**
     1.  **Apply the Change:** Your primary goal is to accurately implement the user's requested change into the provided code.
-    2.  **Return the Full Code:** You MUST return the entire, complete, and updated file. Do NOT provide only the changed snippets, explanations, or markdown formatting. Your response should be only the raw code.
-    3.  **Maintain Structure:** The application must remain a single file. Continue to use standard React Native components and \`StyleSheet\` for styling.
-    4.  **Preserve Functionality:** Ensure that the existing functionality of the application remains intact unless the user's request specifically asks to change or remove it.
+    2.  **Improve Quality:** While applying the change, you must also maintain or improve the overall quality of the code. This includes:
+        - Enhancing the visual design and user experience.
+        - Ensuring the code remains clean, readable, and well-structured, following React Native best practices.
+    3.  **Return the Full Code:** You MUST return the entire, complete, and updated file. Do NOT provide only snippets, explanations, or markdown. Your response should be only raw code.
+    4.  **Maintain Structure:** The application must remain a single file. Continue to use standard React Native components and \`StyleSheet\` for styling.
+    5.  **Preserve Functionality:** Ensure existing functionality remains intact unless the user specifically asks to change or remove it.
     `;
     
     const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
