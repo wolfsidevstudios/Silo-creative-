@@ -261,6 +261,47 @@ const LandingPage: React.FC = () => {
                     </div>
                 </section>
 
+                {/* Rebranding Announcement Section */}
+                <section id="rebranding" className="relative isolate py-20 sm:py-28">
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+                            The Next Evolution is Coming
+                        </h2>
+                        <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+                            We're thrilled to announce that Silo Creative is becoming{' '}
+                            <span className="font-bold text-indigo-600">Silo Create</span>.
+                            Get ready for <span className="font-bold text-indigo-600">V2</span>, a completely redesigned and more powerful version of the platform.
+                        </p>
+                        <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
+                            <div className="flex items-center gap-3">
+                                <img 
+                                    src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
+                                    alt="Silo Creative Logo" 
+                                    className="w-12 h-12 rounded-full opacity-60"
+                                />
+                                <span className="text-xl font-semibold text-gray-500">Silo Creative</span>
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-gray-400 transform sm:rotate-0 rotate-90">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                            <div className="flex items-center gap-3 relative">
+                                 <div className="absolute -top-2 -right-3">
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-600 text-white">
+                                        V2
+                                    </span>
+                                </div>
+                                <img 
+                                    src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
+                                    alt="Silo Create Logo" 
+                                    className="w-12 h-12 rounded-full"
+                                />
+                                <span className="text-xl font-bold text-gray-800">Silo Create</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 {/* Features Section */}
                 <section id="features" className="relative isolate py-20 sm:py-28 bg-gray-50/50 backdrop-blur-sm">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
