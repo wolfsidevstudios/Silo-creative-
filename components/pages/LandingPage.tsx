@@ -35,7 +35,7 @@ const Header: React.FC = () => {
     };
 
     return (
-        <header className="fixed top-4 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-xl">
+        <header className="fixed top-4 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl">
             <nav>
                 <div className="flex items-center justify-between gap-4 bg-white/70 backdrop-blur-md rounded-full shadow-lg ring-1 ring-black/5 px-4 py-2 sm:px-6 sm:py-3">
                     <Link to="/" className="flex items-center gap-2 flex-shrink-0">
@@ -46,9 +46,18 @@ const Header: React.FC = () => {
                          <button onClick={() => scrollToSection('pricing')} className="hover:text-indigo-600 transition-colors">Pricing</button>
                          <button onClick={() => scrollToSection('faq')} className="hover:text-indigo-600 transition-colors">FAQ</button>
                     </div>
-                    <button onClick={() => navigate('/login')} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-sm">
-                        Get Started
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <a href="https://discord.gg/sPt7bZAB" target="_blank" rel="noopener noreferrer" className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/80 text-gray-700 text-sm font-semibold rounded-full hover:bg-white transition-colors shadow-sm ring-1 ring-gray-200">
+                           <DiscordIcon className="h-5 w-5 text-[#5865F2]" />
+                           <span>Join Discord</span>
+                        </a>
+                        <a href="https://discord.gg/sPt7bZAB" target="_blank" rel="noopener noreferrer" className="sm:hidden flex items-center justify-center w-10 h-10 bg-white/80 rounded-full text-gray-700 hover:bg-white transition-colors shadow-sm ring-1 ring-gray-200">
+                            <DiscordIcon className="h-5 w-5 text-[#5865F2]" />
+                        </a>
+                        <button onClick={() => navigate('/login')} className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-full hover:bg-indigo-700 transition-colors shadow-sm">
+                            Get Started
+                        </button>
+                    </div>
                 </div>
             </nav>
         </header>
