@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
@@ -10,6 +11,7 @@ import TermsOfServicePage from './components/pages/TermsOfServicePage';
 import LoginPage from './components/pages/LoginPage';
 import LandingPage from './components/pages/LandingPage';
 import SiloOneDrivePage from './components/pages/SiloOneDrivePage';
+import ChangelogPage from './components/pages/ChangelogPage';
 
 const FullPageSpinner: React.FC = () => (
     <div className="flex items-center justify-center h-screen w-screen bg-gray-50">
@@ -57,6 +59,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/login" element={<LoginPageWrapper />} />
       <Route path="/privacy" element={<PrivacyPolicyPage />} />
       <Route path="/terms" element={<TermsOfServicePage />} />
+      <Route path="/changelog" element={<ChangelogPage />} />
       <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/build" element={<ProtectedRoute><AppBuilderPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

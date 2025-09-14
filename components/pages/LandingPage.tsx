@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GitHubIcon, DiscordIcon, BrainCircuitIcon, CodeIcon, UsersIcon, AtSignIcon, ChevronDownIcon, CheckIcon } from '../common/Icons';
@@ -93,6 +94,7 @@ const Footer: React.FC = () => (
                 <div className="flex items-center gap-4 text-gray-500">
                     <Link to="/terms" className="hover:text-indigo-600">Terms of Service</Link>
                     <Link to="/privacy" className="hover:text-indigo-600">Privacy Policy</Link>
+                    <Link to="/changelog" className="hover:text-indigo-600">Changelog</Link>
                 </div>
                  <div className="flex space-x-6">
                     <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-500" aria-label="Silo Create on GitHub">
