@@ -359,7 +359,7 @@ const LandingPage: React.FC = () => {
                             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Simple, Transparent Pricing</h2>
                             <p className="mt-4 text-lg text-gray-600">Choose the plan that's right for you. Get started for free.</p>
                         </div>
-                        <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                        <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {/* Free Plan */}
                             <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 rounded-2xl p-8 flex flex-col">
                                 <h3 className="text-2xl font-semibold text-gray-800">Hobbyist</h3>
@@ -396,6 +396,27 @@ const LandingPage: React.FC = () => {
                                 </ul>
                                 <button onClick={() => navigate('/login')} className="mt-8 w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
                                     Sign Up with School Email
+                                </button>
+                            </div>
+                            {/* Ultra Plan */}
+                            <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 rounded-2xl p-8 flex flex-col relative overflow-hidden">
+                                <div className="absolute top-4 right-4 px-3 py-1 bg-gray-200 text-gray-700 text-xs font-semibold rounded-full uppercase tracking-wider">
+                                    Coming Soon
+                                </div>
+                                <h3 className="text-2xl font-semibold text-gray-800">Ultra</h3>
+                                <p className="mt-2 text-gray-500">For professionals and power users.</p>
+                                <div className="mt-6">
+                                    <span className="text-5xl font-bold">$20</span>
+                                    <span className="text-lg text-gray-500">/ month</span>
+                                </div>
+                                <ul className="mt-8 space-y-4 text-gray-600 flex-grow">
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-500"/><strong>Unlimited</strong> credits</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-500"/>Advanced AI models</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-500"/>Team collaboration features</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-500"/>Priority support</li>
+                                </ul>
+                                <button disabled className="mt-8 w-full py-3 bg-gray-300 text-gray-500 font-semibold rounded-lg cursor-not-allowed">
+                                    Coming Soon
                                 </button>
                             </div>
                         </div>
