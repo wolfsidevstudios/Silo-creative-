@@ -215,6 +215,7 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
     7.  **No Build Step:** The code must run directly in the browser without any compilation.
     8.  **No Explanations:** The output must ONLY be the raw HTML code. Do not include markdown, comments, or explanations outside the code itself.
     9.  **Functionality:** The final app must be fully functional, implementing all features from the plan. All interactive elements MUST be wired up with vanilla JavaScript in the script tag to make the app work as described.
+    10. **Style Tag:** Include an empty <style></style> tag inside the <head>. This is reserved for future CSS modifications.
     `;
     
     const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
@@ -364,6 +365,7 @@ export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: 
         - The <form> tag MUST include the 'data-netlify="true"' attribute.
         - Include a honeypot field for spam prevention: <p class="hidden"><label>Don’t fill this out if you’re human: <input name="bot-field" /></label></p>.
     7.  **No Explanations:** The output must be ONLY the raw HTML code. Do not include any markdown like \`\`\`html.
+    8.  **Style Tag:** Include an empty <style></style> tag inside the <head> for future CSS edits.
     `;
     
   const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
@@ -394,7 +396,7 @@ export const refineAppCode = async (existingCode: string, prompt: string, agentS
 
   const taskPrompt = `
     You are an expert web developer tasked with modifying an existing single-file web application built with HTML, Tailwind CSS, and vanilla JavaScript.
-    You will be given the application's complete current HTML code and a user's request for a change.
+    The HTML structure includes a <style> tag in the <head> for CSS modifications.
 
     **User's Change Request:**
     "${prompt}"
@@ -404,16 +406,21 @@ export const refineAppCode = async (existingCode: string, prompt: string, agentS
     ${existingCode}
     \`\`\`
 
+    **MODIFICATION STRATEGY:**
+    - **For STYLISTIC changes** (e.g., colors, fonts, spacing, borders, sizing): Your HIGHEST PRIORITY is to add or modify CSS rules within the \`<style>\` tag in the \`<head>\`. Use CSS selectors to target elements. AVOID changing HTML and Tailwind classes for purely stylistic updates.
+    - **For STRUCTURAL changes** (e.g., adding a button, removing a section, changing the layout logic): You SHOULD modify the HTML structure in the \`<body>\` and the JavaScript in the \`<script>\` tag.
+    - **If in doubt, prefer CSS modifications over HTML class changes.**
+
     **CRITICAL INSTRUCTIONS:**
-    1.  **Apply the Change:** Your primary goal is to accurately implement the user's requested change into the provided code.
-    2.  **Analyze and Summarize:** After applying the change, provide a brief, user-friendly summary of what you did. Also, list the conceptual "files" you edited (e.g., "index.html", "script.js", "styles.css").
+    1.  **Apply the Change:** Accurately implement the user's request following the MODIFICATION STRATEGY.
+    2.  **Analyze and Summarize:** Provide a brief, user-friendly summary of the changes. For 'files_edited', list 'styles.css' if you only changed the \`<style>\` tag. List 'index.html' if you changed the \`<body>\`. List 'script.js' if you changed the \`<script>\` tag. List all that apply.
     3.  **Return JSON:** You MUST respond with a single JSON object with the following structure:
         {
           "code": "The entire, complete, and updated HTML file content as a single string.",
           "summary": "A friendly summary of the changes you made.",
-          "files_edited": ["A list of the conceptual files you edited, e.g., 'index.html', 'script.js']
+          "files_edited": ["A list of the conceptual files you edited, e.g., 'styles.css', 'index.html']
         }
-    4.  **Maintain Structure:** The application code within the 'code' property must remain a single HTML file with Tailwind CSS (from CDN) and all JavaScript in one \`<script>\` tag. Do not introduce build steps or frameworks.
+    4.  **Maintain Structure:** The application must remain a single HTML file. The \`<style>\` tag must be preserved in the \`<head>\`. All JavaScript must remain in one \`<script>\` tag.
     5.  **Preserve Functionality:** Ensure existing functionality remains intact unless the user specifically asks to change or remove it.
     `;
   

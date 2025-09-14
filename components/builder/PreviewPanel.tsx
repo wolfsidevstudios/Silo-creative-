@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { FlashcardDisplay } from '../builder/FlashcardDisplay';
-import { ClipboardIcon, CheckIcon, MousePointerClickIcon } from '../common/Icons';
+import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon } from '../common/Icons';
 import VisualEditBar from './VisualEditBar';
 
 // Add QRCode to window interface to avoid TypeScript errors
@@ -230,6 +230,14 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ onVisualEditSubmit }) => {
         onVisualEditSubmit(finalPrompt);
         setSelectedElementData(null); // Hide bar after submission
     };
+    
+    const handleOpenInNewTab = () => {
+        if (generatedCode) {
+            const blob = new Blob([generatedCode], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        }
+    };
 
     const renderBuildMode = () => {
         if (!generatedCode) return <AdPlaceholder title="Your app is being planned..." />;
@@ -293,6 +301,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ onVisualEditSubmit }) => {
     
     const showViewModeToggle = (appMode === 'build' || appMode === 'form' || appMode === 'native') && generatedCode;
     const showVisualEditToggle = (appMode === 'build' || appMode === 'form') && generatedCode && viewMode === 'app';
+    const showOpenInNewTabButton = (appMode === 'build' || appMode === 'form') && generatedCode && viewMode === 'app';
 
     return (
         <div className="w-1/2 flex flex-col h-full bg-white">
@@ -316,6 +325,16 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ onVisualEditSubmit }) => {
                      )}
                 </div>
                 <div className="flex items-center space-x-2">
+                    {showOpenInNewTabButton && (
+                        <button
+                            onClick={handleOpenInNewTab}
+                            className="p-2 rounded-full hover:bg-gray-200 text-gray-500 transition-colors"
+                            title="Open in new tab"
+                            aria-label="Open in new tab"
+                        >
+                            <ExternalLinkIcon className="w-5 h-5" />
+                        </button>
+                    )}
                     <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                     <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
