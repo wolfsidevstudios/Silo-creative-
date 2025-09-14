@@ -298,51 +298,53 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest }
 
   return (
     <div className="w-1/2 flex flex-col h-full bg-gray-50">
-      <header className="p-4 border-b border-gray-200 flex items-center">
+      <header className="p-4 border-b border-gray-200 flex items-center flex-shrink-0">
         <div className="flex items-center gap-3">
           {selectedAgent && <img src={selectedAgent.imageUrl} alt={selectedAgent.name} className="w-10 h-10 rounded-full" />}
           <h2 className="text-xl font-semibold">{selectedAgent ? selectedAgent.name : "Conversation"}</h2>
         </div>
       </header>
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {messages.map((msg, index) => (
-          <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-             <div className="w-full max-w-lg">
-                {msg.isPlan ? (
-                    msg.planType === 'app' ? (
-                        <PlanDisplay plan={JSON.parse(msg.content)} onGenerate={() => generateCode(JSON.parse(msg.content), appMode === 'native' ? generateNativeAppCode : generateAppCode)} isGenerated={isCodeGenerated} />
+      <div className="flex-1 overflow-hidden relative">
+        <div className="absolute inset-0 overflow-y-auto p-6 space-y-6">
+            {messages.map((msg, index) => (
+            <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className="w-full max-w-lg">
+                    {msg.isPlan ? (
+                        msg.planType === 'app' ? (
+                            <PlanDisplay plan={JSON.parse(msg.content)} onGenerate={() => generateCode(JSON.parse(msg.content), appMode === 'native' ? generateNativeAppCode : generateAppCode)} isGenerated={isCodeGenerated} />
+                        ) : (
+                            <FormPlanDisplay plan={JSON.parse(msg.content)} onGenerate={() => generateCode(JSON.parse(msg.content), generateFormCode)} isGenerated={isCodeGenerated} />
+                        )
+                    ) : msg.isChangeSummary ? (
+                        <ChangeSummaryDisplay data={JSON.parse(msg.content)} />
+                    ) : msg.imageUrl ? (
+                        <ScreenshotMessage imageUrl={msg.imageUrl} />
+                    ) : msg.isAgentActivity ? (
+                        <AgentActivityMessage content={msg.content} />
                     ) : (
-                        <FormPlanDisplay plan={JSON.parse(msg.content)} onGenerate={() => generateCode(JSON.parse(msg.content), generateFormCode)} isGenerated={isCodeGenerated} />
-                    )
-                ) : msg.isChangeSummary ? (
-                    <ChangeSummaryDisplay data={JSON.parse(msg.content)} />
-                ) : msg.imageUrl ? (
-                    <ScreenshotMessage imageUrl={msg.imageUrl} />
-                ) : msg.isAgentActivity ? (
-                    <AgentActivityMessage content={msg.content} />
-                ) : (
-                  <div className={`inline-block max-w-lg p-4 rounded-2xl ${msg.role === 'user' ? 'bg-indigo-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                  </div>
-                )}
-              </div>
-          </div>
-        ))}
-        {isLoading && !messages.some(m => m.isAgentActivity) && (
-           <div className="flex justify-start">
-             <div className="max-w-lg p-4 rounded-2xl bg-gray-200 text-gray-800 rounded-bl-none">
-                <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
-                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse [animation-delay:0.1s]"></div>
-                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse [animation-delay:0.2s]"></div>
-                    <span className="ml-2 text-sm text-gray-600">Silo Create is thinking...</span>
+                    <div className={`inline-block max-w-lg p-4 rounded-2xl ${msg.role === 'user' ? 'bg-indigo-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                    </div>
+                    )}
                 </div>
-             </div>
-           </div>
-        )}
-        <div ref={messagesEndRef} />
+            </div>
+            ))}
+            {isLoading && !messages.some(m => m.isAgentActivity) && (
+            <div className="flex justify-start">
+                <div className="max-w-lg p-4 rounded-2xl bg-gray-200 text-gray-800 rounded-bl-none">
+                    <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse [animation-delay:0.1s]"></div>
+                        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse [animation-delay:0.2s]"></div>
+                        <span className="ml-2 text-sm text-gray-600">Silo Create is thinking...</span>
+                    </div>
+                </div>
+            </div>
+            )}
+            <div ref={messagesEndRef} />
+        </div>
       </div>
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 flex-shrink-0">
         {isCodeGenerated && (
             <div className="flex items-center gap-2 mb-3">
                 <button onClick={() => setChatMode('refine')} className={`px-3 py-1 text-sm font-medium rounded-full transition-colors ${chatMode === 'refine' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>Refine App</button>
