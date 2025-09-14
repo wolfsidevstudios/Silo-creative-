@@ -4,6 +4,26 @@ import { GitHubIcon, DiscordIcon, BrainCircuitIcon, CodeIcon, UsersIcon, AtSignI
 import GoogleSignInButton from '../auth/GoogleSignInButton';
 import { useAppContext } from '../../context/AppContext';
 
+const AdComponent: React.FC = () => {
+    useEffect(() => {
+        try {
+            // @ts-ignore
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+        } catch (e) {
+            console.error('AdSense error:', e);
+        }
+    }, []);
+
+    return (
+        <ins className="adsbygoogle"
+             style={{display: 'block', textAlign: 'center'}}
+             data-ad-layout="in-article"
+             data-ad-format="fluid"
+             data-ad-client="ca-pub-7029279570287128"
+             data-ad-slot="7988731574"></ins>
+    );
+};
+
 const Header: React.FC = () => {
     const navigate = useNavigate();
 
@@ -299,6 +319,13 @@ const LandingPage: React.FC = () => {
                                 </p>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                {/* Ad Section */}
+                <section className="py-10 bg-gray-50/50 backdrop-blur-sm">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <AdComponent />
                     </div>
                 </section>
 
