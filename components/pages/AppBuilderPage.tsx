@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import ChatPanel, { ChatPanelRef } from '../builder/ChatPanel';
 import PreviewPanel from '../builder/PreviewPanel';
@@ -16,6 +17,8 @@ const AppBuilderPage: React.FC = () => {
   const { generatedCode, setGeneratedCode } = useAppContext();
   const [isAgentTesting, setIsAgentTesting] = useState(false);
   const [agentTestAction, setAgentTestAction] = useState<AgentTestAction | null>(null);
+  // FIX: Explicitly type the state to ensure type safety for the preview mode.
+  const [activePreviewMode, setActivePreviewMode] = useState<'viewer' | 'editor' | 'console'>('viewer'); // viewer, editor, console
 
   const handleVisualEditSubmit = (prompt: string) => {
     chatPanelRef.current?.submitRefinement(prompt);
@@ -37,23 +40,29 @@ const AppBuilderPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-white">
+    <div className="flex flex-col h-screen w-screen bg-gray-100">
       <Banner />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
-        <main className="flex flex-1 overflow-hidden">
-          <ChatPanel 
-            ref={chatPanelRef}
-            onStartAgentTest={handleStartAgentTest}
-          />
-          <div className="w-px bg-gray-200 h-full" />
-          <PreviewPanel 
-            onVisualEditSubmit={handleVisualEditSubmit}
-            onScreenshotTaken={handleScreenshotTaken}
-            isAgentTesting={isAgentTesting}
-            agentTestAction={agentTestAction}
-            onTestComplete={handleTestComplete}
-          />
+        <main className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
+          <div className="bg-white rounded-2xl shadow-lg flex flex-col overflow-hidden">
+            <ChatPanel 
+              ref={chatPanelRef}
+              onStartAgentTest={handleStartAgentTest}
+              onToggleCodeView={() => setActivePreviewMode(prev => prev === 'editor' ? 'viewer' : 'editor')}
+            />
+          </div>
+          <div className="bg-[#0D1117] rounded-2xl shadow-lg flex flex-col overflow-hidden">
+            <PreviewPanel 
+              onVisualEditSubmit={handleVisualEditSubmit}
+              onScreenshotTaken={handleScreenshotTaken}
+              isAgentTesting={isAgentTesting}
+              agentTestAction={agentTestAction}
+              onTestComplete={handleTestComplete}
+              activePreviewMode={activePreviewMode}
+              setActivePreviewMode={setActivePreviewMode}
+            />
+          </div>
         </main>
       </div>
     </div>
