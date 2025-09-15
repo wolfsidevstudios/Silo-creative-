@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import SuggestionButton from '../common/SuggestionButton';
-import { LogoIcon, PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon, PhoneIcon, FilesIcon } from '../common/Icons';
+import { LogoIcon, PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon, PhoneIcon, FilesIcon, FileTextIcon } from '../common/Icons';
 import Sidebar from '../common/Sidebar';
 import Banner from '../common/Banner';
 import AgentSelector from '../agents/AgentSelector';
@@ -77,12 +77,19 @@ const HomePage: React.FC = () => {
       { text: "Tap counter", icon: <PhoneIcon className="w-4 h-4 text-gray-500" /> },
   ];
 
+  const documentSuggestions = [
+      { text: "A presentation on climate change", icon: <FileTextIcon className="w-4 h-4 text-gray-500" /> },
+      { text: "A report on Q2 earnings", icon: <BookIcon className="w-4 h-4 text-gray-500" /> },
+      { text: "A proposal for a new project", icon: <StarIcon className="w-4 h-4 text-gray-500" /> },
+  ];
+
   const getSuggestions = () => {
     switch(appMode) {
         case 'build': return buildSuggestions;
         case 'study': return studySuggestions;
         case 'form': return formSuggestions;
         case 'native': return nativeSuggestions;
+        case 'document': return documentSuggestions;
         default: return buildSuggestions;
     }
   }
@@ -93,6 +100,7 @@ const HomePage: React.FC = () => {
         case 'study': return 'What topic do you want flashcards for?';
         case 'form': return 'Describe the form you want to build...';
         case 'native': return 'Describe the native mobile app you want...';
+        case 'document': return 'Describe the document or presentation you want to create...';
         default: return 'Describe the web app you want to create...';
     }
   }
@@ -131,6 +139,7 @@ const HomePage: React.FC = () => {
                           <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>Web App Builder</MenuItem>
                           <MenuItem active={appMode === 'native'} onClick={() => { setAppMode('native'); setIsMenuOpen(false); }}>Native App Builder</MenuItem>
                           <MenuItem active={appMode === 'form'} onClick={() => { setAppMode('form'); setIsMenuOpen(false); }}>AI Form Generator</MenuItem>
+                          <MenuItem active={appMode === 'document'} onClick={() => { setAppMode('document'); setIsMenuOpen(false); }}>PDF & Presentations</MenuItem>
                           <MenuItem active={appMode === 'study'} onClick={() => { setAppMode('study'); setIsMenuOpen(false); }}>Study Mode</MenuItem>
                         </div>
                       )}

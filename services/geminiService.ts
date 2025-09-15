@@ -1,5 +1,6 @@
+
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import { AppPlan, Flashcard, FormPlan, RefinementResult } from '../types';
+import { AppPlan, Flashcard, FormPlan, DocumentPlan, RefinementResult } from '../types';
 import { getApiKey } from './apiKeyService';
 
 const combineInstructions = (agentInstruction: string | undefined, taskInstruction: string): string => {
@@ -120,6 +121,55 @@ Respond with ONLY the JSON object.`;
         console.error("Error generating form plan with Gemini:", error);
         throw new Error("Failed to generate a form plan from the AI model.");
     }
+};
+
+export const generateDocumentPlan = async (prompt: string, agentSystemInstruction?: string): Promise<DocumentPlan> => {
+  console.log(`Generating document plan for prompt: "${prompt}"`);
+
+  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+
+  const taskInstruction = `You are an expert document architect. A user wants to create a document or presentation. Analyze their prompt to determine the best format and create a plan.
+
+The plan must include:
+1.  A concise **title**.
+2.  A **documentType**, which must be either "PDF" or "Presentation".
+3.  A detailed **outline** as an array of strings. For a PDF, this should be chapter or section titles. For a Presentation, this should be the title of each slide.
+
+Respond with ONLY the JSON object.`;
+    
+  const systemInstruction = combineInstructions(agentSystemInstruction, taskInstruction);
+
+  const schema = {
+      type: Type.OBJECT,
+      properties: {
+          title: { type: Type.STRING },
+          documentType: { type: Type.STRING },
+          outline: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+          },
+      },
+      required: ['title', 'documentType', 'outline'],
+  };
+
+  try {
+      const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt,
+          config: {
+              systemInstruction: systemInstruction,
+              responseMimeType: "application/json",
+              responseSchema: schema,
+          },
+      });
+
+      const planJson = response.text.trim();
+      const plan: DocumentPlan = JSON.parse(planJson);
+      return plan;
+  } catch (error) {
+      console.error("Error generating document plan with Gemini:", error);
+      throw new Error("Failed to generate a document plan from the AI model.");
+  }
 };
 
 
@@ -388,6 +438,93 @@ export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: 
     `;
   }
 };
+
+export const generateDocumentCode = async (plan: DocumentPlan, agentSystemInstruction?: string): Promise<string> => {
+    console.log(`Generating ${plan.documentType} code for: "${plan.title}"`);
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+
+    let taskPrompt: string;
+
+    if (plan.documentType === 'Presentation') {
+        taskPrompt = `
+You are an expert presentation designer. Based on the following plan, create a complete, single HTML file that renders a slide deck using Marp (Markdown Presentation Ecosystem).
+
+**Presentation Plan:**
+- **Title:** ${plan.title}
+- **Outline (Slide Titles):**
+${plan.outline.map(item => `- ${item}`).join('\n')}
+
+**CRITICAL REQUIREMENTS:**
+1.  **Single HTML File:** The entire presentation must be a single HTML file.
+2.  **Marp for Slides:** Use Marp markdown syntax. Each slide is separated by \`---\`.
+3.  **Content Generation:** For each slide in the outline, generate relevant, concise, and engaging content. Use headings, lists, bold text, and italics to structure the information effectively.
+4.  **Include Marp Renderer:** The HTML file MUST include the Marp web component script in the \`<head>\`:
+    \`<script src="https://cdn.jsdelivr.net/npm/@marp-team/marp-core@latest/lib/browser.js"></script>\`
+5.  **Styling:** Use Marp's built-in themes (like \`gaia\`, \`uncover\`) or provide custom CSS in a \`<style>\` tag. Ensure the presentation is modern, professional, and visually appealing. Add a theme directive like \`<!-- theme: default -->\` at the top of the markdown.
+6.  **Structure:** The Marp markdown should be placed inside a \`<script type="text/marp">\` tag within the \`<body>\`.
+7.  **No Explanations:** The output must ONLY be the raw HTML code.
+
+Example Structure:
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/@marp-team/marp-core@latest/lib/browser.js"></script>
+  <style>/* Custom CSS here */</style>
+</head>
+<body>
+  <script type="text/marp">
+  <!-- theme: gaia -->
+  # Slide 1 Title
+  Content...
+  ---
+  # Slide 2 Title
+  Content...
+  </script>
+</body>
+</html>
+`;
+    } else { // PDF
+        taskPrompt = `
+You are an expert document writer and designer. Based on the following plan, generate a professional, single-file HTML document that is optimized for reading and printing to PDF.
+
+**Document Plan:**
+- **Title:** ${plan.title}
+- **Outline (Sections/Chapters):**
+${plan.outline.map(item => `- ${item}`).join('\n')}
+
+**CRITICAL REQUIREMENTS:**
+1.  **Single HTML File:** The entire document must be a single HTML file.
+2.  **Tailwind CSS:** Use Tailwind CSS for all styling. Include the CDN script: \`<script src="https://cdn.tailwindcss.com"></script>\`.
+3.  **High-Quality Aesthetics:**
+    - The document must have a clean, professional, and readable layout, similar to a Google Doc or a Notion page.
+    - Use excellent typography, spacing, and a clear visual hierarchy (e.g., H1, H2, H3 for sections).
+4.  **Content Generation:** For each section in the outline, generate well-written, detailed, and informative content. Use paragraphs, lists, and other formatting to make the content easy to digest.
+5.  **Print-Friendly:** The design should be optimized for printing. Use a white background and dark text. Avoid elements that would not print well. Use \`@media print\` styles in a \`<style>\` tag if necessary for specific print adjustments (e.g., hiding elements).
+6.  **No Explanations:** The output must ONLY be the raw HTML code.
+`;
+    }
+
+    const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: taskPrompt,
+            config: config,
+        });
+        return response.text;
+    } catch (error) {
+        console.error("Error generating document code with Gemini:", error);
+        return `
+      <!DOCTYPE html>
+      <html>
+      <head><title>Error</title><script src="https://cdn.tailwindcss.com"></script></head>
+      <body><div class="p-4 bg-red-100 text-red-800">Failed to generate the document.</div></body>
+      </html>
+    `;
+    }
+};
+
 
 export const refineAppCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<RefinementResult> => {
   console.log(`Refining code with prompt: "${prompt}"`);

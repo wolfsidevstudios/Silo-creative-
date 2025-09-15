@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { FlashcardDisplay } from '../builder/FlashcardDisplay';
@@ -57,7 +56,6 @@ interface PreviewPanelProps {
   isAgentTesting: boolean;
   agentTestAction: AgentTestAction | null;
   onTestComplete: () => void;
-  // FIX: Changed type from 'string' to a specific union type to match state.
   activePreviewMode: 'viewer' | 'editor' | 'console';
   setActivePreviewMode: (mode: 'viewer' | 'editor' | 'console') => void;
 }
@@ -69,10 +67,53 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     const { generatedCode, appMode } = useAppContext();
     const [deviceMode, setDeviceMode] = useState<'desktop' | 'mobile'>('desktop');
     const iframeRef = useRef<HTMLIFrameElement>(null);
+    const [isVisualEditMode, setIsVisualEditMode] = useState(false);
+    const [visualEditBarState, setVisualEditBarState] = useState<{ isVisible: boolean; top: number; left: number; width: number; } | null>(null);
+
+    useEffect(() => {
+        const iframe = iframeRef.current;
+        if (!iframe || !iframe.contentWindow || !iframe.contentDocument) return;
+
+        const doc = iframe.contentDocument;
+
+        const handleIframeClick = (e: MouseEvent) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const target = e.target as HTMLElement;
+            const rect = target.getBoundingClientRect();
+            
+            setVisualEditBarState({
+                isVisible: true,
+                top: rect.bottom + iframe.offsetTop,
+                left: rect.left + iframe.offsetLeft,
+                width: rect.width,
+            });
+        };
+        
+        const closeVisualEdit = () => {
+            setIsVisualEditMode(false);
+            setVisualEditBarState(null);
+        };
+
+        if (isVisualEditMode && activePreviewMode === 'viewer') {
+            doc.body.addEventListener('click', handleIframeClick);
+            doc.body.style.cursor = 'crosshair';
+            // Close visual edit mode if user switches preview mode
+            if (activePreviewMode !== 'viewer') closeVisualEdit();
+        }
+
+        return () => {
+            if (doc && doc.body) {
+                doc.body.removeEventListener('click', handleIframeClick);
+                doc.body.style.cursor = 'default';
+            }
+        };
+    }, [isVisualEditMode, activePreviewMode]);
+    
 
     const getSrcDoc = () => {
         if (!generatedCode) return '';
-        // Visual edit script is simplified for now
         return generatedCode;
     };
 
@@ -87,6 +128,13 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                     .catch((err: Error) => console.error("Screenshot failed:", err));
             }
         }, 500);
+    };
+
+    const handleOpenInNewTab = () => {
+        if (!generatedCode) return;
+        const blob = new Blob([generatedCode], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
     };
 
     const renderContent = () => {
@@ -125,36 +173,41 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                 {renderContent()}
             </div>
             
-            {generatedCode && activePreviewMode === 'viewer' && (
+            {generatedCode && (
                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
                     <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md rounded-xl shadow-2xl border border-gray-200/80 p-1.5 text-gray-800">
                         
-                        <button className="flex items-center gap-1 p-2 rounded-lg hover:bg-gray-200/60 transition-colors">
-                            <MousePointerClickIcon className="w-4 h-4" />
-                            <ChevronDownIcon className="w-3 h-3 text-gray-500" />
-                        </button>
+                        {activePreviewMode === 'viewer' && (
+                            <>
+                                <button 
+                                    onClick={() => setIsVisualEditMode(prev => !prev)}
+                                    className={`p-2 rounded-lg transition-colors ${isVisualEditMode ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-gray-200/60'}`}
+                                    aria-label="Toggle visual edit mode"
+                                >
+                                    <MousePointerClickIcon className="w-4 h-4" />
+                                </button>
+                                <div className="w-px h-6 bg-gray-300 mx-1"></div>
 
-                        <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-                        {/* Device Toggle */}
-                        <div className="flex items-center bg-gray-200/70 rounded-lg p-0.5">
-                            <button
-                                onClick={() => setDeviceMode('desktop')}
-                                className={`p-1.5 rounded-md transition-colors ${deviceMode === 'desktop' ? 'bg-white shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
-                                aria-label="Desktop view"
-                            >
-                                <DesktopIcon className="w-4 h-4" />
-                            </button>
-                            <button
-                                onClick={() => setDeviceMode('mobile')}
-                                className={`p-1.5 rounded-md transition-colors ${deviceMode === 'mobile' ? 'bg-white shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
-                                aria-label="Mobile view"
-                            >
-                                <PhoneIcon className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                                {/* Device Toggle */}
+                                <div className="flex items-center bg-gray-200/70 rounded-lg p-0.5">
+                                    <button
+                                        onClick={() => setDeviceMode('desktop')}
+                                        className={`p-1.5 rounded-md transition-colors ${deviceMode === 'desktop' ? 'bg-white shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                                        aria-label="Desktop view"
+                                    >
+                                        <DesktopIcon className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setDeviceMode('mobile')}
+                                        className={`p-1.5 rounded-md transition-colors ${deviceMode === 'mobile' ? 'bg-white shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                                        aria-label="Mobile view"
+                                    >
+                                        <PhoneIcon className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                            </>
+                        )}
 
                         {/* App Viewer Dropdown */}
                         <div className="relative group">
@@ -179,21 +232,38 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
 
                         {/* Right Side */}
                         <button
-                            onClick={() => iframeRef.current?.contentWindow?.location.reload()}
-                            className="p-2 rounded-lg hover:bg-gray-200/60 transition-colors"
-                            aria-label="Refresh preview"
-                        >
-                            <RefreshCwIcon className="w-4 h-4" />
-                        </button>
-                        <button
+                            onClick={handleOpenInNewTab}
                             className="p-2 rounded-lg hover:bg-gray-200/60 transition-colors"
                             aria-label="Open in new tab"
                         >
                             <ExternalLinkIcon className="w-4 h-4" />
                         </button>
 
+                        {activePreviewMode === 'viewer' && (
+                            <button
+                                onClick={() => iframeRef.current?.contentWindow?.location.reload()}
+                                className="p-2 rounded-lg hover:bg-gray-200/60 transition-colors"
+                                aria-label="Refresh preview"
+                            >
+                                <RefreshCwIcon className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
                 </div>
+            )}
+             {visualEditBarState?.isVisible && (
+                <VisualEditBar
+                    position={visualEditBarState}
+                    onSubmit={(prompt) => {
+                        onVisualEditSubmit(prompt);
+                        setVisualEditBarState(null);
+                        setIsVisualEditMode(false);
+                    }}
+                    onClose={() => {
+                        setVisualEditBarState(null);
+                        setIsVisualEditMode(false);
+                    }}
+                />
             )}
              <style>{`
                 .bg-grid {

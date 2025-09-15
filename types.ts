@@ -1,11 +1,11 @@
 
-export type AppMode = 'build' | 'study' | 'form' | 'native';
+export type AppMode = 'build' | 'study' | 'form' | 'native' | 'document';
 
 export interface Message {
   role: 'user' | 'model';
   content: string;
   isPlan?: boolean;
-  planType?: 'app' | 'form';
+  planType?: 'app' | 'form' | 'document';
   isChangeSummary?: boolean;
   imageUrl?: string; // For screenshots
   isAgentActivity?: boolean; // For status messages
@@ -18,9 +18,15 @@ export interface AppPlan {
 }
 
 export interface FormPlan {
-    title: string;
+    title:string;
     description: string;
     fields: { name: string; type: string; required: boolean }[];
+}
+
+export interface DocumentPlan {
+    title: string;
+    documentType: 'PDF' | 'Presentation';
+    outline: string[];
 }
 
 export interface RefinementResult {

@@ -5,10 +5,10 @@ import {
     generateAppPlan, generateAppCode, generateFlashcards, 
     generateFormPlan, generateFormCode, refineAppCode, 
     generateNativeAppCode, refineNativeAppCode, chatAboutCode,
-    selfCorrectCode, getPrimaryAction
+    selfCorrectCode, getPrimaryAction, generateDocumentPlan, generateDocumentCode
 } from '../../services/geminiService';
 import { saveApp } from '../../services/storageService';
-import type { Message, AppPlan, FormPlan, RefinementResult } from '../../types';
+import type { Message, AppPlan, FormPlan, DocumentPlan, RefinementResult } from '../../types';
 import { AgentTestAction } from '../pages/AppBuilderPage';
 import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon, BotIcon, CheckIcon, PlusIcon, StarIcon } from '../common/Icons';
 
@@ -48,7 +48,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
   const [isLoading, setIsLoading] = useState(false);
   const [input, setInput] = useState('');
   const [isCodeGenerated, setIsCodeGenerated] = useState(false);
-  const [currentPlan, setCurrentPlan] = useState<AppPlan | FormPlan | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<AppPlan | FormPlan | DocumentPlan | null>(null);
   const [changeSummary, setChangeSummary] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'planning' | 'generating' | 'reviewing' | 'testing' | 'finished'>('idle');
 
@@ -73,10 +73,11 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
         setIsLoading(false);
       };
       
-      const planGenerators = {
+      const planGenerators: { [key: string]: (prompt: string, agentInstruction?: string) => Promise<any> } = {
           build: generateAppPlan,
           native: generateAppPlan,
           form: generateFormPlan,
+          document: generateDocumentPlan,
       };
 
       if (appMode === 'study') {
@@ -89,23 +90,21 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
             .finally(() => setIsLoading(false));
 
       } else if (appMode in planGenerators) {
-        planGenerators[appMode as 'build' | 'native' | 'form'](prompt, agentInstruction)
-          .then((plan: any) => {
+        planGenerators[appMode as 'build' | 'native' | 'form' | 'document'](prompt, agentInstruction)
+          .then((plan: AppPlan | FormPlan | DocumentPlan) => {
               setCurrentPlan(plan);
               setStatus('generating');
               return generateCode(plan);
           })
-          .catch(error => handleErrors(error, 'app plan'));
+          .catch(error => handleErrors(error, 'plan'));
       }
     }
   }, [prompt, appMode]);
   
-  const generateCode = async (plan: AppPlan | FormPlan) => {
+  const generateCode = async (plan: AppPlan | FormPlan | DocumentPlan) => {
       const agentInstruction = selectedAgent?.systemInstruction;
       
       try {
-          // FIX: Use if/else blocks to handle different app modes and ensure correct plan types are passed.
-          // TypeScript cannot infer the correlation between `appMode` and the type of `plan` automatically.
           let code: string;
           if (appMode === 'build') {
               code = await generateAppCode(plan as AppPlan, agentInstruction);
@@ -113,6 +112,8 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
               code = await generateNativeAppCode(plan as AppPlan, agentInstruction);
           } else if (appMode === 'form') {
               code = await generateFormCode(plan as FormPlan, agentInstruction);
+          } else if (appMode === 'document') {
+              code = await generateDocumentCode(plan as DocumentPlan, agentInstruction);
           } else {
               // This case should ideally not be reached due to logic in useEffect
               console.error(`Invalid appMode for code generation: ${appMode}`);
@@ -123,7 +124,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
           }
           
           setGeneratedCode(code); // This triggers PreviewPanel screenshot
-          saveApp(plan.title, code, appMode as 'build' | 'form' | 'native');
+          saveApp(plan.title, code, appMode as 'build' | 'form' | 'native' | 'document');
           setIsCodeGenerated(true);
       } catch (error) {
           console.error("Error generating code:", error);
@@ -134,6 +135,11 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
   };
 
   const reviewScreenshot = async (dataUrl: string) => {
+    // Skip self-correction for documents and study materials
+    if (appMode === 'document' || appMode === 'study') {
+        finalizeTest();
+        return;
+    }
     setStatus('reviewing');
     try {
         const result = await selfCorrectCode(prompt, generatedCode, dataUrl.split(',')[1], selectedAgent?.systemInstruction);
@@ -163,14 +169,16 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
           setIsLoading(false);
       }
   };
+  
+  const finalizeTest = () => {
+    setStatus('finished');
+    setIsLoading(false);
+  };
 
   useImperativeHandle(ref, () => ({
     submitRefinement,
     reviewScreenshot,
-    finalizeTest: () => {
-        setStatus('finished');
-        setIsLoading(false);
-    }
+    finalizeTest
   }));
 
   const submitRefinement = async (refinementPrompt: string) => {
@@ -200,22 +208,33 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
     submitRefinement(input);
   };
 
+  const isRefinementDisabled = !isCodeGenerated || isLoading || appMode === 'document' || appMode === 'study';
+
+  const getPlaceholderText = () => {
+    if (!isCodeGenerated) return "Waiting for content to be generated...";
+    if (appMode === 'document') return "Document generation complete.";
+    if (appMode === 'study') return "Flashcards generated.";
+    return "Make changes to the app...";
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 p-6 overflow-y-auto">
-        <h2 className="text-2xl font-bold text-gray-800">{currentPlan?.title || "Building your app..."}</h2>
+        <h2 className="text-2xl font-bold text-gray-800">{currentPlan?.title || "Building your creation..."}</h2>
         <p className="text-gray-500 mt-1">From prompt: "{prompt}"</p>
         
         <div className="mt-8 space-y-6">
             <Step icon={<StarIcon className="w-5 h-5"/>} title="1. Review the generated plan" isComplete={status !== 'planning' && status !== 'idle'}>
                 {currentPlan && (
                     <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-md border border-gray-200">
-                        <p className="font-medium text-gray-800">{currentPlan.description}</p>
+                        <p className="font-medium text-gray-800">
+                           { 'description' in currentPlan ? currentPlan.description : `Type: ${(currentPlan as DocumentPlan).documentType}` }
+                        </p>
                     </div>
                 )}
             </Step>
             
-            <Step icon={<BotIcon className="w-5 h-5"/>} title="2. Generate the application" isComplete={isCodeGenerated}>
+            <Step icon={<BotIcon className="w-5 h-5"/>} title="2. Generate the content" isComplete={isCodeGenerated}>
                 {changeSummary && <p className="text-sm text-gray-600 italic">"{changeSummary}"</p>}
                  {isCodeGenerated && !isLoading && status !== 'finished' && (
                     <div className="text-sm text-gray-600 italic flex items-center gap-2">
@@ -228,6 +247,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
             <Step icon={<BotIcon className="w-5 h-5"/>} title="3. Self-correct and test" isComplete={status === 'finished'}>
                 {status === 'reviewing' && <p className="text-sm text-gray-600 italic">Reviewing the generated UI...</p>}
                 {status === 'testing' && <p className="text-sm text-gray-600 italic">Testing primary functionality...</p>}
+                {(appMode === 'document' || appMode === 'study') && status !== 'generating' && status !== 'planning' && <p className="text-sm text-gray-600 italic">Self-correction is not applicable for this content type.</p>}
             </Step>
         </div>
         
@@ -237,7 +257,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
                     <span className="font-semibold text-gray-800">Version 1</span>
                     <span className="text-xs font-semibold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">Live</span>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">{status === 'finished' ? "Landing page created." : "Creating landing page..."}</p>
+                <p className="text-sm text-gray-600 mt-1">{status === 'finished' ? "Content created." : "Creating content..."}</p>
             </div>
         )}
 
@@ -261,9 +281,9 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={isCodeGenerated ? "Make changes to the app..." : "Waiting for app to be generated..."}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
-                disabled={!isCodeGenerated || isLoading}
+                placeholder={getPlaceholderText()}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm disabled:bg-gray-100"
+                disabled={isRefinementDisabled}
             />
         </form>
       </div>
