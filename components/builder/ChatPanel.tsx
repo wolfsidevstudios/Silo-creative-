@@ -136,41 +136,15 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
   };
 
   const reviewScreenshot = async (dataUrl: string) => {
-    if (appMode === 'document' || appMode === 'study') {
-        finalizeTest();
-        return;
-    }
-    setStatus('reviewing');
-    try {
-        const result = await selfCorrectCode(prompt, generatedCode, dataUrl.split(',')[1], selectedAgent?.systemInstruction);
-        if (result.summary === 'NO_CHANGES_NEEDED') {
-            startAgentTestingPhase();
-        } else {
-            setGeneratedCode(result.code);
-            setChangeSummary(`I found a small issue and fixed it: ${result.summary}`);
-            startAgentTestingPhase();
-        }
-    } catch (error) {
-        console.error("Error during self-correction:", error);
-        setStatus('finished');
-        setIsLoading(false);
-    }
+    // Self-correction and testing step has been removed by user request.
+    // This function is still wired up and is called after code generation.
+    // We just call finalizeTest() to move the status to 'finished'.
+    finalizeTest();
   };
 
   const startAgentTestingPhase = async () => {
-      if (appMode === 'document' || appMode === 'study') {
-          finalizeTest();
-          return;
-      }
-      setStatus('testing');
-      try {
-          const action = await getPrimaryAction(generatedCode, selectedModel, selectedAgent?.systemInstruction);
-          onStartAgentTest(action);
-      } catch(error) {
-          console.error("Could not get primary action:", error);
-          setStatus('finished');
-          setIsLoading(false);
-      }
+    // This step has been removed.
+    return;
   };
   
   const finalizeTest = () => {
@@ -248,7 +222,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
                 )}
             </Step>
             
-            <Step icon={<BotIcon className="w-5 h-5"/>} title="2. Generate the content" isComplete={isCodeGenerated}>
+            <Step icon={<BotIcon className="w-5 h-5"/>} title="2. Generate the content" isComplete={isCodeGenerated || status === 'finished'}>
                 {changeSummary && <p className="text-sm text-gray-400 italic">"{changeSummary}"</p>}
                  {isCodeGenerated && !isLoading && status !== 'finished' && (
                     <div className="text-sm text-gray-400 italic flex items-center gap-2">
@@ -256,12 +230,6 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
                         <span>AI is working...</span>
                     </div>
                 )}
-            </Step>
-            
-            <Step icon={<BotIcon className="w-5 h-5"/>} title="3. Self-correct and test" isComplete={status === 'finished'}>
-                {status === 'reviewing' && <p className="text-sm text-gray-400 italic">Reviewing the generated UI...</p>}
-                {status === 'testing' && <p className="text-sm text-gray-400 italic">Testing primary functionality...</p>}
-                {(appMode === 'document' || appMode === 'study') && status !== 'generating' && status !== 'planning' && <p className="text-sm text-gray-400 italic">Self-correction is not applicable for this content type.</p>}
             </Step>
         </div>
         
