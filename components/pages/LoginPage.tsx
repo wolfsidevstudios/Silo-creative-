@@ -1,4 +1,3 @@
-
 import React, { useState, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import GoogleSignInButton from '../auth/GoogleSignInButton';
@@ -73,7 +72,7 @@ const LoginPage: React.FC = () => {
             <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full -translate-x-16 -translate-y-16 blur-2xl opacity-75"></div>
             <div className="absolute bottom-0 right-0 w-80 h-80 bg-white/10 rounded-full translate-x-20 translate-y-20 blur-3xl opacity-75"></div>
             <div className="relative z-10 text-center space-y-6">
-                <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Create Logo" className="w-24 h-24 rounded-full mx-auto border-4 border-white/50 shadow-xl" />
+                <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Labs Logo" className="w-24 h-24 rounded-full mx-auto border-4 border-white/50 shadow-xl" />
                 <h1 className="text-4xl font-bold">Unleash Your Creativity</h1>
                 <p className="text-indigo-200 text-lg max-w-sm mx-auto">
                     Turn your ideas into fully functional web applications with the power of AI.
@@ -95,8 +94,8 @@ const LoginPage: React.FC = () => {
                 </div>
 
                 <div className="text-center mb-8">
-                    <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Create Logo" className="w-16 h-16 rounded-full mx-auto lg:hidden" />
-                    <h2 className="text-3xl font-bold text-gray-100 mt-4">Welcome to Silo Create</h2>
+                    <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Labs Logo" className="w-16 h-16 rounded-full mx-auto lg:hidden" />
+                    <h2 className="text-3xl font-bold text-gray-100 mt-4">Welcome to Silo Labs</h2>
                     <p className="text-gray-400">Sign in to continue your creative journey.</p>
                 </div>
           

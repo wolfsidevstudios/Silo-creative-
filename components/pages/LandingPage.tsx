@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GitHubIcon, DiscordIcon, BrainCircuitIcon, CodeIcon, UsersIcon, AtSignIcon, ChevronDownIcon, CheckIcon } from '../common/Icons';
@@ -58,8 +57,8 @@ const Header: React.FC = () => {
         <header className="fixed top-4 left-1/2 -translate-x-1/2 z-30 w-[95%] max-w-2xl">
             <nav>
                 <div className="flex items-center justify-between gap-4 bg-black/30 backdrop-blur-lg rounded-full shadow-lg ring-1 ring-white/10 px-4 py-2 sm:px-6 sm:py-3">
-                    <Link to="/" className="flex items-center gap-2 flex-shrink-0" aria-label="Silo Create Home">
-                        <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Create Logo" className="w-8 h-8 rounded-full" />
+                    <Link to="/" className="flex items-center gap-2 flex-shrink-0" aria-label="Silo Labs Home">
+                        <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo Labs Logo" className="w-8 h-8 rounded-full" />
                     </Link>
                     <div className="hidden sm:flex items-center gap-6 text-sm font-medium text-gray-300">
                          <button onClick={() => scrollToSection('features')} className="hover:text-indigo-400 transition-colors">Features</button>
@@ -89,7 +88,7 @@ const Footer: React.FC = () => (
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
                 <div className="text-sm text-gray-400">
-                    &copy; {new Date().getFullYear()} Silo Create. All rights reserved.
+                    &copy; {new Date().getFullYear()} Silo Labs. All rights reserved.
                 </div>
                 <div className="flex items-center gap-4 text-gray-400">
                     <Link to="/terms" className="hover:text-indigo-400">Terms of Service</Link>
@@ -97,11 +96,11 @@ const Footer: React.FC = () => (
                     <Link to="/changelog" className="hover:text-indigo-400">Changelog</Link>
                 </div>
                  <div className="flex space-x-6">
-                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-300" aria-label="Silo Create on GitHub">
+                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-300" aria-label="Silo Labs on GitHub">
                         <span className="sr-only">GitHub</span>
                         <GitHubIcon className="h-6 w-6" />
                     </a>
-                    <a href="https://discord.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-300" aria-label="Join the Silo Create Discord">
+                    <a href="https://discord.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-300" aria-label="Join the Silo Labs Discord">
                         <span className="sr-only">Discord</span>
                         <DiscordIcon className="h-6 w-6" />
                     </a>
@@ -265,36 +264,47 @@ const LandingPage: React.FC = () => {
                         </div>
                         <div className="mt-8 flex justify-center">
                             <a href="https://www.producthunt.com/products/silo-creative-app-builder?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-silo&#0045;creative&#0045;app&#0045;builder" target="_blank" rel="noopener noreferrer">
-                                <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1015728&theme=dark&t=1757771222673" alt="Silo&#0032;Creative&#0032;App&#0032;Builder - AI&#0032;app&#0032;builder | Product Hunt" style={{width: '250px', height: '54px'}} width="250" height="54" />
+                                <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1015728&theme=dark&t=1757771222673" alt="Silo&#0032;Labs&#0032;Build - AI&#0032;app&#0032;builder | Product Hunt" style={{width: '250px', height: '54px'}} width="250" height="54" />
                             </a>
                         </div>
                         
-                        {/* Gemini Section */}
-                        <div className="mt-12 text-center">
-                            <p className="text-sm font-semibold text-gray-500 tracking-wide uppercase">POWERED BY</p>
-                            <a href="https://deepmind.google/technologies/gemini/" target="_blank" rel="noopener noreferrer" className="mt-4 inline-block transition-transform hover:scale-105">
-                                <img src="https://i.ibb.co/pvVQHjkw/Gemini-2-5-cover.webp" alt="Gemini 2.5 Flash Logo" className="h-12 w-auto mx-auto rounded-md shadow-sm" />
-                            </a>
-                            <p className="mt-4 text-gray-400 max-w-xl mx-auto">
-                                Silo Create is built on Gemini 2.5 Flash, bringing you state-of-the-art speed and intelligence in AI-powered app generation.
-                            </p>
-                        </div>
-
                         <AppPreview />
                     </div>
                 </div>
+
+                {/* V2 Banner */}
+                <section className="relative py-20 sm:py-28 overflow-hidden">
+                     <div className="absolute inset-x-0 top-0 h-4/5 bg-black/30 backdrop-blur-sm [clip-path:ellipse(100%_70%_at_50%_30%)]"></div>
+                     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
+                        <div className="inline-flex items-center gap-3">
+                            <h2 className="text-4xl sm:text-5xl font-bold text-gray-100">Silo Labs</h2>
+                            <span className="px-4 py-1.5 bg-indigo-500 text-white text-lg font-semibold rounded-full shadow-lg">Build V2</span>
+                        </div>
+                        <p className="mt-6 text-2xl text-indigo-300 font-medium max-w-3xl mx-auto">
+                            Introducing Deep Agent: AI that thinks before it builds.
+                        </p>
+                        <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto">
+                            Our next-generation agent, powered by Gemini, analyzes your requests with deeper understanding to generate more robust, higher-quality code. Experience a smarter way to build.
+                        </p>
+                        <div className="mt-10">
+                            <button onClick={() => navigate('/login')} className="px-8 py-3 bg-white text-black font-semibold rounded-full hover:bg-gray-200 transition-colors shadow-lg">
+                                Try Build V2 Now
+                            </button>
+                        </div>
+                    </div>
+                </section>
 
                 {/* Who We Are Section */}
                 <section id="about" className="relative isolate py-20 sm:py-28">
                     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                         <img 
                             src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
-                            alt="Silo Create company logo" 
+                            alt="Silo Labs company logo" 
                             className="w-24 h-24 rounded-full mx-auto mb-6"
                         />
                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-100">Who We Are</h2>
                         <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto">
-                            At Silo Create, we believe that a great idea shouldn't be limited by coding skills. We are a passionate team of developers and designers dedicated to making technology accessible to everyone. Our mission is to empower creators, entrepreneurs, and students to bring their digital ideas to life, instantly.
+                            At Silo Labs, we believe that a great idea shouldn't be limited by coding skills. We are a passionate team of developers and designers dedicated to making technology accessible to everyone. Our mission is to empower creators, entrepreneurs, and students to bring their digital ideas to life, instantly.
                         </p>
                         
                         <div className="mt-20">
@@ -302,7 +312,7 @@ const LandingPage: React.FC = () => {
                              <div className="inline-block bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-lg p-8">
                                 <img 
                                     src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" 
-                                    alt="Emanuel Martinez, Founder of Silo Create" 
+                                    alt="Emanuel Martinez, Founder of Silo Labs" 
                                     className="w-28 h-28 rounded-full mx-auto mb-4"
                                 />
                                 <h4 className="text-xl font-semibold text-gray-200">Emanuel Martinez</h4>
@@ -316,7 +326,7 @@ const LandingPage: React.FC = () => {
                 <section id="features" className="relative isolate py-20 sm:py-28 bg-black/30 backdrop-blur-sm">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="text-center">
-                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-100">Why Choose Silo Create?</h2>
+                            <h2 className="text-3xl sm:text-4xl font-bold text-gray-100">Why Choose Silo Labs?</h2>
                             <p className="mt-4 text-lg text-gray-400 max-w-2xl mx-auto">
                                 We combine powerful AI with an intuitive interface to make app development accessible to everyone.
                             </p>
@@ -403,7 +413,7 @@ const LandingPage: React.FC = () => {
                             </div>
                              <div className="bg-gray-900/50 p-8 rounded-2xl border border-white/10">
                                 <p className="text-gray-300 relative">
-                                    "I don't code, but I have a lot of ideas. Silo Create bridges that gap perfectly. I can finally build and test my concepts without hiring a developer."
+                                    "I don't code, but I have a lot of ideas. Silo Labs bridges that gap perfectly. I can finally build and test my concepts without hiring a developer."
                                 </p>
                                 <div className="mt-6 flex items-center gap-4">
                                     <img className="w-12 h-12 rounded-full" src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Testimonial from Jessica P." />
@@ -498,8 +508,8 @@ const LandingPage: React.FC = () => {
                             </p>
                         </div>
                         <div className="mt-12">
-                            <FaqItem question="What is Silo Create?">
-                                <p>Silo Create is an AI-powered platform that lets you build simple, single-page web applications just by describing them. It's designed for makers, students, and developers who want to quickly prototype and build ideas without writing code from scratch.</p>
+                            <FaqItem question="What is Silo Labs?">
+                                <p>Silo Labs is an AI-powered platform that lets you build simple, single-page web applications just by describing them. It's designed for makers, students, and developers who want to quickly prototype and build ideas without writing code from scratch.</p>
                             </FaqItem>
                             <FaqItem question="Do I need to know how to code?">
                                 <p>Not at all! You can generate complete, functional applications just by writing a prompt. If you are a developer, you can also view and download the generated HTML and Tailwind CSS code to customize it further.</p>
@@ -543,7 +553,7 @@ const LandingPage: React.FC = () => {
                      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
                         <h2 className="text-3xl sm:text-4xl font-bold">Ready to Build Your Idea?</h2>
                         <p className="mt-4 text-lg text-indigo-200 max-w-2xl mx-auto">
-                           Stop wondering and start building. Join Silo Create today and turn your vision into reality.
+                           Stop wondering and start building. Join Silo Labs today and turn your vision into reality.
                         </p>
                         <div className="mt-10">
                             <button onClick={() => navigate('/login')} className="px-8 py-3.5 bg-white text-indigo-600 font-semibold rounded-full hover:bg-gray-100 transition-colors shadow-lg text-lg">
