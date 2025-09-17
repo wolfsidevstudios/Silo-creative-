@@ -309,6 +309,12 @@ export const CodeBracketIcon: React.FC<{ className?: string }> = ({ className })
     </svg>
 );
 
+export const VercelIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M12 2L2 22h20L12 2z"/>
+    </svg>
+);
+
 
 // --- File Type Icons ---
 export const FileTextIcon: React.FC<{ className?: string }> = ({ className }) => (

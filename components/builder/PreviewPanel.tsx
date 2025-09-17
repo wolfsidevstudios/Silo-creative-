@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { generateDocumentation } from '../../services/geminiService';
-import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon, PhoneIcon, DesktopIcon, RefreshCwIcon, CodeBracketIcon, TerminalIcon, FileTextIcon, ChevronDownIcon, GitHubIcon, SearchIcon, XIcon } from '../common/Icons';
+import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon, PhoneIcon, DesktopIcon, RefreshCwIcon, CodeBracketIcon, TerminalIcon, FileTextIcon, ChevronDownIcon, GitHubIcon, SearchIcon, XIcon, VercelIcon } from '../common/Icons';
 import VisualEditBar from './VisualEditBar';
 import { AgentTestAction } from '../pages/AppBuilderPage';
 import { GitHubPushModal } from './GitHubPushModal';
+import { VercelPushModal } from './VercelPushModal';
 
 declare global {
     interface Window {
@@ -89,6 +90,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
     const [isVisualEditMode, setIsVisualEditMode] = useState(false);
     const [visualEditBarState, setVisualEditBarState] = useState<{ isVisible: boolean; top: number; left: number; width: number; } | null>(null);
     const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
+    const [isVercelModalOpen, setIsVercelModalOpen] = useState(false);
     const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
     const [documentation, setDocumentation] = useState('');
     const [isGeneratingDocs, setIsGeneratingDocs] = useState(false);
@@ -165,6 +167,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
         }
     };
 
+    const canDeploy = ['build', 'form', 'document', 'component'].includes(appMode);
 
     const renderContent = () => {
         if (!generatedCode) return <div className="flex items-center justify-center h-full text-gray-500">Preview will appear here...</div>;
@@ -194,6 +197,9 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
                         <button onClick={onAnalyzeRequest} className="p-2.5 rounded-full hover:bg-white/10 transition-colors" aria-label="Analyze UI/UX"><SearchIcon className="w-5 h-5" /></button>
                         <button onClick={handleGenerateDocs} disabled={isGeneratingDocs} className="p-2.5 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50" aria-label="Generate Documentation"><FileTextIcon className="w-5 h-5" /></button>
                         <button onClick={() => setIsGitHubModalOpen(true)} className="p-2.5 rounded-full hover:bg-white/10 transition-colors" aria-label="Push to GitHub"><GitHubIcon className="w-5 h-5" /></button>
+                        {canDeploy && (
+                             <button onClick={() => setIsVercelModalOpen(true)} className="p-2.5 rounded-full hover:bg-white/10 transition-colors" aria-label="Deploy to Vercel"><VercelIcon className="w-5 h-5" /></button>
+                        )}
                         
                         <div className="w-px h-6 bg-white/10 mx-1"></div>
                         
@@ -230,6 +236,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
             )}
              {visualEditBarState?.isVisible && <VisualEditBar position={visualEditBarState} onSubmit={(prompt) => { onVisualEditSubmit(prompt); setVisualEditBarState(null); setIsVisualEditMode(false); }} onClose={() => { setVisualEditBarState(null); setIsVisualEditMode(false); }} />}
              <GitHubPushModal isOpen={isGitHubModalOpen} onClose={() => setIsGitHubModalOpen(false)} fileContent={generatedCode} filePath={appMode === 'native' ? 'App.js' : 'index.html'} />
+             <VercelPushModal isOpen={isVercelModalOpen} onClose={() => setIsVercelModalOpen(false)} fileContent={generatedCode} filePath={appMode === 'native' ? 'App.js' : 'index.html'} />
              <DocsModal isOpen={isDocsModalOpen} onClose={() => setIsDocsModalOpen(false)} content={documentation} />
         </div>
     );
