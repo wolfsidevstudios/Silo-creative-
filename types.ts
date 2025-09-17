@@ -1,21 +1,28 @@
 
-export type AppMode = 'build' | 'study' | 'form' | 'native' | 'document';
+export type AppMode = 'build' | 'study' | 'form' | 'native' | 'document' | 'component';
 export type ModelID = 'gemini-2.5-flash' | 'qwen/qwen3-coder:free';
 
 export interface Message {
-  role: 'user' | 'model';
+  role: 'user' | 'model' | 'assistant';
   content: string;
   isPlan?: boolean;
-  planType?: 'app' | 'form' | 'document';
+  planType?: 'app' | 'form' | 'document' | 'component';
   isChangeSummary?: boolean;
   imageUrl?: string; // For screenshots
   isAgentActivity?: boolean; // For status messages
+  analysis?: UiUxAnalysis;
 }
 
 export interface AppPlan {
     title: string;
     description: string;
     features: string[];
+}
+
+export interface ComponentPlan {
+    name: string;
+    description: string;
+    properties: { name: string; type: string; defaultValue: string }[];
 }
 
 export interface FormPlan {
@@ -35,6 +42,15 @@ export interface RefinementResult {
   summary: string;
   files_edited: string[];
 }
+
+export interface UiUxAnalysis {
+    headline: string;
+    suggestions: {
+        area: string;
+        suggestion: string;
+    }[];
+}
+
 
 export interface Flashcard {
     question: string;

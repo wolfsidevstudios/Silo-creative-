@@ -13,6 +13,8 @@ export const MODELS: { id: ModelID; name: string; provider: string }[] = [
 interface AppContextType {
   prompt: string;
   setPrompt: (prompt: string) => void;
+  isTranslation: boolean; // For code translation
+  setIsTranslation: (isTranslation: boolean) => void;
   generatedCode: string;
   setGeneratedCode: (code: string) => void;
   generatedFlashcards: Flashcard[] | null;
@@ -41,6 +43,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [prompt, setPrompt] = useState('');
+  const [isTranslation, setIsTranslation] = useState(false);
   const [generatedCode, setGeneratedCode] = useState('');
   const [generatedFlashcards, setGeneratedFlashcards] = useState<Flashcard[] | null>(null);
   const [isStudent, setIsStudentState] = useState(false);
@@ -173,11 +176,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setPrompt('');
     setGeneratedCode('');
     setGeneratedFlashcards(null);
+    setIsTranslation(false);
   };
 
   return (
     <AppContext.Provider value={{ 
         prompt, setPrompt, 
+        isTranslation, setIsTranslation,
         generatedCode, setGeneratedCode, 
         generatedFlashcards, setGeneratedFlashcards, 
         isStudent, setIsStudent, 

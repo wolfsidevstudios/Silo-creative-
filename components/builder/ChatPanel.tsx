@@ -1,16 +1,17 @@
-
-import React, { useState, useEffect, useRef, FormEvent, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, FormEvent, forwardRef, useImperativeHandle } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { 
     generateAppPlan, generateAppCode, generateFlashcards, 
     generateFormPlan, generateFormCode, refineAppCode, 
-    generateNativeAppCode, refineNativeAppCode, chatAboutCode,
-    selfCorrectCode, getPrimaryAction, generateDocumentPlan, generateDocumentCode
+    generateNativeAppCode, refineNativeAppCode, 
+    selfCorrectCode, generateDocumentPlan, generateDocumentCode,
+    generateComponentPlan, generateComponentCode, translateCodeToWebApp,
+    analyzeUiUx
 } from '../../services/geminiService';
 import { saveApp } from '../../services/storageService';
-import type { Message, AppPlan, FormPlan, DocumentPlan, RefinementResult } from '../../types';
+import type { Message, AppPlan, FormPlan, DocumentPlan, RefinementResult, UiUxAnalysis, ComponentPlan } from '../../types';
 import { AgentTestAction } from '../pages/AppBuilderPage';
-import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon, BotIcon, CheckIcon, PlusIcon, StarIcon, SendIcon } from '../common/Icons';
+import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon, BotIcon, CheckIcon, PlusIcon, StarIcon, SendIcon, SearchIcon, CodeBracketIcon } from '../common/Icons';
 
 // --- Sub-components for new UI ---
 
@@ -26,12 +27,39 @@ const Step: React.FC<{ icon: React.ReactNode; title: string; children?: React.Re
     </div>
 );
 
+const UiAnalysisResult: React.FC<{ analysis: UiUxAnalysis }> = ({ analysis }) => (
+    <div className="mt-4 p-4 bg-white/5 border border-white/10 rounded-lg">
+        <div className="flex items-center gap-3">
+            <div className="w-8 h-8 flex-shrink-0 bg-indigo-500/20 text-indigo-300 rounded-full flex items-center justify-center">
+                <SearchIcon className="w-5 h-5" />
+            </div>
+            <div>
+                <h4 className="font-semibold text-gray-200">UI/UX Analysis Complete</h4>
+                <p className="text-sm text-gray-400">{analysis.headline}</p>
+            </div>
+        </div>
+        <ul className="mt-4 space-y-3 text-sm">
+            {analysis.suggestions.map((item, index) => (
+                <li key={index} className="flex items-start gap-3">
+                    <CheckIcon className="w-4 h-4 text-green-400 mt-1 flex-shrink-0" />
+                    <div>
+                        <strong className="text-gray-300">{item.area}:</strong>
+                        <span className="text-gray-400 ml-1">{item.suggestion}</span>
+                    </div>
+                </li>
+            ))}
+        </ul>
+    </div>
+);
+
+
 // --- Main ChatPanel Component ---
 
 export interface ChatPanelRef {
   submitRefinement: (prompt: string) => void;
   reviewScreenshot: (dataUrl: string) => void;
   finalizeTest: () => void;
+  runUiUxAnalysis: (dataUrl: string) => void;
 }
 
 interface ChatPanelProps {
@@ -43,15 +71,15 @@ const MAX_CHARS_REFINEMENT = 200;
 
 const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, onToggleCodeView }, ref) => {
   const { 
-    prompt, generatedCode, setGeneratedCode, 
+    prompt, isTranslation, generatedCode, setGeneratedCode, 
     appMode, setGeneratedFlashcards, agents, selectedAgentId, selectedModel
   } = useAppContext();
   
   const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isCodeGenerated, setIsCodeGenerated] = useState(false);
-  const [currentPlan, setCurrentPlan] = useState<AppPlan | FormPlan | DocumentPlan | null>(null);
-  const [changeSummary, setChangeSummary] = useState<string | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<AppPlan | FormPlan | DocumentPlan | ComponentPlan | null>(null);
   const [status, setStatus] = useState<'idle' | 'planning' | 'generating' | 'reviewing' | 'testing' | 'finished'>('idle');
 
   const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
@@ -62,7 +90,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
       setGeneratedFlashcards(null);
       setIsCodeGenerated(false);
       setCurrentPlan(null);
-      setChangeSummary(null);
+      setMessages([]);
       setStatus('planning');
       setIsLoading(true);
 
@@ -70,16 +98,25 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
 
       const handleErrors = (error: any, type: string) => {
         console.error(`Error generating ${type}:`, error);
-        setChangeSummary(`Error generating ${type}. Please try again.`);
+        setMessages(prev => [...prev, { role: 'assistant', content: `Error generating ${type}. Please try again.` }]);
         setStatus('finished');
         setIsLoading(false);
       };
       
+      if(isTranslation) {
+        translateCodeToWebApp(prompt, selectedModel, agentInstruction)
+            .then(code => handleCodeGeneration(code, "Translated App"))
+            .catch(error => handleErrors(error, 'code translation'))
+            .finally(() => setIsLoading(false));
+        return;
+      }
+
       const planGenerators: { [key: string]: (prompt: string, model: any, agentInstruction?: string) => Promise<any> } = {
           build: generateAppPlan,
           native: generateAppPlan,
           form: generateFormPlan,
           document: generateDocumentPlan,
+          component: generateComponentPlan,
       };
 
       if (appMode === 'study') {
@@ -92,8 +129,8 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
             .finally(() => setIsLoading(false));
 
       } else if (appMode in planGenerators) {
-        planGenerators[appMode as 'build' | 'native' | 'form' | 'document'](prompt, selectedModel, agentInstruction)
-          .then((plan: AppPlan | FormPlan | DocumentPlan) => {
+        planGenerators[appMode](prompt, selectedModel, agentInstruction)
+          .then((plan: AppPlan | FormPlan | DocumentPlan | ComponentPlan) => {
               setCurrentPlan(plan);
               setStatus('generating');
               return generateCode(plan);
@@ -101,39 +138,48 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
           .catch(error => handleErrors(error, 'plan'));
       }
     }
-  }, [prompt, appMode, selectedModel]);
+  }, [prompt, appMode, selectedModel, isTranslation]);
   
-  const generateCode = async (plan: AppPlan | FormPlan | DocumentPlan) => {
+  const generateCode = async (plan: AppPlan | FormPlan | DocumentPlan | ComponentPlan) => {
       const agentInstruction = selectedAgent?.systemInstruction;
       
       try {
           let code: string;
+          let title = "Generated Content";
           if (appMode === 'build' && 'features' in plan) {
               code = await generateAppCode(plan as AppPlan, selectedModel, agentInstruction);
+              title = plan.title;
           } else if (appMode === 'native' && 'features' in plan) {
               code = await generateNativeAppCode(plan as AppPlan, selectedModel, agentInstruction);
+              title = plan.title;
           } else if (appMode === 'form' && 'fields' in plan) {
               code = await generateFormCode(plan as FormPlan, selectedModel, agentInstruction);
+              title = plan.title;
           } else if (appMode === 'document' && 'documentType' in plan) {
               code = await generateDocumentCode(plan as DocumentPlan, selectedModel, agentInstruction);
+              title = plan.title;
+          } else if (appMode === 'component' && 'properties' in plan) {
+              code = await generateComponentCode(plan as ComponentPlan, selectedModel, agentInstruction);
+              title = (plan as ComponentPlan).name;
           } else {
-              console.error(`Invalid appMode or plan type mismatch: ${appMode}`);
-              setChangeSummary(`An internal error occurred: Invalid app mode or plan mismatch.`);
-              setStatus('finished');
-              setIsLoading(false);
-              return;
+              throw new Error(`Invalid appMode or plan type mismatch: ${appMode}`);
           }
           
-          setGeneratedCode(code); // This triggers PreviewPanel screenshot
-          saveApp(plan.title, code, appMode as 'build' | 'form' | 'native' | 'document');
-          setIsCodeGenerated(true);
+          handleCodeGeneration(code, title);
+
       } catch (error) {
           console.error("Error generating code:", error);
-          setChangeSummary("Sorry, there was an error generating the code.");
+          setMessages(prev => [...prev, {role: 'assistant', content: "Sorry, there was an error generating the code."}]);
           setStatus('finished');
           setIsLoading(false);
       }
   };
+
+  const handleCodeGeneration = (code: string, title: string) => {
+      setGeneratedCode(code); // This triggers PreviewPanel screenshot
+      saveApp(title, code, appMode);
+      setIsCodeGenerated(true);
+  }
 
   const reviewScreenshot = async (dataUrl: string) => {
     // Self-correction and testing step has been removed by user request.
@@ -141,21 +187,35 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
     // We just call finalizeTest() to move the status to 'finished'.
     finalizeTest();
   };
-
-  const startAgentTestingPhase = async () => {
-    // This step has been removed.
-    return;
-  };
   
   const finalizeTest = () => {
     setStatus('finished');
     setIsLoading(false);
   };
 
+  const runUiUxAnalysis = async (dataUrl: string) => {
+      if (!generatedCode) return;
+      setMessages(prev => [...prev, {role: 'assistant', content: 'Analyzing UI/UX...', isAgentActivity: true}]);
+      setIsLoading(true);
+      try {
+          const agentInstruction = selectedAgent?.systemInstruction;
+          const analysis = await analyzeUiUx(generatedCode, dataUrl, agentInstruction);
+          setMessages(prev => prev.filter(m => m.content !== 'Analyzing UI/UX...'));
+          setMessages(prev => [...prev, {role: 'assistant', content: '', analysis}]);
+      } catch (error) {
+          console.error("Error running analysis:", error);
+          setMessages(prev => prev.filter(m => m.content !== 'Analyzing UI/UX...'));
+          setMessages(prev => [...prev, {role: 'assistant', content: "Sorry, I couldn't run the UI/UX analysis."}]);
+      } finally {
+          setIsLoading(false);
+      }
+  };
+
   useImperativeHandle(ref, () => ({
     submitRefinement,
     reviewScreenshot,
-    finalizeTest
+    finalizeTest,
+    runUiUxAnalysis,
   }));
 
   const submitRefinement = async (refinementPrompt: string) => {
@@ -172,11 +232,12 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
         result = await refineAppCode(generatedCode, refinementPrompt, selectedModel, agentInstruction);
       }
       setGeneratedCode(result.code);
-      saveApp(currentPlan?.title || "Updated App", result.code, appMode as 'build' | 'form' | 'native');
-      setChangeSummary(result.summary);
+      // FIX: Safely access title or name from the union type for the currentPlan.
+      saveApp((currentPlan as any)?.title || (currentPlan as any)?.name || "Updated App", result.code, appMode);
+      setMessages(prev => [...prev, {role: 'assistant', content: result.summary, isChangeSummary: true}]);
     } catch (error) {
         console.error("Error refining code:", error);
-        setChangeSummary("Sorry, I couldn't apply those changes.");
+        setMessages(prev => [...prev, {role: 'assistant', content: "Sorry, I couldn't apply those changes."}]);
         setStatus('finished');
     } finally {
         setIsLoading(false);
@@ -189,60 +250,48 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
     submitRefinement(input);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value;
-    if (text.length <= MAX_CHARS_REFINEMENT) {
-      setInput(text);
-    }
-  };
-
   const isRefinementDisabled = !isCodeGenerated || isLoading || appMode === 'document' || appMode === 'study';
 
   const getPlaceholderText = () => {
     if (!isCodeGenerated) return "Waiting for content to be generated...";
-    if (appMode === 'document') return "Document generation complete.";
-    if (appMode === 'study') return "Flashcards generated.";
+    if (appMode === 'document' || appMode === 'study') return "Generation complete.";
     return "Describe a change...";
   };
 
   return (
     <div className="flex flex-col h-full text-gray-300">
       <div className="flex-1 p-6 overflow-y-auto">
-        <h2 className="text-2xl font-bold text-gray-100">{currentPlan?.title || "Building your creation..."}</h2>
-        <p className="text-gray-400 mt-1">From prompt: "{prompt}"</p>
+        {/* FIX: Safely access title or name from the union type of currentPlan. */}
+        <h2 className="text-2xl font-bold text-gray-100">{(currentPlan as any)?.title || (currentPlan as any)?.name || "Building your creation..."}</h2>
+        <p className="text-gray-400 mt-1 line-clamp-1">From prompt: "{prompt}"</p>
         
         <div className="mt-8 space-y-6">
             <Step icon={<StarIcon className="w-5 h-5"/>} title="1. Review the generated plan" isComplete={status !== 'planning' && status !== 'idle'}>
                 {currentPlan && (
                     <div className="text-sm text-gray-300 p-3 bg-white/5 rounded-md border border-white/10">
                         <p className="font-medium text-gray-200">
-                           { 'description' in currentPlan ? currentPlan.description : `Type: ${(currentPlan as DocumentPlan).documentType}` }
+                           {/* FIX: Safely access description property, which doesn't exist on DocumentPlan. */}
+                           { (currentPlan as any).description || `Type: ${(currentPlan as DocumentPlan).documentType}` }
                         </p>
                     </div>
                 )}
             </Step>
             
             <Step icon={<BotIcon className="w-5 h-5"/>} title="2. Generate the content" isComplete={isCodeGenerated || status === 'finished'}>
-                {changeSummary && <p className="text-sm text-gray-400 italic">"{changeSummary}"</p>}
-                 {isCodeGenerated && !isLoading && status !== 'finished' && (
-                    <div className="text-sm text-gray-400 italic flex items-center gap-2">
-                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
-                        <span>AI is working...</span>
-                    </div>
-                )}
+                {messages.filter(m => m.isChangeSummary).map((m, i) => (
+                    <p key={i} className="text-sm text-gray-400 italic">"{m.content}"</p>
+                ))}
             </Step>
         </div>
         
-        {isCodeGenerated && (
-             <div className="mt-8 bg-white/5 border border-white/10 rounded-lg p-4">
-                <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-200">Version 1</span>
-                    <span className="text-xs font-semibold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full">Live</span>
-                </div>
-                <p className="text-sm text-gray-400 mt-1">{status === 'finished' ? "Content created." : "Creating content..."}</p>
-            </div>
-        )}
-
+        <div className="mt-6 space-y-3">
+             {messages.filter(m => !m.isChangeSummary).map((msg, index) => (
+                msg.analysis 
+                    ? <UiAnalysisResult key={index} analysis={msg.analysis} />
+                    : <p key={index} className="text-sm text-gray-400">{msg.content}</p>
+             ))}
+        </div>
+        
         {status === 'finished' && (
             <div className="mt-10">
                 <h3 className="text-lg font-semibold text-gray-200">What's next?</h3>
@@ -251,13 +300,13 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
                 </div>
             </div>
         )}
-
       </div>
+
       <div className="p-4 bg-transparent mt-auto">
         <form onSubmit={handleSendMessage} className="relative">
             <textarea
                 value={input}
-                onChange={handleInputChange}
+                onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -265,14 +314,11 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
                     }
                 }}
                 placeholder={getPlaceholderText()}
-                className="w-full bg-black/30 backdrop-blur-lg border border-white/10 rounded-full py-3 pl-5 pr-28 shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none placeholder-gray-500 text-gray-200"
+                className="w-full bg-black/30 backdrop-blur-lg border border-white/10 rounded-full py-3 pl-5 pr-12 shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none placeholder-gray-500 text-gray-200"
                 rows={1}
                 disabled={isRefinementDisabled}
             />
-            <div className="absolute top-1/2 -translate-y-1/2 right-3 flex items-center gap-2">
-                <div className="text-sm font-mono text-gray-500">
-                    <span className={input.length > 0 ? "text-gray-200" : ""}>{MAX_CHARS_REFINEMENT - input.length}</span>
-                </div>
+            <div className="absolute top-1/2 -translate-y-1/2 right-3">
                 <button
                     type="submit"
                     disabled={isRefinementDisabled || !input.trim()}

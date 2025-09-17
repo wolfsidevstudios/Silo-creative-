@@ -1,22 +1,23 @@
-
-
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import SuggestionButton from '../common/SuggestionButton';
-import { PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon, PhoneIcon, FilesIcon, FileTextIcon } from '../common/Icons';
+import { PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon, PhoneIcon, FilesIcon, FileTextIcon, CodeBracketIcon, XIcon } from '../common/Icons';
 import AgentSelector from '../agents/AgentSelector';
 import { Link } from 'react-router-dom';
 import ModelSelector from '../common/ModelSelector';
 
-const MAX_CHARS = 350;
+const MAX_CHARS = 10000; // Increased for code translation
 
 const HomePage: React.FC = () => {
   const [inputValue, setInputValue] = React.useState('');
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { setPrompt, appMode, setAppMode } = useAppContext();
+  const { 
+      setPrompt, appMode, setAppMode, 
+      isTranslation, setIsTranslation
+  } = useAppContext();
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -40,7 +41,7 @@ const HomePage: React.FC = () => {
     setPrompt(promptText);
     navigate('/build');
   };
-
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     startBuilding(inputValue);
@@ -52,15 +53,18 @@ const HomePage: React.FC = () => {
       form: ["Contact form for a portfolio", "Event registration form", "Customer feedback survey"],
       native: ["Simple weather app", "Quote of the day", "Tap counter"],
       document: ["A presentation on climate change", "A report on Q2 earnings", "A proposal for a new project"],
+      component: ["A responsive navbar", "A pricing table component", "A testimonial card"],
   };
 
   const getPlaceholder = () => {
+    if (isTranslation) return 'Paste your code here (e.g., Python, Java)...';
     switch(appMode) {
         case 'build': return 'Describe the web app you want to build...';
         case 'study': return 'What topic do you want flashcards for?';
         case 'form': return 'Describe the form you want to build...';
         case 'native': return 'Describe the native mobile app you want...';
         case 'document': return 'Describe the document or presentation you want...';
+        case 'component': return 'Describe the UI component you want to build...';
         default: return 'Describe something to create...';
     }
   };
@@ -98,11 +102,17 @@ const HomePage: React.FC = () => {
             </div>
         </div>
       </main>
-
+      
       <form onSubmit={handleSubmit} className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[95%] max-w-3xl bg-black/30 backdrop-blur-lg border border-white/10 rounded-2xl p-4 shadow-2xl z-20">
-        <div className="flex items-center gap-4 mb-3">
-            <AgentSelector />
-            <ModelSelector />
+        <div className="flex items-center justify-between gap-4 mb-3">
+            <div className="flex items-center gap-4">
+                <AgentSelector />
+                <ModelSelector />
+            </div>
+             <div className="flex items-center bg-black/20 rounded-full p-1 text-sm font-medium">
+                <button type="button" onClick={() => setIsTranslation(false)} className={`px-3 py-1 rounded-full ${!isTranslation ? 'bg-white/10' : 'text-gray-400'}`}>Describe</button>
+                <button type="button" onClick={() => setIsTranslation(true)} className={`px-3 py-1 rounded-full ${isTranslation ? 'bg-white/10' : 'text-gray-400'}`}>Translate</button>
+            </div>
         </div>
         <div className="relative">
             <textarea
@@ -116,7 +126,7 @@ const HomePage: React.FC = () => {
                 }}
                 placeholder={getPlaceholder()}
                 className="w-full h-12 bg-black/20 border border-white/10 rounded-xl py-3 pl-4 pr-40 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none placeholder-gray-500 text-base text-gray-200 transition-colors"
-                rows={1}
+                rows={isTranslation ? 5 : 1}
             />
             <div className="absolute top-1/2 -translate-y-1/2 right-4 flex items-center gap-2">
                 <div className="text-sm font-mono text-gray-500">
@@ -130,6 +140,7 @@ const HomePage: React.FC = () => {
                         <div className="absolute bottom-full mb-2 right-0 w-56 bg-gray-900/80 backdrop-blur-lg rounded-xl shadow-xl border border-white/10 p-2 z-10">
                             <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Mode</div>
                             <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>Web App</MenuItem>
+                            <MenuItem active={appMode === 'component'} onClick={() => { setAppMode('component'); setIsMenuOpen(false); }}>Component</MenuItem>
                             <MenuItem active={appMode === 'native'} onClick={() => { setAppMode('native'); setIsMenuOpen(false); }}>Native App</MenuItem>
                             <MenuItem active={appMode === 'form'} onClick={() => { setAppMode('form'); setIsMenuOpen(false); }}>Web Form</MenuItem>
                             <MenuItem active={appMode === 'document'} onClick={() => { setAppMode('document'); setIsMenuOpen(false); }}>Document</MenuItem>

@@ -281,14 +281,17 @@ const LandingPage: React.FC = () => {
                             <span className="px-4 py-1.5 bg-indigo-500 text-white text-lg font-semibold rounded-full shadow-lg">Build V2</span>
                         </div>
                         <p className="mt-6 text-2xl text-indigo-300 font-medium max-w-3xl mx-auto">
-                            Introducing Deep Agent: AI that thinks before it builds.
+                            A New Era of Creation. Supercharged with 4 Powerful Features.
                         </p>
-                        <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto">
-                            Our next-generation agent, powered by Gemini, analyzes your requests with deeper understanding to generate more robust, higher-quality code. Experience a smarter way to build.
-                        </p>
+                        <div className="mt-8 max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-medium text-gray-300">
+                            <span className="flex items-center justify-center gap-2 p-2 bg-white/5 rounded-full"><CheckIcon className="w-4 h-4 text-green-400"/>Code Translation</span>
+                            <span className="flex items-center justify-center gap-2 p-2 bg-white/5 rounded-full"><CheckIcon className="w-4 h-4 text-green-400"/>UI/UX Analysis</span>
+                            <span className="flex items-center justify-center gap-2 p-2 bg-white/5 rounded-full"><CheckIcon className="w-4 h-4 text-green-400"/>Component Generation</span>
+                            <span className="flex items-center justify-center gap-2 p-2 bg-white/5 rounded-full"><CheckIcon className="w-4 h-4 text-green-400"/>Generate Docs</span>
+                        </div>
                         <div className="mt-10">
                             <button onClick={() => navigate('/login')} className="px-8 py-3 bg-white text-black font-semibold rounded-full hover:bg-gray-200 transition-colors shadow-lg">
-                                Try Build V2 Now
+                                Explore The New Features
                             </button>
                         </div>
                     </div>

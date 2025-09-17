@@ -7,7 +7,7 @@ const SettingsPage: React.FC = () => {
     const { user } = useAppContext();
 
     return (
-        <div className="flex-1 p-6 sm:p-10 overflow-y-auto bg-black">
+        <div className="flex-1 p-6 sm:p-10 bg-black">
             <header className="mb-10">
                 <h1 className="text-4xl font-bold text-gray-100">Settings</h1>
                 <p className="text-lg text-gray-400 mt-1">Manage your account and application preferences.</p>

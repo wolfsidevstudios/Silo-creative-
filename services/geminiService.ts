@@ -1,6 +1,5 @@
-
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import { AppPlan, Flashcard, FormPlan, DocumentPlan, RefinementResult, ModelID } from '../types';
+import { AppPlan, Flashcard, FormPlan, DocumentPlan, RefinementResult, ModelID, ComponentPlan, UiUxAnalysis } from '../types';
 import { getApiKey, getOpenRouterApiKey } from './apiKeyService';
 
 const combineInstructions = (agentInstruction: string | undefined, taskInstruction: string): string => {
@@ -11,24 +10,14 @@ const combineInstructions = (agentInstruction: string | undefined, taskInstructi
 }
 
 const cleanJsonString = (str: string): string => {
-    const firstBracket = str.indexOf('{');
-    const firstSquare = str.indexOf('[');
-    let start = -1;
-
-    if (firstBracket === -1) start = firstSquare;
-    else if (firstSquare === -1) start = firstBracket;
-    else start = Math.min(firstBracket, firstSquare);
-
-    if (start === -1) return str;
-
-    const lastBracket = str.lastIndexOf('}');
-    const lastSquare = str.lastIndexOf(']');
-    const end = Math.max(lastBracket, lastSquare);
-    
-    if (end === -1) return str;
-
-    return str.substring(start, end + 1);
+    // This regex finds the first and last bracket or square bracket, and extracts everything in between.
+    const match = str.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
+    if (match) {
+        return match[0];
+    }
+    return str; // Return original if no JSON structure is found
 };
+
 
 const callOpenRouter = async (model: string, systemInstruction: string, userMessage: string): Promise<string> => {
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -113,6 +102,63 @@ You must respond with only a JSON object that strictly follows this structure:
     throw new Error("Failed to generate an app plan from the AI model.");
   }
 };
+
+export const generateComponentPlan = async (prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<ComponentPlan> => {
+  console.log(`Generating component plan for prompt: "${prompt}" with model ${model}`);
+
+  const taskInstruction = `You are an expert UI component architect. A user wants to build a specific UI component. Create a plan for it.
+
+The plan should include:
+1.  A short **name** for the component (e.g., "Pricing Table").
+2.  A one-sentence **description**.
+3.  A list of key **properties** (props) the component should accept, each with a 'name', 'type' (e.g., "string", "number", "boolean", "array"), and a sensible 'defaultValue'.
+
+Respond with ONLY the JSON object.`;
+  const systemInstruction = combineInstructions(agentSystemInstruction, taskInstruction);
+
+  try {
+    if (model.startsWith('gemini')) {
+      const ai = new GoogleGenAI({ apiKey: getApiKey() });
+      const schema = {
+        type: Type.OBJECT,
+        properties: {
+          name: { type: Type.STRING },
+          description: { type: Type.STRING },
+          properties: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING },
+                type: { type: Type.STRING },
+                defaultValue: { type: Type.STRING },
+              },
+              required: ['name', 'type', 'defaultValue'],
+            },
+          },
+        },
+        required: ['name', 'description', 'properties'],
+      };
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          systemInstruction: systemInstruction,
+          responseMimeType: "application/json",
+          responseSchema: schema,
+        },
+      });
+      return JSON.parse(response.text.trim());
+    } else {
+      const responseJson = await callOpenRouter(model, systemInstruction, prompt);
+      return JSON.parse(cleanJsonString(responseJson));
+    }
+  } catch (error) {
+    console.error(`Error generating component plan with ${model}:`, error);
+    throw new Error("Failed to generate a component plan from the AI model.");
+  }
+};
+
 
 export const generateFormPlan = async (prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<FormPlan> => {
     console.log(`Generating form plan for prompt: "${prompt}" with model ${model}`);
@@ -555,6 +601,54 @@ ${plan.outline.map(item => `- ${item}`).join('\n')}
     }
 };
 
+export const generateComponentCode = async (plan: ComponentPlan, model: ModelID, agentSystemInstruction?: string): Promise<string> => {
+    console.log(`Generating code for component: "${plan.name}" with model ${model}`);
+    
+    const propsString = plan.properties.map(p => `- ${p.name} (type: ${p.type}, default: ${p.defaultValue})`).join('\n');
+    const taskPrompt = `
+You are an expert web developer creating standalone UI components.
+Based on the following plan, generate a single HTML file that showcases the component.
+
+**Component Plan:**
+- **Name:** ${plan.name}
+- **Description:** ${plan.description}
+- **Properties:**
+${propsString}
+
+**CRITICAL REQUIREMENTS:**
+1.  **Single HTML File:** The entire output must be a single HTML file.
+2.  **Demonstration:** The HTML should display one or more examples of the component with different properties to demonstrate its functionality and appearance.
+3.  **Styling:** Style the component using Tailwind CSS. Include the CDN script.
+4.  **Logic:** If the component is interactive, all logic must be contained in a single vanilla JavaScript <script> tag.
+5.  **Isolation:** The component's HTML, CSS, and JS should be self-contained and easy to copy and paste into another project. Add comments to clearly delineate the component's code from the demonstration page code.
+6.  **No Explanations:** The output must ONLY be the raw HTML code.
+`;
+
+    try {
+        if (model.startsWith('gemini')) {
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: taskPrompt,
+                config: config,
+            });
+            return response.text;
+        } else {
+            return await callOpenRouter(model, agentSystemInstruction || '', taskPrompt);
+        }
+    } catch (error) {
+        console.error(`Error generating component code with ${model}:`, error);
+        return `
+      <!DOCTYPE html>
+      <html>
+      <head><title>Error</title><script src="https://cdn.tailwindcss.com"></script></head>
+      <body><div class="p-4 bg-red-100 text-red-800">Failed to generate component.</div></body>
+      </html>
+    `;
+    }
+};
+
 
 export const refineAppCode = async (existingCode: string, prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<RefinementResult> => {
   console.log(`Refining code with prompt: "${prompt}" using model ${model}`);
@@ -671,52 +765,6 @@ You MUST respond with a single JSON object.
     }
 };
 
-export const getPrimaryAction = async (code: string, model: ModelID, agentSystemInstruction?: string): Promise<{ selector: string; action: string; justification: string }> => {
-    console.log(`Identifying primary action for testing with model ${model}.`);
-    
-    const taskPrompt = `You are a test automation engineer. Analyze the following HTML code and identify the single most important interactive element for a user to test. This is likely the main button (e.g., "Submit", "Calculate", "Start") or a primary input field.
-
-Return a JSON object with the element's CSS selector, the action to perform (e.g., "click"), and a brief justification.
-
-**Existing Application Code:**
-\`\`\`html
-${code}
-\`\`\`
-
-**CRITICAL RESPONSE FORMAT:**
-Respond with ONLY a JSON object with this exact structure:
-\`{"selector": "string", "action": "string", "justification": "string"}\``;
-    const systemInstruction = agentSystemInstruction || '';
-
-    try {
-        let resultJson: string;
-        if (model.startsWith('gemini')) {
-            const ai = new GoogleGenAI({ apiKey: getApiKey() });
-            const schema = {
-                type: Type.OBJECT,
-                properties: { selector: { type: Type.STRING }, action: { type: Type.STRING }, justification: { type: Type.STRING } }, required: ['selector', 'action', 'justification'],
-            };
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: taskPrompt,
-                config: {
-                    ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
-                    responseMimeType: "application/json",
-                    responseSchema: schema,
-                },
-            });
-            resultJson = response.text.trim();
-        } else {
-            resultJson = await callOpenRouter(model, systemInstruction, taskPrompt);
-        }
-        return JSON.parse(cleanJsonString(resultJson));
-    } catch (error) {
-        console.error(`Error getting primary action with ${model}:`, error);
-        throw new Error("Failed to identify a primary action for testing.");
-    }
-};
-
-
 export const refineNativeAppCode = async (existingCode: string, prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<RefinementResult> => {
   console.log(`Refining native code with prompt: "${prompt}" using model ${model}`);
 
@@ -773,43 +821,145 @@ export const refineNativeAppCode = async (existingCode: string, prompt: string, 
     }
 };
 
-export const chatAboutCode = async (existingCode: string, prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<string> => {
-  console.log(`Chatting about code with prompt: "${prompt}" using model ${model}`);
-  
-  const taskPrompt = `
-    You are an expert developer and helpful AI assistant. A user has a question about a piece of code they are working on. Your task is to provide a clear, concise, and helpful answer.
+export const translateCodeToWebApp = async (sourceCode: string, model: ModelID, agentSystemInstruction?: string): Promise<string> => {
+    console.log(`Translating code to web app with model ${model}`);
+    const taskPrompt = `
+You are an expert polyglot developer who specializes in translating application logic from various programming languages into standalone, single-file web applications (HTML, Tailwind CSS, vanilla JS).
 
-    **User's Question:**
-    "${prompt}"
+**User's Source Code:**
+\`\`\`
+${sourceCode}
+\`\`\`
 
-    **The Code in Question:**
-    \`\`\`
-    ${existingCode}
-    \`\`\`
+**Your Task:**
+1.  **Analyze the source code** to understand its core functionality, logic, and intended purpose.
+2.  **Re-implement the functionality** as a visually appealing, user-friendly, single-file web application.
+3.  **Follow all CRITICAL REQUIREMENTS** for building high-quality web apps: Single HTML file, Tailwind CSS from CDN, clean vanilla JS in one script tag, responsive design, and high-quality aesthetics.
+4.  **No Explanations:** The output must ONLY be the raw HTML code.
+`;
+    try {
+        if (model.startsWith('gemini')) {
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: taskPrompt,
+                config: config,
+            });
+            return response.text;
+        } else {
+            return await callOpenRouter(model, agentSystemInstruction || '', taskPrompt);
+        }
+    } catch (error) {
+        console.error(`Error translating code with ${model}:`, error);
+        throw new Error("Failed to translate code to web app.");
+    }
+};
 
-    **Instructions:**
-    1.  Analyze the user's question in the context of the provided code.
-    2.  Provide a direct answer to the question.
-    3.  If appropriate, you can include small code snippets to illustrate your point, but do not return the full code.
-    4.  Keep your explanation easy to understand for someone who might not be an expert.
-    5.  Your response should be conversational and helpful. Do not respond in JSON or any other structured format.
-    `;
+export const analyzeUiUx = async (code: string, imageBase64: string, agentSystemInstruction?: string): Promise<UiUxAnalysis> => {
+    console.log(`Analyzing UI/UX for the generated app.`);
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+
+    const taskPrompt = `You are a world-class UI/UX design expert. You will be given the code and a screenshot of a web application. Your task is to provide a concise, actionable critique of its design and usability.
+
+**Instructions:**
+1.  Analyze the provided screenshot for key UI/UX principles: layout, spacing, typography, color contrast, accessibility, and visual hierarchy.
+2.  Provide a one-sentence **headline** that summarizes your overall impression.
+3.  Provide a list of 3-5 specific, actionable **suggestions** for improvement. Each suggestion should specify the design **area** (e.g., "Color Contrast", "Typography") and the **suggestion** itself.
+4.  Do not comment on the code, only on the visual design in the screenshot.
+
+**Existing Code (for context):**
+\`\`\`html
+${code}
+\`\`\`
+
+**CRITICAL RESPONSE FORMAT:**
+You MUST respond with a single JSON object with the exact structure below:
+{
+  "headline": "string",
+  "suggestions": [
+    { "area": "string", "suggestion": "string" },
+    ...
+  ]
+}`;
     
-  try {
-    if (model.startsWith('gemini')) {
-        const ai = new GoogleGenAI({ apiKey: getApiKey() });
-        const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+    const schema = {
+        type: Type.OBJECT,
+        properties: {
+            headline: { type: Type.STRING },
+            suggestions: {
+                type: Type.ARRAY,
+                items: {
+                    type: Type.OBJECT,
+                    properties: {
+                        area: { type: Type.STRING },
+                        suggestion: { type: Type.STRING },
+                    },
+                    required: ['area', 'suggestion'],
+                }
+            }
+        },
+        required: ['headline', 'suggestions'],
+    };
+
+    const imagePart = { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } };
+    const textPart = { text: taskPrompt };
+
+    try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            contents: taskPrompt,
-            config: config
+            contents: { parts: [imagePart, textPart] },
+            config: {
+                ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
+                responseMimeType: "application/json",
+                responseSchema: schema,
+            },
         });
-        return response.text;
-    } else {
-        return await callOpenRouter(model, agentSystemInstruction || '', taskPrompt);
+        return JSON.parse(response.text.trim());
+    } catch (error) {
+        console.error("Error during UI/UX analysis:", error);
+        throw new Error("Failed to analyze the application's UI/UX.");
     }
-  } catch (error) {
-      console.error(`Error chatting about code with ${model}:`, error);
-      throw new Error("Failed to get a response from the AI model.");
-  }
+};
+
+export const generateDocumentation = async (code: string, model: ModelID, agentSystemInstruction?: string): Promise<string> => {
+    console.log(`Generating documentation for code with model ${model}`);
+    
+    const taskPrompt = `
+You are an expert technical writer. Your task is to generate clear, concise documentation for the provided single-file web application.
+
+**Application Code:**
+\`\`\`html
+${code}
+\`\`\`
+
+**Instructions:**
+- Analyze the HTML, CSS (in the style tag), and JavaScript (in the script tag).
+- Generate documentation in **Markdown format**.
+- The documentation should include:
+    1.  A brief **Overview** of what the application does.
+    2.  A **Features** section listing its key capabilities.
+    3.  A **Code Breakdown** section explaining:
+        - The overall HTML structure.
+        - Key JavaScript functions and their purpose.
+- Your response must be ONLY the raw Markdown text. Do not include any other explanations.
+`;
+    
+    try {
+        if (model.startsWith('gemini')) {
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: taskPrompt,
+                config: config,
+            });
+            return response.text;
+        } else {
+            return await callOpenRouter(model, agentSystemInstruction || '', taskPrompt);
+        }
+    } catch (error) {
+        console.error(`Error generating documentation with ${model}:`, error);
+        throw new Error("Failed to generate documentation from the AI model.");
+    }
 };

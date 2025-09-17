@@ -1,5 +1,3 @@
-
-
 import React, { useRef, useState, useEffect } from 'react';
 import ChatPanel, { ChatPanelRef } from '../builder/ChatPanel';
 import PreviewPanel from '../builder/PreviewPanel';
@@ -13,6 +11,7 @@ export interface AgentTestAction {
 
 const AppBuilderPage: React.FC = () => {
   const chatPanelRef = useRef<ChatPanelRef>(null);
+  const previewPanelRef = useRef<{ takeScreenshot: () => Promise<string> }>(null);
   const { generatedCode, setGeneratedCode } = useAppContext();
   const [isAgentTesting, setIsAgentTesting] = useState(false);
   const [agentTestAction, setAgentTestAction] = useState<AgentTestAction | null>(null);
@@ -24,6 +23,17 @@ const AppBuilderPage: React.FC = () => {
 
   const handleScreenshotTaken = (dataUrl: string) => {
     chatPanelRef.current?.reviewScreenshot(dataUrl);
+  };
+
+  const handleAnalyzeRequest = async () => {
+    if (previewPanelRef.current) {
+        try {
+            const dataUrl = await previewPanelRef.current.takeScreenshot();
+            chatPanelRef.current?.runUiUxAnalysis(dataUrl);
+        } catch (error) {
+            console.error("Failed to take screenshot for analysis:", error);
+        }
+    }
   };
 
   const handleStartAgentTest = (action: AgentTestAction) => {
@@ -49,6 +59,7 @@ const AppBuilderPage: React.FC = () => {
         </div>
         <div className="bg-black/30 backdrop-blur-lg border border-white/10 rounded-2xl shadow-lg flex flex-col overflow-hidden">
           <PreviewPanel 
+            ref={previewPanelRef}
             onVisualEditSubmit={handleVisualEditSubmit}
             onScreenshotTaken={handleScreenshotTaken}
             isAgentTesting={isAgentTesting}
@@ -56,6 +67,7 @@ const AppBuilderPage: React.FC = () => {
             onTestComplete={handleTestComplete}
             activePreviewMode={activePreviewMode}
             setActivePreviewMode={setActivePreviewMode}
+            onAnalyzeRequest={handleAnalyzeRequest}
           />
         </div>
       </div>

@@ -65,7 +65,7 @@ const ChangeTag: React.FC<{ type: Change['type'] }> = ({ type }) => {
 
 const ChangelogPage: React.FC = () => {
     return (
-        <div className="flex-1 overflow-y-auto bg-black p-6 sm:p-10">
+        <div className="flex-1 bg-black p-6 sm:p-10">
             <div className="max-w-4xl mx-auto">
                 <Link to="/home" className="inline-flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-gray-200 mb-6">
                     <ChevronLeftIcon className="w-4 h-4" />
