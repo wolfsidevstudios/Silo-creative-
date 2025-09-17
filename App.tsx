@@ -12,10 +12,12 @@ import LoginPage from './components/pages/LoginPage';
 import LandingPage from './components/pages/LandingPage';
 import SiloOneDrivePage from './components/pages/SiloOneDrivePage';
 import ChangelogPage from './components/pages/ChangelogPage';
+import Sidebar from './components/common/Sidebar';
+import Banner from './components/common/Banner';
 
 const FullPageSpinner: React.FC = () => (
-    <div className="flex items-center justify-center h-screen w-screen bg-gray-50">
-        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-indigo-500" role="status" aria-label="Loading">
+    <div className="flex items-center justify-center h-screen w-screen bg-black">
+        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-white/50" role="status" aria-label="Loading">
             <span className="sr-only">Loading...</span>
         </div>
     </div>
@@ -34,7 +36,18 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (loading) return <FullPageSpinner />;
 
-  return user ? <>{children}</> : null;
+  // This wrapper provides the consistent layout for all protected pages
+  return user ? (
+    <div className="flex flex-col h-screen w-screen bg-black">
+      <Banner />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 overflow-hidden">
+          {children}
+        </main>
+      </div>
+    </div>
+  ) : null;
 };
 
 const LoginPageWrapper: React.FC = () => {
@@ -57,14 +70,18 @@ const AppRoutes: React.FC = () => {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPageWrapper />} />
-      <Route path="/privacy" element={<PrivacyPolicyPage />} />
-      <Route path="/terms" element={<TermsOfServicePage />} />
-      <Route path="/changelog" element={<ChangelogPage />} />
-      <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+      
+      {/* Pages without Sidebar/Banner */}
+      <Route path="/home" element={<HomePage />} />
+
+      {/* Pages with Sidebar/Banner layout */}
       <Route path="/build" element={<ProtectedRoute><AppBuilderPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/agents" element={<ProtectedRoute><AgentsPage /></ProtectedRoute>} />
       <Route path="/onedrive" element={<ProtectedRoute><SiloOneDrivePage /></ProtectedRoute>} />
+      <Route path="/privacy" element={<ProtectedRoute><PrivacyPolicyPage /></ProtectedRoute>} />
+      <Route path="/terms" element={<ProtectedRoute><TermsOfServicePage /></ProtectedRoute>} />
+      <Route path="/changelog" element={<ProtectedRoute><ChangelogPage /></ProtectedRoute>} />
     </Routes>
   );
 };

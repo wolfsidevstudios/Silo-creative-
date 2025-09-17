@@ -1,5 +1,6 @@
 
 export type AppMode = 'build' | 'study' | 'form' | 'native' | 'document';
+export type ModelID = 'gemini-2.5-flash' | 'qwen/qwen3-coder:free';
 
 export interface Message {
   role: 'user' | 'model';

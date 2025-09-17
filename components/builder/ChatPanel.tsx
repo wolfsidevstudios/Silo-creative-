@@ -10,17 +10,17 @@ import {
 import { saveApp } from '../../services/storageService';
 import type { Message, AppPlan, FormPlan, DocumentPlan, RefinementResult } from '../../types';
 import { AgentTestAction } from '../pages/AppBuilderPage';
-import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon, BotIcon, CheckIcon, PlusIcon, StarIcon } from '../common/Icons';
+import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon, BotIcon, CheckIcon, PlusIcon, StarIcon, SendIcon } from '../common/Icons';
 
 // --- Sub-components for new UI ---
 
 const Step: React.FC<{ icon: React.ReactNode; title: string; children?: React.ReactNode; isComplete?: boolean }> = ({ icon, title, children, isComplete }) => (
     <div className="flex items-start gap-4">
-        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isComplete ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isComplete ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400'}`}>
             {isComplete ? <CheckIcon className="w-5 h-5" /> : icon}
         </div>
         <div className="flex-1 pt-1">
-            <h3 className={`font-semibold ${isComplete ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{title}</h3>
+            <h3 className={`font-semibold ${isComplete ? 'text-gray-500 line-through' : 'text-gray-200'}`}>{title}</h3>
             {children && <div className="mt-2">{children}</div>}
         </div>
     </div>
@@ -39,10 +39,12 @@ interface ChatPanelProps {
     onToggleCodeView: () => void;
 }
 
+const MAX_CHARS_REFINEMENT = 200;
+
 const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, onToggleCodeView }, ref) => {
   const { 
     prompt, generatedCode, setGeneratedCode, 
-    appMode, setGeneratedFlashcards, agents, selectedAgentId 
+    appMode, setGeneratedFlashcards, agents, selectedAgentId, selectedModel
   } = useAppContext();
   
   const [isLoading, setIsLoading] = useState(false);
@@ -73,7 +75,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
         setIsLoading(false);
       };
       
-      const planGenerators: { [key: string]: (prompt: string, agentInstruction?: string) => Promise<any> } = {
+      const planGenerators: { [key: string]: (prompt: string, model: any, agentInstruction?: string) => Promise<any> } = {
           build: generateAppPlan,
           native: generateAppPlan,
           form: generateFormPlan,
@@ -81,7 +83,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
       };
 
       if (appMode === 'study') {
-          generateFlashcards(prompt, agentInstruction)
+          generateFlashcards(prompt, selectedModel, agentInstruction)
             .then(flashcards => {
                 setGeneratedFlashcards(flashcards);
                 setStatus('finished');
@@ -90,7 +92,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
             .finally(() => setIsLoading(false));
 
       } else if (appMode in planGenerators) {
-        planGenerators[appMode as 'build' | 'native' | 'form' | 'document'](prompt, agentInstruction)
+        planGenerators[appMode as 'build' | 'native' | 'form' | 'document'](prompt, selectedModel, agentInstruction)
           .then((plan: AppPlan | FormPlan | DocumentPlan) => {
               setCurrentPlan(plan);
               setStatus('generating');
@@ -99,25 +101,24 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
           .catch(error => handleErrors(error, 'plan'));
       }
     }
-  }, [prompt, appMode]);
+  }, [prompt, appMode, selectedModel]);
   
   const generateCode = async (plan: AppPlan | FormPlan | DocumentPlan) => {
       const agentInstruction = selectedAgent?.systemInstruction;
       
       try {
           let code: string;
-          if (appMode === 'build') {
-              code = await generateAppCode(plan as AppPlan, agentInstruction);
-          } else if (appMode === 'native') {
-              code = await generateNativeAppCode(plan as AppPlan, agentInstruction);
-          } else if (appMode === 'form') {
-              code = await generateFormCode(plan as FormPlan, agentInstruction);
-          } else if (appMode === 'document') {
-              code = await generateDocumentCode(plan as DocumentPlan, agentInstruction);
+          if (appMode === 'build' && 'features' in plan) {
+              code = await generateAppCode(plan as AppPlan, selectedModel, agentInstruction);
+          } else if (appMode === 'native' && 'features' in plan) {
+              code = await generateNativeAppCode(plan as AppPlan, selectedModel, agentInstruction);
+          } else if (appMode === 'form' && 'fields' in plan) {
+              code = await generateFormCode(plan as FormPlan, selectedModel, agentInstruction);
+          } else if (appMode === 'document' && 'documentType' in plan) {
+              code = await generateDocumentCode(plan as DocumentPlan, selectedModel, agentInstruction);
           } else {
-              // This case should ideally not be reached due to logic in useEffect
-              console.error(`Invalid appMode for code generation: ${appMode}`);
-              setChangeSummary(`An internal error occurred: Invalid app mode.`);
+              console.error(`Invalid appMode or plan type mismatch: ${appMode}`);
+              setChangeSummary(`An internal error occurred: Invalid app mode or plan mismatch.`);
               setStatus('finished');
               setIsLoading(false);
               return;
@@ -135,7 +136,6 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
   };
 
   const reviewScreenshot = async (dataUrl: string) => {
-    // Skip self-correction for documents and study materials
     if (appMode === 'document' || appMode === 'study') {
         finalizeTest();
         return;
@@ -148,7 +148,6 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
         } else {
             setGeneratedCode(result.code);
             setChangeSummary(`I found a small issue and fixed it: ${result.summary}`);
-            // Let new code trigger a new screenshot and review. To prevent loops, we'll proceed after one correction.
             startAgentTestingPhase();
         }
     } catch (error) {
@@ -159,9 +158,13 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
   };
 
   const startAgentTestingPhase = async () => {
+      if (appMode === 'document' || appMode === 'study') {
+          finalizeTest();
+          return;
+      }
       setStatus('testing');
       try {
-          const action = await getPrimaryAction(generatedCode, selectedAgent?.systemInstruction);
+          const action = await getPrimaryAction(generatedCode, selectedModel, selectedAgent?.systemInstruction);
           onStartAgentTest(action);
       } catch(error) {
           console.error("Could not get primary action:", error);
@@ -188,11 +191,15 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
     setInput('');
     try {
       const agentInstruction = selectedAgent?.systemInstruction;
-      const result = await refineAppCode(generatedCode, refinementPrompt, agentInstruction);
+      let result: RefinementResult;
+      if (appMode === 'native') {
+        result = await refineNativeAppCode(generatedCode, refinementPrompt, selectedModel, agentInstruction);
+      } else {
+        result = await refineAppCode(generatedCode, refinementPrompt, selectedModel, agentInstruction);
+      }
       setGeneratedCode(result.code);
-      saveApp(currentPlan?.title || "Updated App", result.code, appMode as 'build' | 'form');
+      saveApp(currentPlan?.title || "Updated App", result.code, appMode as 'build' | 'form' | 'native');
       setChangeSummary(result.summary);
-      // Let screenshot trigger next phase
     } catch (error) {
         console.error("Error refining code:", error);
         setChangeSummary("Sorry, I couldn't apply those changes.");
@@ -208,26 +215,33 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
     submitRefinement(input);
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    if (text.length <= MAX_CHARS_REFINEMENT) {
+      setInput(text);
+    }
+  };
+
   const isRefinementDisabled = !isCodeGenerated || isLoading || appMode === 'document' || appMode === 'study';
 
   const getPlaceholderText = () => {
     if (!isCodeGenerated) return "Waiting for content to be generated...";
     if (appMode === 'document') return "Document generation complete.";
     if (appMode === 'study') return "Flashcards generated.";
-    return "Make changes to the app...";
+    return "Describe a change...";
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full text-gray-300">
       <div className="flex-1 p-6 overflow-y-auto">
-        <h2 className="text-2xl font-bold text-gray-800">{currentPlan?.title || "Building your creation..."}</h2>
-        <p className="text-gray-500 mt-1">From prompt: "{prompt}"</p>
+        <h2 className="text-2xl font-bold text-gray-100">{currentPlan?.title || "Building your creation..."}</h2>
+        <p className="text-gray-400 mt-1">From prompt: "{prompt}"</p>
         
         <div className="mt-8 space-y-6">
             <Step icon={<StarIcon className="w-5 h-5"/>} title="1. Review the generated plan" isComplete={status !== 'planning' && status !== 'idle'}>
                 {currentPlan && (
-                    <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-md border border-gray-200">
-                        <p className="font-medium text-gray-800">
+                    <div className="text-sm text-gray-300 p-3 bg-white/5 rounded-md border border-white/10">
+                        <p className="font-medium text-gray-200">
                            { 'description' in currentPlan ? currentPlan.description : `Type: ${(currentPlan as DocumentPlan).documentType}` }
                         </p>
                     </div>
@@ -235,56 +249,71 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
             </Step>
             
             <Step icon={<BotIcon className="w-5 h-5"/>} title="2. Generate the content" isComplete={isCodeGenerated}>
-                {changeSummary && <p className="text-sm text-gray-600 italic">"{changeSummary}"</p>}
+                {changeSummary && <p className="text-sm text-gray-400 italic">"{changeSummary}"</p>}
                  {isCodeGenerated && !isLoading && status !== 'finished' && (
-                    <div className="text-sm text-gray-600 italic flex items-center gap-2">
-                        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+                    <div className="text-sm text-gray-400 italic flex items-center gap-2">
+                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
                         <span>AI is working...</span>
                     </div>
                 )}
             </Step>
             
             <Step icon={<BotIcon className="w-5 h-5"/>} title="3. Self-correct and test" isComplete={status === 'finished'}>
-                {status === 'reviewing' && <p className="text-sm text-gray-600 italic">Reviewing the generated UI...</p>}
-                {status === 'testing' && <p className="text-sm text-gray-600 italic">Testing primary functionality...</p>}
-                {(appMode === 'document' || appMode === 'study') && status !== 'generating' && status !== 'planning' && <p className="text-sm text-gray-600 italic">Self-correction is not applicable for this content type.</p>}
+                {status === 'reviewing' && <p className="text-sm text-gray-400 italic">Reviewing the generated UI...</p>}
+                {status === 'testing' && <p className="text-sm text-gray-400 italic">Testing primary functionality...</p>}
+                {(appMode === 'document' || appMode === 'study') && status !== 'generating' && status !== 'planning' && <p className="text-sm text-gray-400 italic">Self-correction is not applicable for this content type.</p>}
             </Step>
         </div>
         
         {isCodeGenerated && (
-             <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-4">
+             <div className="mt-8 bg-white/5 border border-white/10 rounded-lg p-4">
                 <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-800">Version 1</span>
-                    <span className="text-xs font-semibold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full">Live</span>
+                    <span className="font-semibold text-gray-200">Version 1</span>
+                    <span className="text-xs font-semibold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full">Live</span>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">{status === 'finished' ? "Content created." : "Creating content..."}</p>
+                <p className="text-sm text-gray-400 mt-1">{status === 'finished' ? "Content created." : "Creating content..."}</p>
             </div>
         )}
 
         {status === 'finished' && (
             <div className="mt-10">
-                <h3 className="text-lg font-semibold text-gray-800">Everything's finished!</h3>
+                <h3 className="text-lg font-semibold text-gray-200">What's next?</h3>
                 <div className="mt-4 space-y-3">
-                    <button onClick={onToggleCodeView} className="w-full text-left p-3 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700">View/edit codes or download</button>
+                    <button onClick={onToggleCodeView} className="w-full text-left p-3 bg-white/5 hover:bg-white/10 rounded-lg text-sm font-medium text-gray-300 transition-colors">View/edit codes or download</button>
                 </div>
             </div>
         )}
 
       </div>
-      <div className="p-4 bg-white border-t border-gray-200">
-        <p className="text-sm font-medium text-gray-600 mb-2">How's it going? Ask the team to...</p>
+      <div className="p-4 bg-transparent mt-auto">
         <form onSubmit={handleSendMessage} className="relative">
-            <button type="button" className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-gray-200 rounded-full hover:bg-gray-300">
-                <PlusIcon className="w-4 h-4 text-gray-600" />
-            </button>
-            <input
-                type="text"
+            <textarea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={handleInputChange}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                    }
+                }}
                 placeholder={getPlaceholderText()}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm disabled:bg-gray-100"
+                className="w-full bg-black/30 backdrop-blur-lg border border-white/10 rounded-full py-3 pl-5 pr-28 shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none placeholder-gray-500 text-gray-200"
+                rows={1}
                 disabled={isRefinementDisabled}
             />
+            <div className="absolute top-1/2 -translate-y-1/2 right-3 flex items-center gap-2">
+                <div className="text-sm font-mono text-gray-500">
+                    <span className={input.length > 0 ? "text-gray-200" : ""}>{MAX_CHARS_REFINEMENT - input.length}</span>
+                </div>
+                <button
+                    type="submit"
+                    disabled={isRefinementDisabled || !input.trim()}
+                    className="bg-indigo-500 text-white rounded-full w-8 h-8 flex items-center justify-center disabled:bg-gray-600/50 disabled:cursor-not-allowed hover:bg-indigo-600 transition-all shadow-lg"
+                    aria-label="Send change request"
+                >
+                    <SendIcon className="w-4 h-4" />
+                </button>
+            </div>
         </form>
       </div>
     </div>

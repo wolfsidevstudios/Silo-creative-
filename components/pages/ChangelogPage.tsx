@@ -1,7 +1,5 @@
 
 import React from 'react';
-import Sidebar from '../common/Sidebar';
-import Banner from '../common/Banner';
 import { Link } from 'react-router-dom';
 import { ChevronLeftIcon } from '../common/Icons';
 
@@ -48,9 +46,9 @@ const changelogData: ChangelogEntry[] = [
 
 const ChangeTag: React.FC<{ type: Change['type'] }> = ({ type }) => {
     const styles = {
-        new: 'bg-green-100 text-green-800',
-        improvement: 'bg-blue-100 text-blue-800',
-        fix: 'bg-yellow-100 text-yellow-800'
+        new: 'bg-green-500/20 text-green-300',
+        improvement: 'bg-blue-500/20 text-blue-300',
+        fix: 'bg-yellow-500/20 text-yellow-300'
     };
     const text = {
         new: 'New',
@@ -67,51 +65,45 @@ const ChangeTag: React.FC<{ type: Change['type'] }> = ({ type }) => {
 
 const ChangelogPage: React.FC = () => {
     return (
-        <div className="flex flex-col h-screen w-screen bg-white">
-            <Banner />
-            <div className="flex flex-1 overflow-hidden">
-                <Sidebar />
-                <main className="flex-1 overflow-y-auto bg-gray-50 p-6 sm:p-10">
-                    <div className="max-w-4xl mx-auto">
-                        <Link to="/home" className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-800 mb-6">
-                            <ChevronLeftIcon className="w-4 h-4" />
-                            Back to Home
-                        </Link>
-                        <header className="mb-10">
-                            <h1 className="text-4xl font-bold text-gray-800">Changelog</h1>
-                            <p className="text-lg text-gray-500 mt-1">Updates, improvements, and bug fixes for Silo Create.</p>
-                        </header>
+        <div className="flex-1 overflow-y-auto bg-black p-6 sm:p-10">
+            <div className="max-w-4xl mx-auto">
+                <Link to="/home" className="inline-flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-gray-200 mb-6">
+                    <ChevronLeftIcon className="w-4 h-4" />
+                    Back to Home
+                </Link>
+                <header className="mb-10">
+                    <h1 className="text-4xl font-bold text-gray-100">Changelog</h1>
+                    <p className="text-lg text-gray-400 mt-1">Updates, improvements, and bug fixes for Silo Create.</p>
+                </header>
 
-                        <div className="space-y-12">
-                            {changelogData.map((entry, entryIndex) => (
-                                <div key={entry.version} className="relative pl-12">
-                                    {entryIndex < changelogData.length -1 && (
-                                        <div className="absolute left-4 top-4 h-full w-0.5 bg-gray-200"></div>
-                                    )}
-                                    <div className="absolute left-0 top-0">
-                                        <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center z-10 ring-8 ring-gray-50">
-                                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                    <div className="mb-4">
-                                        <h2 className="text-2xl font-bold text-gray-800">{entry.version}</h2>
-                                        <p className="text-sm text-gray-500">{entry.date}</p>
-                                    </div>
-                                    <div className="space-y-4">
-                                        {entry.changes.map((change, index) => (
-                                            <div key={index} className="flex items-start gap-3">
-                                                <ChangeTag type={change.type} />
-                                                <p className="text-gray-700 flex-1">{change.text}</p>
-                                            </div>
-                                        ))}
-                                    </div>
+                <div className="space-y-12">
+                    {changelogData.map((entry, entryIndex) => (
+                        <div key={entry.version} className="relative pl-12">
+                            {entryIndex < changelogData.length -1 && (
+                                <div className="absolute left-4 top-4 h-full w-0.5 bg-white/10"></div>
+                            )}
+                            <div className="absolute left-0 top-0">
+                                <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center z-10 ring-8 ring-black">
+                                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
                                 </div>
-                            ))}
+                            </div>
+                            <div className="mb-4">
+                                <h2 className="text-2xl font-bold text-gray-200">{entry.version}</h2>
+                                <p className="text-sm text-gray-500">{entry.date}</p>
+                            </div>
+                            <div className="space-y-4">
+                                {entry.changes.map((change, index) => (
+                                    <div key={index} className="flex items-start gap-3">
+                                        <ChangeTag type={change.type} />
+                                        <p className="text-gray-300 flex-1">{change.text}</p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                </main>
+                    ))}
+                </div>
             </div>
         </div>
     );

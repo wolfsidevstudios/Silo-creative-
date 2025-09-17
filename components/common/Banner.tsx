@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { GraduationCapIcon, XIcon } from './Icons';
 import StudentSignUpModal from './StudentSignUpModal';
@@ -28,7 +29,7 @@ const Banner: React.FC = () => {
 
   return (
     <>
-      <div className="relative w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white flex items-center justify-center p-3 text-sm font-medium z-20">
+      <div className="relative w-full bg-gradient-to-r from-indigo-600/80 to-purple-600/80 backdrop-blur-md text-white flex items-center justify-center p-3 text-sm font-medium z-20">
         <div className="flex items-center gap-3">
           <GraduationCapIcon className="w-5 h-5 flex-shrink-0" />
           <p>
@@ -37,7 +38,7 @@ const Banner: React.FC = () => {
           </p>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="py-1 px-4 bg-white text-indigo-600 rounded-full font-bold hover:bg-gray-100 transition-colors text-xs flex-shrink-0"
+            className="py-1.5 px-4 bg-white/20 text-white rounded-full font-bold hover:bg-white/30 transition-colors text-xs flex-shrink-0"
           >
             Sign Up
           </button>

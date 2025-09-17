@@ -1,3 +1,4 @@
+
 import React, { useState, FormEvent, useEffect } from 'react';
 import { XIcon, LinkIcon } from '../common/Icons';
 import { useAppContext } from '../../context/AppContext';
@@ -63,40 +64,40 @@ export const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isOpen, onCl
       aria-labelledby="create-agent-title"
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl relative transform transition-all duration-300 scale-95 opacity-0 animate-scale-in"
+        className="bg-gray-900/70 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl w-full max-w-2xl relative transform transition-all duration-300 scale-95 opacity-0 animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-200">
-          <h2 id="create-agent-title" className="text-xl font-bold text-gray-900">
+        <div className="p-6 border-b border-white/10">
+          <h2 id="create-agent-title" className="text-xl font-bold text-gray-100">
             Create Custom Agent
           </h2>
-          <p className="text-sm text-gray-500 mt-1">Define the personality and expertise of your new AI assistant.</p>
+          <p className="text-sm text-gray-400 mt-1">Define the personality and expertise of your new AI assistant.</p>
         </div>
         
         <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
             <div>
-              <label htmlFor="agent-name" className="block text-sm font-medium text-gray-700 mb-1">Agent Name</label>
+              <label htmlFor="agent-name" className="block text-sm font-medium text-gray-300 mb-1">Agent Name</label>
               <input
                 type="text"
                 id="agent-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className="block w-full rounded-full border-white/20 bg-black/30 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-white px-4 py-2"
                 placeholder="e.g., Grumpy Pirate Coder"
                 required
               />
             </div>
 
             <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-700">Profile Image</label>
+              <label className="block text-sm font-medium text-gray-300">Profile Image</label>
               <div className="flex flex-wrap gap-3">
                 {AVATARS.map((avatarUrl) => (
                   <button
                     key={avatarUrl}
                     type="button"
                     onClick={() => setImageUrl(avatarUrl)}
-                    className={`w-16 h-16 rounded-full overflow-hidden transition-all duration-200 ${imageUrl === avatarUrl ? 'ring-4 ring-offset-2 ring-indigo-500' : 'ring-2 ring-transparent hover:ring-indigo-300'}`}
+                    className={`w-16 h-16 rounded-full overflow-hidden transition-all duration-200 ${imageUrl === avatarUrl ? 'ring-4 ring-indigo-500' : 'ring-2 ring-transparent hover:ring-indigo-400'}`}
                   >
                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   </button>
@@ -104,24 +105,24 @@ export const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isOpen, onCl
               </div>
               <div className="relative">
                 <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                    <div className="w-full border-t border-gray-200" />
+                    <div className="w-full border-t border-white/10" />
                 </div>
                 <div className="relative flex justify-center">
-                    <span className="bg-white px-2 text-sm text-gray-500">Or</span>
+                    <span className="bg-gray-900/70 px-2 text-sm text-gray-400">Or</span>
                 </div>
               </div>
               <div>
                 <label htmlFor="agent-image-url" className="sr-only">Image URL</label>
                  <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <LinkIcon className="h-5 w-5 text-gray-400" />
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                        <LinkIcon className="h-5 w-5 text-gray-500" />
                     </div>
                     <input
                         type="url"
                         id="agent-image-url"
                         value={customUrlInputValue}
                         onChange={(e) => setImageUrl(e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 py-2.5 pl-10 pr-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        className="block w-full rounded-full border-white/20 bg-black/30 py-2.5 pl-11 pr-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-white placeholder-gray-500"
                         placeholder="Enter image URL"
                     />
                 </div>
@@ -129,13 +130,13 @@ export const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isOpen, onCl
             </div>
 
             <div>
-              <label htmlFor="system-instruction" className="block text-sm font-medium text-gray-700 mb-1">System Instructions</label>
+              <label htmlFor="system-instruction" className="block text-sm font-medium text-gray-300 mb-1">System Instructions</label>
               <textarea
                 id="system-instruction"
                 rows={6}
                 value={systemInstruction}
                 onChange={(e) => setSystemInstruction(e.target.value)}
-                className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className="block w-full rounded-lg border-white/20 bg-black/30 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-white"
                 placeholder="You are a grumpy pirate who reluctantly helps with coding..."
                 required
               ></textarea>
@@ -145,17 +146,17 @@ export const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isOpen, onCl
             </div>
           </div>
 
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+          <div className="px-6 py-4 bg-black/20 border-t border-white/10 flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="px-4 py-2 border border-white/20 text-sm font-medium rounded-full shadow-sm text-gray-300 bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-500/50"
               disabled={!name.trim() || !systemInstruction.trim() || !imageUrl.trim()}
             >
               Create Agent
@@ -165,7 +166,7 @@ export const CreateAgentModal: React.FC<CreateAgentModalProps> = ({ isOpen, onCl
 
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-full text-gray-400 hover:bg-white/10 transition-colors"
           aria-label="Close"
         >
           <XIcon className="w-5 h-5" />

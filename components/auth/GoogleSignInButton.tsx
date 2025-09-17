@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
@@ -59,7 +60,7 @@ const GoogleSignInButton: React.FC = () => {
                 
                 window.google.accounts.id.renderButton(
                     buttonDivRef.current,
-                    { theme: "outline", size: "large", type: "standard", shape: 'pill', width: '300' }
+                    { theme: "filled_black", size: "large", type: "standard", shape: 'pill', width: '320' }
                 );
             }
         };

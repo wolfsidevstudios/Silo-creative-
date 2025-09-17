@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { FlashcardDisplay } from '../builder/FlashcardDisplay';
@@ -169,83 +170,84 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     
     return (
         <div className="relative flex flex-col h-full w-full text-white">
-            <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-hidden bg-grid">
+            <div className="flex-1 overflow-hidden">
                 {renderContent()}
             </div>
             
             {generatedCode && (
                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
-                    <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md rounded-xl shadow-2xl border border-gray-200/80 p-1.5 text-gray-800">
+                    <div className="flex items-center gap-1.5 bg-black/30 backdrop-blur-lg rounded-full shadow-2xl border border-white/10 p-1.5 text-gray-200">
                         
                         {activePreviewMode === 'viewer' && (
                             <>
                                 <button 
                                     onClick={() => setIsVisualEditMode(prev => !prev)}
-                                    className={`p-2 rounded-lg transition-colors ${isVisualEditMode ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-gray-200/60'}`}
+                                    className={`p-2.5 rounded-full transition-colors ${isVisualEditMode ? 'bg-indigo-500 text-white' : 'hover:bg-white/10'}`}
                                     aria-label="Toggle visual edit mode"
                                 >
-                                    <MousePointerClickIcon className="w-4 h-4" />
+                                    <MousePointerClickIcon className="w-5 h-5" />
                                 </button>
-                                <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                                <div className="w-px h-6 bg-white/10 mx-1"></div>
 
                                 {/* Device Toggle */}
-                                <div className="flex items-center bg-gray-200/70 rounded-lg p-0.5">
+                                <div className="flex items-center bg-black/20 rounded-full p-0.5">
                                     <button
                                         onClick={() => setDeviceMode('desktop')}
-                                        className={`p-1.5 rounded-md transition-colors ${deviceMode === 'desktop' ? 'bg-white shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                                        className={`p-2.5 rounded-full transition-colors ${deviceMode === 'desktop' ? 'bg-white/10 shadow-sm' : 'text-gray-400 hover:text-white'}`}
                                         aria-label="Desktop view"
                                     >
-                                        <DesktopIcon className="w-4 h-4" />
+                                        <DesktopIcon className="w-5 h-5" />
                                     </button>
                                     <button
                                         onClick={() => setDeviceMode('mobile')}
-                                        className={`p-1.5 rounded-md transition-colors ${deviceMode === 'mobile' ? 'bg-white shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}
+                                        className={`p-2.5 rounded-full transition-colors ${deviceMode === 'mobile' ? 'bg-white/10 shadow-sm' : 'text-gray-400 hover:text-white'}`}
                                         aria-label="Mobile view"
                                     >
-                                        <PhoneIcon className="w-4 h-4" />
+                                        <PhoneIcon className="w-5 h-5" />
                                     </button>
                                 </div>
-                                <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                                <div className="w-px h-6 bg-white/10 mx-1"></div>
                             </>
                         )}
 
                         {/* App Viewer Dropdown */}
                         <div className="relative group">
-                            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-200/60 text-sm font-medium transition-colors">
-                                <FileTextIcon className="w-4 h-4" />
-                                <span>App Viewer</span>
+                            <button className="flex items-center gap-2 px-4 py-2.5 rounded-full hover:bg-white/10 text-sm font-medium transition-colors">
+                                <FileTextIcon className="w-5 h-5" />
+                                <span>Viewer</span>
+                                <ChevronDownIcon className="w-4 h-4 opacity-50"/>
                             </button>
-                             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg hidden group-hover:block z-10 text-sm py-1">
-                                <button onClick={() => setActivePreviewMode('editor')} className={`w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-gray-100 ${activePreviewMode === 'editor' ? 'font-semibold text-gray-800' : 'text-gray-600'}`}>
-                                    <CodeBracketIcon className="w-4 h-4 text-gray-500"/>Editor
+                             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-gray-900/80 backdrop-blur-lg border border-white/10 rounded-xl shadow-lg hidden group-hover:block z-10 text-sm p-2">
+                                <button onClick={() => setActivePreviewMode('editor')} className={`w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-md ${activePreviewMode === 'editor' ? 'font-semibold text-gray-100' : 'text-gray-300'}`}>
+                                    <CodeBracketIcon className="w-5 h-5 text-gray-400"/>Editor
                                 </button>
-                                <button onClick={() => setActivePreviewMode('viewer')} className={`w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-gray-100 ${activePreviewMode === 'viewer' ? 'font-semibold text-gray-800' : 'text-gray-600'}`}>
-                                    <ExternalLinkIcon className="w-4 h-4 text-gray-500"/>App Viewer
+                                <button onClick={() => setActivePreviewMode('viewer')} className={`w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-md ${activePreviewMode === 'viewer' ? 'font-semibold text-gray-100' : 'text-gray-300'}`}>
+                                    <ExternalLinkIcon className="w-5 h-5 text-gray-400"/>App Viewer
                                 </button>
-                                <button onClick={() => setActivePreviewMode('console')} className={`w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-gray-100 ${activePreviewMode === 'console' ? 'font-semibold text-gray-800' : 'text-gray-600'}`}>
-                                    <TerminalIcon className="w-4 h-4 text-gray-500"/>Console
+                                <button onClick={() => setActivePreviewMode('console')} className={`w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-md ${activePreviewMode === 'console' ? 'font-semibold text-gray-100' : 'text-gray-300'}`}>
+                                    <TerminalIcon className="w-5 h-5 text-gray-400"/>Console
                                 </button>
                             </div>
                         </div>
 
-                        <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                        <div className="w-px h-6 bg-white/10 mx-1"></div>
 
                         {/* Right Side */}
                         <button
                             onClick={handleOpenInNewTab}
-                            className="p-2 rounded-lg hover:bg-gray-200/60 transition-colors"
+                            className="p-2.5 rounded-full hover:bg-white/10 transition-colors"
                             aria-label="Open in new tab"
                         >
-                            <ExternalLinkIcon className="w-4 h-4" />
+                            <ExternalLinkIcon className="w-5 h-5" />
                         </button>
 
                         {activePreviewMode === 'viewer' && (
                             <button
                                 onClick={() => iframeRef.current?.contentWindow?.location.reload()}
-                                className="p-2 rounded-lg hover:bg-gray-200/60 transition-colors"
+                                className="p-2.5 rounded-full hover:bg-white/10 transition-colors"
                                 aria-label="Refresh preview"
                             >
-                                <RefreshCwIcon className="w-4 h-4" />
+                                <RefreshCwIcon className="w-5 h-5" />
                             </button>
                         )}
                     </div>
@@ -265,14 +267,6 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                     }}
                 />
             )}
-             <style>{`
-                .bg-grid {
-                    background-image:
-                        linear-gradient(rgba(255,255,255,0.07) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(255,255,255,0.07) 1px, transparent 1px);
-                    background-size: 20px 20px;
-                }
-            `}</style>
         </div>
     );
 };

@@ -1,10 +1,14 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { AppMode, Flashcard, Agent, User } from '../types';
+import { AppMode, Flashcard, Agent, User, ModelID } from '../types';
 import { getAllAgents, saveCustomAgents, getCustomAgents } from '../services/agentService';
 import { PREMADE_AGENTS } from '../data/premadeAgents';
 import { supabase } from '../services/supabaseClient';
 import type { Session } from '@supabase/supabase-js';
 
+export const MODELS: { id: ModelID; name: string; provider: string }[] = [
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google' },
+    { id: 'qwen/qwen3-coder:free', name: 'Qwen 3 Coder (Free)', provider: 'OpenRouter' },
+];
 
 interface AppContextType {
   prompt: string;
@@ -22,6 +26,8 @@ interface AppContextType {
   addAgent: (agent: Agent) => void;
   selectedAgentId: string;
   setSelectedAgentId: (id: string) => void;
+  selectedModel: ModelID;
+  setSelectedModel: (model: ModelID) => void;
   // Auth
   user: User | null;
   session: Session | null;
@@ -41,6 +47,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [appMode, setAppMode] = useState<AppMode>('build');
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>(PREMADE_AGENTS[0].id);
+  const [selectedModel, setSelectedModel] = useState<ModelID>(MODELS[0].id);
 
   // Auth state
   const [user, setUser] = useState<User | null>(null);
@@ -57,6 +64,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const savedAgentId = localStorage.getItem('selectedAgentId');
     if (savedAgentId) {
         setSelectedAgentId(savedAgentId);
+    }
+    const savedModelId = localStorage.getItem('selectedModelId') as ModelID;
+    if (savedModelId && MODELS.some(m => m.id === savedModelId)) {
+        setSelectedModel(savedModelId);
     }
 
     // On initial load, check for any persisted user profile.
@@ -145,6 +156,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem('selectedAgentId', id);
     setSelectedAgentId(id);
   };
+  
+  const handleSetSelectedModel = (id: ModelID) => {
+    localStorage.setItem('selectedModelId', id);
+    setSelectedModel(id);
+  };
 
   const addAgent = (agent: Agent) => {
     const customAgents = getCustomAgents();
@@ -169,6 +185,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         appMode, setAppMode,
         agents, addAgent,
         selectedAgentId, setSelectedAgentId: handleSetSelectedAgentId,
+        selectedModel, setSelectedModel: handleSetSelectedModel,
         user, session, loading, signOut, setGoogleUser,
         signInAnonymously
     }}>

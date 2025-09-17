@@ -1,7 +1,7 @@
 
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import { AppPlan, Flashcard, FormPlan, DocumentPlan, RefinementResult } from '../types';
-import { getApiKey } from './apiKeyService';
+import { AppPlan, Flashcard, FormPlan, DocumentPlan, RefinementResult, ModelID } from '../types';
+import { getApiKey, getOpenRouterApiKey } from './apiKeyService';
 
 const combineInstructions = (agentInstruction: string | undefined, taskInstruction: string): string => {
     if (agentInstruction) {
@@ -10,10 +10,60 @@ const combineInstructions = (agentInstruction: string | undefined, taskInstructi
     return taskInstruction;
 }
 
-export const generateAppPlan = async (prompt: string, agentSystemInstruction?: string): Promise<AppPlan> => {
-  console.log(`Generating plan for prompt: "${prompt}"`);
+const cleanJsonString = (str: string): string => {
+    const firstBracket = str.indexOf('{');
+    const firstSquare = str.indexOf('[');
+    let start = -1;
 
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+    if (firstBracket === -1) start = firstSquare;
+    else if (firstSquare === -1) start = firstBracket;
+    else start = Math.min(firstBracket, firstSquare);
+
+    if (start === -1) return str;
+
+    const lastBracket = str.lastIndexOf('}');
+    const lastSquare = str.lastIndexOf(']');
+    const end = Math.max(lastBracket, lastSquare);
+    
+    if (end === -1) return str;
+
+    return str.substring(start, end + 1);
+};
+
+const callOpenRouter = async (model: string, systemInstruction: string, userMessage: string): Promise<string> => {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${getOpenRouterApiKey()}`,
+            "HTTP-Referer": "silocreative.netlify.app",
+            "X-Title": "silocreate",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            "model": model,
+            "messages": [
+                { "role": "system", "content": systemInstruction },
+                { "role": "user", "content": userMessage }
+            ]
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("OpenRouter API error:", errorText);
+        throw new Error(`OpenRouter API request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.choices || data.choices.length === 0) {
+        throw new Error("Invalid response structure from OpenRouter API.");
+    }
+    return data.choices[0].message.content;
+};
+
+
+export const generateAppPlan = async (prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<AppPlan> => {
+  console.log(`Generating plan for prompt: "${prompt}" with model ${model}`);
 
   const taskInstruction = `You are an expert software architect. A user will provide you with an idea for a web application. Your task is to break down this idea into a simple, clear, and actionable plan.
 
@@ -31,79 +81,18 @@ You must respond with only a JSON object that strictly follows this structure:
   
   const systemInstruction = combineInstructions(agentSystemInstruction, taskInstruction);
 
-  const schema = {
-      type: Type.OBJECT,
-      properties: {
-        title: { type: Type.STRING },
-        description: { type: Type.STRING },
-        features: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.STRING,
-          },
-        },
-      },
-      required: ['title', 'description', 'features'],
-    };
-
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        systemInstruction: systemInstruction,
-        responseMimeType: "application/json",
-        responseSchema: schema,
-      },
-    });
-
-    const planJson = response.text.trim();
-    const plan: AppPlan = JSON.parse(planJson);
-    return plan;
-  } catch (error) {
-    console.error("Error generating plan with Gemini:", error);
-    throw new Error("Failed to generate an app plan from the AI model.");
-  }
-};
-
-export const generateFormPlan = async (prompt: string, agentSystemInstruction?: string): Promise<FormPlan> => {
-    console.log(`Generating form plan for prompt: "${prompt}"`);
-
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
-
-    const taskInstruction = `You are an expert form designer. A user wants to build a web form. Create a plan for this form.
-
-The plan must include:
-1.  A short **title** for the form.
-2.  A one-sentence **description**.
-3.  A list of **fields**, each with a 'name' (e.g., "Full Name"), 'type' (e.g., "text", "email", "textarea", "select", "checkbox", "radio"), and a 'required' boolean status.
-
-Respond with ONLY the JSON object.`;
-    
-    const systemInstruction = combineInstructions(agentSystemInstruction, taskInstruction);
-
-    const schema = {
-        type: Type.OBJECT,
-        properties: {
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            fields: {
-                type: Type.ARRAY,
-                items: {
-                    type: Type.OBJECT,
-                    properties: {
-                        name: { type: Type.STRING },
-                        type: { type: Type.STRING },
-                        required: { type: Type.BOOLEAN },
-                    },
-                    required: ['name', 'type', 'required'],
-                },
+    if (model.startsWith('gemini')) {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const schema = {
+            type: Type.OBJECT,
+            properties: {
+                title: { type: Type.STRING },
+                description: { type: Type.STRING },
+                features: { type: Type.ARRAY, items: { type: Type.STRING } },
             },
-        },
-        required: ['title', 'description', 'fields'],
-    };
-
-    try {
+            required: ['title', 'description', 'features'],
+        };
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
@@ -113,20 +102,75 @@ Respond with ONLY the JSON object.`;
                 responseSchema: schema,
             },
         });
-
         const planJson = response.text.trim();
-        const plan: FormPlan = JSON.parse(planJson);
-        return plan;
+        return JSON.parse(planJson);
+    } else {
+        const responseJson = await callOpenRouter(model, systemInstruction, prompt);
+        return JSON.parse(cleanJsonString(responseJson));
+    }
+  } catch (error) {
+    console.error(`Error generating plan with ${model}:`, error);
+    throw new Error("Failed to generate an app plan from the AI model.");
+  }
+};
+
+export const generateFormPlan = async (prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<FormPlan> => {
+    console.log(`Generating form plan for prompt: "${prompt}" with model ${model}`);
+    const taskInstruction = `You are an expert form designer. A user wants to build a web form. Create a plan for this form.
+
+The plan must include:
+1.  A short **title** for the form.
+2.  A one-sentence **description**.
+3.  A list of **fields**, each with a 'name' (e.g., "Full Name"), 'type' (e.g., "text", "email", "textarea", "select", "checkbox", "radio"), and a 'required' boolean status.
+
+Respond with ONLY the JSON object.`;
+    const systemInstruction = combineInstructions(agentSystemInstruction, taskInstruction);
+    
+    try {
+        if (model.startsWith('gemini')) {
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    fields: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                name: { type: Type.STRING },
+                                type: { type: Type.STRING },
+                                required: { type: Type.BOOLEAN },
+                            },
+                            required: ['name', 'type', 'required'],
+                        },
+                    },
+                },
+                required: ['title', 'description', 'fields'],
+            };
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+                config: {
+                    systemInstruction: systemInstruction,
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                },
+            });
+            return JSON.parse(response.text.trim());
+        } else {
+            const responseJson = await callOpenRouter(model, systemInstruction, prompt);
+            return JSON.parse(cleanJsonString(responseJson));
+        }
     } catch (error) {
-        console.error("Error generating form plan with Gemini:", error);
+        console.error(`Error generating form plan with ${model}:`, error);
         throw new Error("Failed to generate a form plan from the AI model.");
     }
 };
 
-export const generateDocumentPlan = async (prompt: string, agentSystemInstruction?: string): Promise<DocumentPlan> => {
-  console.log(`Generating document plan for prompt: "${prompt}"`);
-
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+export const generateDocumentPlan = async (prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<DocumentPlan> => {
+  console.log(`Generating document plan for prompt: "${prompt}" with model ${model}`);
 
   const taskInstruction = `You are an expert document architect. A user wants to create a document or presentation. Analyze their prompt to determine the best format and create a plan.
 
@@ -136,47 +180,43 @@ The plan must include:
 3.  A detailed **outline** as an array of strings. For a PDF, this should be chapter or section titles. For a Presentation, this should be the title of each slide.
 
 Respond with ONLY the JSON object.`;
-    
   const systemInstruction = combineInstructions(agentSystemInstruction, taskInstruction);
 
-  const schema = {
-      type: Type.OBJECT,
-      properties: {
-          title: { type: Type.STRING },
-          documentType: { type: Type.STRING },
-          outline: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-          },
-      },
-      required: ['title', 'documentType', 'outline'],
-  };
-
   try {
-      const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: prompt,
-          config: {
-              systemInstruction: systemInstruction,
-              responseMimeType: "application/json",
-              responseSchema: schema,
-          },
-      });
-
-      const planJson = response.text.trim();
-      const plan: DocumentPlan = JSON.parse(planJson);
-      return plan;
+    if (model.startsWith('gemini')) {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const schema = {
+            type: Type.OBJECT,
+            properties: {
+                title: { type: Type.STRING },
+                documentType: { type: Type.STRING },
+                outline: { type: Type.ARRAY, items: { type: Type.STRING } },
+            },
+            required: ['title', 'documentType', 'outline'],
+        };
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                systemInstruction: systemInstruction,
+                responseMimeType: "application/json",
+                responseSchema: schema,
+            },
+        });
+        return JSON.parse(response.text.trim());
+    } else {
+        const responseJson = await callOpenRouter(model, systemInstruction, prompt);
+        return JSON.parse(cleanJsonString(responseJson));
+    }
   } catch (error) {
-      console.error("Error generating document plan with Gemini:", error);
-      throw new Error("Failed to generate a document plan from the AI model.");
+    console.error(`Error generating document plan with ${model}:`, error);
+    throw new Error("Failed to generate a document plan from the AI model.");
   }
 };
 
 
-export const generateFlashcards = async (prompt: string, agentSystemInstruction?: string): Promise<Flashcard[]> => {
-  console.log(`Generating flashcards for topic: "${prompt}"`);
-
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+export const generateFlashcards = async (prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<Flashcard[]> => {
+  console.log(`Generating flashcards for topic: "${prompt}" with model ${model}`);
 
   const taskInstruction = `You are an expert educator. A user will provide you with a topic. Your task is to generate a set of flashcards for that topic.
 
@@ -193,47 +233,46 @@ You must respond with only a JSON object that strictly follows this structure:
   },
   ...
 ]`;
-
   const systemInstruction = combineInstructions(agentSystemInstruction, taskInstruction);
-
-  const schema = {
-      type: Type.ARRAY,
-      items: {
-          type: Type.OBJECT,
-          properties: {
-              question: { type: Type.STRING },
-              answer: { type: Type.STRING },
-          },
-          required: ['question', 'answer'],
-      }
-  };
-
+  
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        systemInstruction: systemInstruction,
-        responseMimeType: "application/json",
-        responseSchema: schema,
-      },
-    });
-
-    const flashcardsJson = response.text.trim();
-    const flashcards: Flashcard[] = JSON.parse(flashcardsJson);
-    return flashcards;
+    if (model.startsWith('gemini')) {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const schema = {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    question: { type: Type.STRING },
+                    answer: { type: Type.STRING },
+                },
+                required: ['question', 'answer'],
+            }
+        };
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                systemInstruction: systemInstruction,
+                responseMimeType: "application/json",
+                responseSchema: schema,
+            },
+        });
+        return JSON.parse(response.text.trim());
+    } else {
+        const responseJson = await callOpenRouter(model, systemInstruction, prompt);
+        return JSON.parse(cleanJsonString(responseJson));
+    }
   } catch (error) {
-    console.error("Error generating flashcards with Gemini:", error);
+    console.error(`Error generating flashcards with ${model}:`, error);
     throw new Error("Failed to generate flashcards from the AI model.");
   }
 };
 
 
 // Function to generate HTML code using the Gemini API
-export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: string): Promise<string> => {
-  console.log(`Generating code for app: "${plan.title}"`);
-
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+export const generateAppCode = async (plan: AppPlan, model: ModelID, agentSystemInstruction?: string): Promise<string> => {
+  console.log(`Generating code for app: "${plan.title}" with model ${model}`);
 
   const featuresString = plan.features.map(f => `- ${f}`).join('\n');
   const taskPrompt = `
@@ -268,17 +307,21 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
     10. **Style Tag:** Include an empty <style></style> tag inside the <head>. This is reserved for future CSS modifications.
     `;
     
-    const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
-
   try {
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: taskPrompt,
-        config: config
-    });
-    return response.text;
+    if (model.startsWith('gemini')) {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: taskPrompt,
+            config: config
+        });
+        return response.text;
+    } else {
+        return await callOpenRouter(model, agentSystemInstruction || '', taskPrompt);
+    }
   } catch (error) {
-      console.error("Error generating code with Gemini:", error);
+      console.error(`Error generating code with ${model}:`, error);
       // Fallback to a simple error message display in HTML
       return `
         <!DOCTYPE html>
@@ -300,11 +343,9 @@ export const generateAppCode = async (plan: AppPlan, agentSystemInstruction?: st
   }
 };
 
-export const generateNativeAppCode = async (plan: AppPlan, agentSystemInstruction?: string): Promise<string> => {
-  console.log(`Generating native code for app: "${plan.title}"`);
-
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-
+export const generateNativeAppCode = async (plan: AppPlan, model: ModelID, agentSystemInstruction?: string): Promise<string> => {
+  console.log(`Generating native code for app: "${plan.title}" with model ${model}`);
+  
   const featuresString = plan.features.map(f => `- ${f}`).join('\n');
   const taskPrompt = `
     You are an expert React Native developer specializing in creating high-quality, production-ready mobile applications with Expo. Your code is clean, efficient, and follows best practices.
@@ -333,18 +374,22 @@ export const generateNativeAppCode = async (plan: AppPlan, agentSystemInstructio
     6.  **No Explanations:** The output must ONLY be the raw JavaScript/JSX code. Do not include any markdown (\`\`\`javascript\`), comments, or explanations outside of the code.
     7.  **Default Export:** The file must end with \`export default App;\`.
     `;
-
-    const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
-
+    
   try {
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: taskPrompt,
-        config: config
-    });
-    return response.text;
+    if (model.startsWith('gemini')) {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: taskPrompt,
+            config: config
+        });
+        return response.text;
+    } else {
+        return await callOpenRouter(model, agentSystemInstruction || '', taskPrompt);
+    }
   } catch (error) {
-      console.error("Error generating native code with Gemini:", error);
+      console.error(`Error generating native code with ${model}:`, error);
       return `
         import React from 'react';
         import { View, Text, StyleSheet } from 'react-native';
@@ -380,12 +425,10 @@ export const generateNativeAppCode = async (plan: AppPlan, agentSystemInstructio
   }
 };
 
-export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: string): Promise<string> => {
-  console.log(`Generating code for form: "${plan.title}"`);
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+export const generateFormCode = async (plan: FormPlan, model: ModelID, agentSystemInstruction?: string): Promise<string> => {
+  console.log(`Generating code for form: "${plan.title}" with model ${model}`);
 
   const fieldsString = plan.fields.map(f => `- ${f.name} (type: ${f.type}, required: ${f.required})`).join('\n');
-
   const taskPrompt = `
     You are an expert web developer who creates beautiful, accessible, and highly functional web forms with a modern, production-ready aesthetic.
     Based on the following plan, generate a complete, single-file HTML document.
@@ -418,17 +461,21 @@ export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: 
     8.  **Style Tag:** Include an empty <style></style> tag inside the <head> for future CSS edits.
     `;
     
-  const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
-
   try {
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: taskPrompt,
-        config: config
-    });
-    return response.text;
+    if (model.startsWith('gemini')) {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: taskPrompt,
+            config: config
+        });
+        return response.text;
+    } else {
+        return await callOpenRouter(model, agentSystemInstruction || '', taskPrompt);
+    }
   } catch (error) {
-    console.error("Error generating form code with Gemini:", error);
+    console.error(`Error generating form code with ${model}:`, error);
     return `
       <!DOCTYPE html>
       <html>
@@ -439,12 +486,10 @@ export const generateFormCode = async (plan: FormPlan, agentSystemInstruction?: 
   }
 };
 
-export const generateDocumentCode = async (plan: DocumentPlan, agentSystemInstruction?: string): Promise<string> => {
-    console.log(`Generating ${plan.documentType} code for: "${plan.title}"`);
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
-
+export const generateDocumentCode = async (plan: DocumentPlan, model: ModelID, agentSystemInstruction?: string): Promise<string> => {
+    console.log(`Generating ${plan.documentType} code for: "${plan.title}" with model ${model}`);
+    
     let taskPrompt: string;
-
     if (plan.documentType === 'Presentation') {
         taskPrompt = `
 You are an expert presentation designer. Based on the following plan, create a complete, single HTML file that renders a slide deck using Marp (Markdown Presentation Ecosystem).
@@ -463,25 +508,6 @@ ${plan.outline.map(item => `- ${item}`).join('\n')}
 5.  **Styling:** Use Marp's built-in themes (like \`gaia\`, \`uncover\`) or provide custom CSS in a \`<style>\` tag. Ensure the presentation is modern, professional, and visually appealing. Add a theme directive like \`<!-- theme: default -->\` at the top of the markdown.
 6.  **Structure:** The Marp markdown should be placed inside a \`<script type="text/marp">\` tag within the \`<body>\`.
 7.  **No Explanations:** The output must ONLY be the raw HTML code.
-
-Example Structure:
-<!DOCTYPE html>
-<html>
-<head>
-  <script src="https://cdn.jsdelivr.net/npm/@marp-team/marp-core@latest/lib/browser.js"></script>
-  <style>/* Custom CSS here */</style>
-</head>
-<body>
-  <script type="text/marp">
-  <!-- theme: gaia -->
-  # Slide 1 Title
-  Content...
-  ---
-  # Slide 2 Title
-  Content...
-  </script>
-</body>
-</html>
 `;
     } else { // PDF
         taskPrompt = `
@@ -504,17 +530,21 @@ ${plan.outline.map(item => `- ${item}`).join('\n')}
 `;
     }
 
-    const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
-
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: taskPrompt,
-            config: config,
-        });
-        return response.text;
+        if (model.startsWith('gemini')) {
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: taskPrompt,
+                config: config,
+            });
+            return response.text;
+        } else {
+            return await callOpenRouter(model, agentSystemInstruction || '', taskPrompt);
+        }
     } catch (error) {
-        console.error("Error generating document code with Gemini:", error);
+        console.error(`Error generating document code with ${model}:`, error);
         return `
       <!DOCTYPE html>
       <html>
@@ -526,11 +556,9 @@ ${plan.outline.map(item => `- ${item}`).join('\n')}
 };
 
 
-export const refineAppCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<RefinementResult> => {
-  console.log(`Refining code with prompt: "${prompt}"`);
-
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-
+export const refineAppCode = async (existingCode: string, prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<RefinementResult> => {
+  console.log(`Refining code with prompt: "${prompt}" using model ${model}`);
+  
   const taskPrompt = `
     You are an expert web developer tasked with modifying an existing single-file web application built with HTML, Tailwind CSS, and vanilla JavaScript.
     The HTML structure includes a <style> tag in the <head> for CSS modifications.
@@ -560,38 +588,31 @@ export const refineAppCode = async (existingCode: string, prompt: string, agentS
     4.  **Maintain Structure:** The application must remain a single HTML file. The \`<style>\` tag must be preserved in the \`<head>\`. All JavaScript must remain in one \`<script>\` tag.
     5.  **Preserve Functionality:** Ensure existing functionality remains intact unless the user specifically asks to change or remove it.
     `;
-  
-    const schema = {
-        type: Type.OBJECT,
-        properties: {
-            code: { type: Type.STRING },
-            summary: { type: Type.STRING },
-            files_edited: {
-                type: Type.ARRAY,
-                items: {
-                    type: Type.STRING,
-                },
-            },
-        },
-        required: ['code', 'summary', 'files_edited'],
-    };
+    const systemInstruction = agentSystemInstruction || '';
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: taskPrompt,
-            config: {
-                ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
-                responseMimeType: "application/json",
-                responseSchema: schema,
-            },
-        });
-
-        const resultJson = response.text.trim();
-        const result: RefinementResult = JSON.parse(resultJson);
-        return result;
+        let resultJson: string;
+        if (model.startsWith('gemini')) {
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const schema = {
+                type: Type.OBJECT, properties: { code: { type: Type.STRING }, summary: { type: Type.STRING }, files_edited: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['code', 'summary', 'files_edited'],
+            };
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: taskPrompt,
+                config: {
+                    ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                },
+            });
+            resultJson = response.text.trim();
+        } else {
+            resultJson = await callOpenRouter(model, systemInstruction, taskPrompt);
+        }
+        return JSON.parse(cleanJsonString(resultJson));
     } catch (error) {
-        console.error("Error refining code with Gemini:", error);
+        console.error(`Error refining code with ${model}:`, error);
         throw new Error("Failed to refine the application code.");
     }
 };
@@ -602,7 +623,7 @@ export const selfCorrectCode = async (
     imageBase64: string,
     agentSystemInstruction?: string
 ): Promise<RefinementResult> => {
-    console.log(`Performing self-correction analysis.`);
+    console.log(`Performing self-correction analysis using Gemini Vision.`);
     const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
     const taskPrompt = `You are an expert QA engineer. Your task is to review a web application that was generated by an AI. You will be given the original user prompt, a screenshot of the app, and the full HTML code.
@@ -627,23 +648,10 @@ You MUST respond with a single JSON object.
 
     const schema = {
         type: Type.OBJECT,
-        properties: {
-            code: { type: Type.STRING },
-            summary: { type: Type.STRING },
-            files_edited: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
-            },
-        },
-        required: ['code', 'summary', 'files_edited'],
+        properties: { code: { type: Type.STRING }, summary: { type: Type.STRING }, files_edited: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['code', 'summary', 'files_edited'],
     };
 
-    const imagePart = {
-        inlineData: {
-            mimeType: 'image/jpeg',
-            data: imageBase64,
-        },
-    };
+    const imagePart = { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } };
     const textPart = { text: taskPrompt };
 
     try {
@@ -656,20 +664,16 @@ You MUST respond with a single JSON object.
                 responseSchema: schema,
             },
         });
-
-        const resultJson = response.text.trim();
-        const result: RefinementResult = JSON.parse(resultJson);
-        return result;
+        return JSON.parse(response.text.trim());
     } catch (error) {
         console.error("Error during self-correction:", error);
         throw new Error("Failed to analyze the application code.");
     }
 };
 
-export const getPrimaryAction = async (code: string, agentSystemInstruction?: string): Promise<{ selector: string; action: string; justification: string }> => {
-    console.log("Identifying primary action for testing.");
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
-
+export const getPrimaryAction = async (code: string, model: ModelID, agentSystemInstruction?: string): Promise<{ selector: string; action: string; justification: string }> => {
+    console.log(`Identifying primary action for testing with model ${model}.`);
+    
     const taskPrompt = `You are a test automation engineer. Analyze the following HTML code and identify the single most important interactive element for a user to test. This is likely the main button (e.g., "Submit", "Calculate", "Start") or a primary input field.
 
 Return a JSON object with the element's CSS selector, the action to perform (e.g., "click"), and a brief justification.
@@ -682,40 +686,39 @@ ${code}
 **CRITICAL RESPONSE FORMAT:**
 Respond with ONLY a JSON object with this exact structure:
 \`{"selector": "string", "action": "string", "justification": "string"}\``;
-
-    const schema = {
-        type: Type.OBJECT,
-        properties: {
-            selector: { type: Type.STRING },
-            action: { type: Type.STRING },
-            justification: { type: Type.STRING },
-        },
-        required: ['selector', 'action', 'justification'],
-    };
+    const systemInstruction = agentSystemInstruction || '';
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: taskPrompt,
-            config: {
-                ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
-                responseMimeType: "application/json",
-                responseSchema: schema,
-            },
-        });
-        const resultJson = response.text.trim();
-        return JSON.parse(resultJson);
+        let resultJson: string;
+        if (model.startsWith('gemini')) {
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const schema = {
+                type: Type.OBJECT,
+                properties: { selector: { type: Type.STRING }, action: { type: Type.STRING }, justification: { type: Type.STRING } }, required: ['selector', 'action', 'justification'],
+            };
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: taskPrompt,
+                config: {
+                    ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                },
+            });
+            resultJson = response.text.trim();
+        } else {
+            resultJson = await callOpenRouter(model, systemInstruction, taskPrompt);
+        }
+        return JSON.parse(cleanJsonString(resultJson));
     } catch (error) {
-        console.error("Error getting primary action:", error);
+        console.error(`Error getting primary action with ${model}:`, error);
         throw new Error("Failed to identify a primary action for testing.");
     }
 };
 
 
-export const refineNativeAppCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<RefinementResult> => {
-  console.log(`Refining native code with prompt: "${prompt}"`);
-
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+export const refineNativeAppCode = async (existingCode: string, prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<RefinementResult> => {
+  console.log(`Refining native code with prompt: "${prompt}" using model ${model}`);
 
   const taskPrompt = `
     You are an expert React Native developer modifying an existing single-file mobile application built for Expo.
@@ -741,47 +744,38 @@ export const refineNativeAppCode = async (existingCode: string, prompt: string, 
     4.  **Maintain Structure:** The application must remain a single file. Continue to use standard React Native components and \`StyleSheet\` for styling.
     5.  **Preserve Functionality:** Ensure existing functionality remains intact unless the user specifically asks to change or remove it.
     `;
-    
-    const schema = {
-        type: Type.OBJECT,
-        properties: {
-            code: { type: Type.STRING },
-            summary: { type: Type.STRING },
-            files_edited: {
-                type: Type.ARRAY,
-                items: {
-                    type: Type.STRING,
-                },
-            },
-        },
-        required: ['code', 'summary', 'files_edited'],
-    };
+    const systemInstruction = agentSystemInstruction || '';
 
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: taskPrompt,
-            config: {
-                // Fix: Correctly pass agentSystemInstruction to systemInstruction property.
-                ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
-                responseMimeType: "application/json",
-                responseSchema: schema,
-            },
-        });
-        const resultJson = response.text.trim();
-        const result: RefinementResult = JSON.parse(resultJson);
-        return result;
+        let resultJson: string;
+        if (model.startsWith('gemini')) {
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const schema = {
+                type: Type.OBJECT, properties: { code: { type: Type.STRING }, summary: { type: Type.STRING }, files_edited: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['code', 'summary', 'files_edited'],
+            };
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: taskPrompt,
+                config: {
+                    ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                },
+            });
+            resultJson = response.text.trim();
+        } else {
+            resultJson = await callOpenRouter(model, systemInstruction, taskPrompt);
+        }
+        return JSON.parse(cleanJsonString(resultJson));
     } catch (error) {
-        console.error("Error refining native code with Gemini:", error);
+        console.error(`Error refining native code with ${model}:`, error);
         throw new Error("Failed to refine the application code.");
     }
 };
 
-export const chatAboutCode = async (existingCode: string, prompt: string, agentSystemInstruction?: string): Promise<string> => {
-  console.log(`Chatting about code with prompt: "${prompt}"`);
-
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-
+export const chatAboutCode = async (existingCode: string, prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<string> => {
+  console.log(`Chatting about code with prompt: "${prompt}" using model ${model}`);
+  
   const taskPrompt = `
     You are an expert developer and helpful AI assistant. A user has a question about a piece of code they are working on. Your task is to provide a clear, concise, and helpful answer.
 
@@ -801,17 +795,21 @@ export const chatAboutCode = async (existingCode: string, prompt: string, agentS
     5.  Your response should be conversational and helpful. Do not respond in JSON or any other structured format.
     `;
     
-    const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
-
   try {
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: taskPrompt,
-        config: config
-    });
-    return response.text;
+    if (model.startsWith('gemini')) {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: taskPrompt,
+            config: config
+        });
+        return response.text;
+    } else {
+        return await callOpenRouter(model, agentSystemInstruction || '', taskPrompt);
+    }
   } catch (error) {
-      console.error("Error chatting about code with Gemini:", error);
+      console.error(`Error chatting about code with ${model}:`, error);
       throw new Error("Failed to get a response from the AI model.");
   }
 };

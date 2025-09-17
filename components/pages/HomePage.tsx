@@ -1,31 +1,24 @@
 
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import SuggestionButton from '../common/SuggestionButton';
-import { LogoIcon, PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon, PhoneIcon, FilesIcon, FileTextIcon } from '../common/Icons';
-import Sidebar from '../common/Sidebar';
-import Banner from '../common/Banner';
+import { PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon, PhoneIcon, FilesIcon, FileTextIcon } from '../common/Icons';
 import AgentSelector from '../agents/AgentSelector';
+import { Link } from 'react-router-dom';
+import ModelSelector from '../common/ModelSelector';
 
 const MAX_CHARS = 350;
 
-const MenuItem: React.FC<{ children: React.ReactNode, active: boolean, onClick: () => void }> = ({ children, active, onClick }) => (
-    <button onClick={onClick} className="w-full text-left flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-        <span>{children}</span>
-        {active && <CheckIcon className="w-4 h-4 text-indigo-500" />}
-    </button>
-);
-
 const HomePage: React.FC = () => {
-  const [inputValue, setInputValue] = useState('');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [inputValue, setInputValue] = React.useState('');
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { setPrompt, appMode, setAppMode } = useAppContext();
 
-  useEffect(() => {
+  React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false);
@@ -53,138 +46,142 @@ const HomePage: React.FC = () => {
     startBuilding(inputValue);
   };
   
-  const buildSuggestions = [
-      { text: "A kanban board", icon: <FilesIcon className="w-4 h-4 text-gray-500" /> },
-      { text: "Playful onboarding flow", icon: <StarIcon className="w-4 h-4 text-gray-500" /> },
-      { text: "A markdown editor", icon: <BookIcon className="w-4 h-4 text-gray-500" /> },
-  ];
-  
-  const studySuggestions = [
-      { text: "Cellular Biology", icon: <BookIcon className="w-4 h-4 text-gray-500" /> },
-      { text: "US History Trivia", icon: <StarIcon className="w-4 h-4 text-gray-500" /> },
-      { text: "JavaScript Fundamentals", icon: <CheckIcon className="w-4 h-4 text-gray-500" /> },
-  ];
-  
-  const formSuggestions = [
-      { text: "Contact form for a portfolio", icon: <BookIcon className="w-4 h-4 text-gray-500" /> },
-      { text: "Event registration form", icon: <StarIcon className="w-4 h-4 text-gray-500" /> },
-      { text: "Customer feedback survey", icon: <CheckIcon className="w-4 h-4 text-gray-500" /> },
-  ];
+  const suggestions = {
+      build: ["A kanban board", "Playful onboarding flow", "A markdown editor"],
+      study: ["Cellular Biology", "US History Trivia", "JavaScript Fundamentals"],
+      form: ["Contact form for a portfolio", "Event registration form", "Customer feedback survey"],
+      native: ["Simple weather app", "Quote of the day", "Tap counter"],
+      document: ["A presentation on climate change", "A report on Q2 earnings", "A proposal for a new project"],
+  };
 
-  const nativeSuggestions = [
-      { text: "Simple weather app", icon: <StarIcon className="w-4 h-4 text-gray-500" /> },
-      { text: "Quote of the day", icon: <BookIcon className="w-4 h-4 text-gray-500" /> },
-      { text: "Tap counter", icon: <PhoneIcon className="w-4 h-4 text-gray-500" /> },
-  ];
-
-  const documentSuggestions = [
-      { text: "A presentation on climate change", icon: <FileTextIcon className="w-4 h-4 text-gray-500" /> },
-      { text: "A report on Q2 earnings", icon: <BookIcon className="w-4 h-4 text-gray-500" /> },
-      { text: "A proposal for a new project", icon: <StarIcon className="w-4 h-4 text-gray-500" /> },
-  ];
-
-  const getSuggestions = () => {
-    switch(appMode) {
-        case 'build': return buildSuggestions;
-        case 'study': return studySuggestions;
-        case 'form': return formSuggestions;
-        case 'native': return nativeSuggestions;
-        case 'document': return documentSuggestions;
-        default: return buildSuggestions;
-    }
-  }
-  
   const getPlaceholder = () => {
     switch(appMode) {
         case 'build': return 'Describe the web app you want to build...';
         case 'study': return 'What topic do you want flashcards for?';
         case 'form': return 'Describe the form you want to build...';
         case 'native': return 'Describe the native mobile app you want...';
-        case 'document': return 'Describe the document or presentation you want to create...';
-        default: return 'Describe the web app you want to create...';
+        case 'document': return 'Describe the document or presentation you want...';
+        default: return 'Describe something to create...';
     }
-  }
+  };
+
+  const MenuItem: React.FC<{ children: React.ReactNode, active: boolean, onClick: () => void }> = ({ children, active, onClick }) => (
+    <button onClick={onClick} className="w-full text-left flex items-center justify-between px-4 py-2 text-sm text-gray-300 hover:bg-white/10 rounded-md">
+        <span>{children}</span>
+        {active && <CheckIcon className="w-4 h-4 text-indigo-400" />}
+    </button>
+  );
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-gray-50">
-      <Banner />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 flex flex-col items-center justify-center text-gray-800 p-4">
-          <div className="w-full max-w-2xl flex flex-col items-center">
-              <LogoIcon />
-              <h1 className="text-5xl font-bold mb-2">Good afternoon</h1>
-              <h2 className="text-3xl text-gray-400 font-medium mb-12">What do you want to create?</h2>
-
-              <form onSubmit={handleSubmit} className="w-full bg-white/50 border border-gray-200/80 rounded-2xl p-4 shadow-sm relative">
-                <AgentSelector />
-                <textarea
-                  value={inputValue}
-                  onChange={handleInputChange}
-                  placeholder={getPlaceholder()}
-                  className="w-full h-28 bg-transparent focus:outline-none resize-none placeholder-gray-400 text-lg pt-4"
-                />
-                <div className="absolute bottom-3 left-4 right-4 flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <button type="button" className="p-2 rounded-full hover:bg-gray-200 text-gray-500">
-                      <PaperclipIcon className="w-5 h-5" />
-                    </button>
-                    <div className="relative" ref={menuRef}>
-                      <button type="button" onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-full hover:bg-gray-200 text-gray-500">
-                        <MoreVerticalIcon className="w-5 h-5" />
-                      </button>
-                      {isMenuOpen && (
-                        <div className="absolute bottom-full mb-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200/80 py-2 z-10">
-                          <div className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">Mode</div>
-                          <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>Web App Builder</MenuItem>
-                          <MenuItem active={appMode === 'native'} onClick={() => { setAppMode('native'); setIsMenuOpen(false); }}>Native App Builder</MenuItem>
-                          <MenuItem active={appMode === 'form'} onClick={() => { setAppMode('form'); setIsMenuOpen(false); }}>AI Form Generator</MenuItem>
-                          <MenuItem active={appMode === 'document'} onClick={() => { setAppMode('document'); setIsMenuOpen(false); }}>PDF & Presentations</MenuItem>
-                          <MenuItem active={appMode === 'study'} onClick={() => { setAppMode('study'); setIsMenuOpen(false); }}>Study Mode</MenuItem>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                      <div className="text-sm font-mono text-gray-500">
-                          <span className={inputValue.length > 0 ? "text-gray-900" : ""}>{MAX_CHARS - inputValue.length}</span>/{MAX_CHARS}
-                      </div>
-                      <button
-                          type="submit"
-                          disabled={!inputValue.trim()}
-                          className="bg-indigo-500 text-white rounded-full w-10 h-10 flex items-center justify-center disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-indigo-600 transition-all shadow-sm"
-                          aria-label="Send prompt"
-                      >
-                          <SendIcon className="w-5 h-5" />
-                      </button>
-                  </div>
+    <div className="relative flex flex-col h-screen w-screen bg-black overflow-hidden futuristic-background">
+      <main className="flex-1 flex flex-col items-center justify-center text-gray-200 p-4 z-10">
+        <div className="text-center">
+            <div className="relative w-40 h-40 mx-auto mb-8">
+                <div className="absolute inset-0 bg-indigo-500/50 rounded-full blur-2xl animate-pulse"></div>
+                <div className="absolute inset-2 bg-black rounded-full"></div>
+                <div className="absolute inset-4 border-2 border-dashed border-white/10 rounded-full animate-spin-slow"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <img src="https://i.ibb.co/DH3dtsXr/IMG-3806.png" alt="Silo AI Core" className="w-24 h-24 rounded-full" />
                 </div>
-              </form>
+            </div>
+            <h1 className="text-5xl font-bold text-white mb-2 tracking-tighter">Start a new project</h1>
+            <h2 className="text-xl text-gray-400 font-light mb-12">Let's create something amazing together.</h2>
+            
+             <div className="flex items-center justify-center gap-3">
+                {suggestions[appMode].map((text, index) => (
+                    <SuggestionButton 
+                        key={index}
+                        text={text} 
+                        onClick={() => startBuilding(text)}
+                    />
+                ))}
+            </div>
+        </div>
+      </main>
 
-              <p className="text-xs text-gray-500 mt-4 text-center max-w-md">
-                  By creating an app, you agree to our{' '}
-                  <Link to="/terms" className="underline hover:text-indigo-600 transition-colors">
-                      Terms of Service
-                  </Link>{' '}
-                  and{' '}
-                  <Link to="/privacy" className="underline hover:text-indigo-600 transition-colors">
-                      Privacy Policy
-                  </Link>.
-              </p>
-
-              <div className="flex items-center gap-4 mt-6">
-                  {getSuggestions().map((suggestion, index) => (
-                      <SuggestionButton 
-                          key={index}
-                          icon={suggestion.icon} 
-                          text={suggestion.text} 
-                          onClick={() => startBuilding(suggestion.text)}
-                      />
-                  ))}
+      <form onSubmit={handleSubmit} className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[95%] max-w-3xl bg-black/30 backdrop-blur-lg border border-white/10 rounded-full p-3 shadow-2xl z-20">
+        <div className="w-full relative">
+            <div className="flex items-center gap-4 mb-2">
+                <AgentSelector />
+                <ModelSelector />
+            </div>
+            <textarea
+              value={inputValue}
+              onChange={handleInputChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }
+              }}
+              placeholder={getPlaceholder()}
+              className="w-full h-12 bg-transparent focus:outline-none resize-none placeholder-gray-500 text-base text-gray-200 pt-3 pl-1 pr-16"
+              rows={1}
+            />
+            <div className="absolute -top-10 right-0 flex justify-end items-center">
+              <div className="flex items-center gap-2">
+                <div className="relative" ref={menuRef}>
+                  <button type="button" onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 transition-colors border border-white/10">
+                    <MoreVerticalIcon className="w-5 h-5" />
+                  </button>
+                  {isMenuOpen && (
+                    <div className="absolute bottom-full mb-2 right-0 w-56 bg-gray-900/80 backdrop-blur-lg rounded-xl shadow-xl border border-white/10 p-2 z-10">
+                      <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Mode</div>
+                      <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>Web App</MenuItem>
+                      <MenuItem active={appMode === 'native'} onClick={() => { setAppMode('native'); setIsMenuOpen(false); }}>Native App</MenuItem>
+                      <MenuItem active={appMode === 'form'} onClick={() => { setAppMode('form'); setIsMenuOpen(false); }}>Web Form</MenuItem>
+                      <MenuItem active={appMode === 'document'} onClick={() => { setAppMode('document'); setIsMenuOpen(false); }}>Document</MenuItem>
+                      <MenuItem active={appMode === 'study'} onClick={() => { setAppMode('study'); setIsMenuOpen(false); }}>Flashcards</MenuItem>
+                    </div>
+                  )}
+                </div>
+                 <button
+                    type="submit"
+                    disabled={!inputValue.trim()}
+                    className="bg-indigo-500 text-white rounded-full w-10 h-10 flex items-center justify-center disabled:bg-gray-600/50 disabled:cursor-not-allowed hover:bg-indigo-600 transition-all shadow-lg"
+                    aria-label="Send prompt"
+                >
+                    <SendIcon className="w-5 h-5" />
+                </button>
               </div>
-          </div>
-        </main>
-      </div>
+            </div>
+             <div className="absolute top-1/2 -translate-y-1/2 right-16 text-sm font-mono text-gray-500">
+                <span className={inputValue.length > 0 ? "text-gray-200" : ""}>{MAX_CHARS - inputValue.length}</span>
+             </div>
+        </div>
+      </form>
+       <div className="fixed top-4 left-4 z-20">
+            <Link to="/onedrive" className="py-2 px-4 bg-white/5 text-gray-300 text-sm font-medium rounded-full transition-colors duration-200 backdrop-blur-sm border border-white/10 hover:bg-white/10">
+                My Creations
+            </Link>
+        </div>
+
+      <style>{`
+        .futuristic-background {
+            background-color: #000000;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(138, 43, 226, 0.2) 0%, rgba(138, 43, 226, 0) 50%),
+                radial-gradient(circle at 75% 75%, rgba(0, 255, 255, 0.2) 0%, rgba(0, 255, 255, 0) 50%),
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+            animation: move-glow 20s linear infinite;
+        }
+
+        @keyframes move-glow {
+            0% { background-position: 0% 0%, 0% 0%, 0 0, 0 0; }
+            50% { background-position: 100% 100%, 0% 0%, 0 0, 0 0; }
+            100% { background-position: 0% 0%, 0% 0%, 0 0, 0 0; }
+        }
+        
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spin-slow 20s linear infinite;
+        }
+      `}</style>
     </div>
   );
 };
