@@ -99,57 +99,56 @@ const HomePage: React.FC = () => {
         </div>
       </main>
 
-      <form onSubmit={handleSubmit} className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[95%] max-w-3xl bg-black/30 backdrop-blur-lg border border-white/10 rounded-full p-3 shadow-2xl z-20">
-        <div className="w-full relative">
-            <div className="flex items-center gap-4 mb-2">
-                <AgentSelector />
-                <ModelSelector />
-            </div>
+      <form onSubmit={handleSubmit} className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[95%] max-w-3xl bg-black/30 backdrop-blur-lg border border-white/10 rounded-2xl p-4 shadow-2xl z-20">
+        <div className="flex items-center gap-4 mb-3">
+            <AgentSelector />
+            <ModelSelector />
+        </div>
+        <div className="relative">
             <textarea
-              value={inputValue}
-              onChange={handleInputChange}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e);
-                }
-              }}
-              placeholder={getPlaceholder()}
-              className="w-full h-12 bg-transparent focus:outline-none resize-none placeholder-gray-500 text-base text-gray-200 pt-3 pl-1 pr-16"
-              rows={1}
+                value={inputValue}
+                onChange={handleInputChange}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSubmit(e);
+                    }
+                }}
+                placeholder={getPlaceholder()}
+                className="w-full h-12 bg-black/20 border border-white/10 rounded-xl py-3 pl-4 pr-40 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none placeholder-gray-500 text-base text-gray-200 transition-colors"
+                rows={1}
             />
-            <div className="absolute -top-10 right-0 flex justify-end items-center">
-              <div className="flex items-center gap-2">
-                <div className="relative" ref={menuRef}>
-                  <button type="button" onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 transition-colors border border-white/10">
-                    <MoreVerticalIcon className="w-5 h-5" />
-                  </button>
-                  {isMenuOpen && (
-                    <div className="absolute bottom-full mb-2 right-0 w-56 bg-gray-900/80 backdrop-blur-lg rounded-xl shadow-xl border border-white/10 p-2 z-10">
-                      <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Mode</div>
-                      <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>Web App</MenuItem>
-                      <MenuItem active={appMode === 'native'} onClick={() => { setAppMode('native'); setIsMenuOpen(false); }}>Native App</MenuItem>
-                      <MenuItem active={appMode === 'form'} onClick={() => { setAppMode('form'); setIsMenuOpen(false); }}>Web Form</MenuItem>
-                      <MenuItem active={appMode === 'document'} onClick={() => { setAppMode('document'); setIsMenuOpen(false); }}>Document</MenuItem>
-                      <MenuItem active={appMode === 'study'} onClick={() => { setAppMode('study'); setIsMenuOpen(false); }}>Flashcards</MenuItem>
-                    </div>
-                  )}
+            <div className="absolute top-1/2 -translate-y-1/2 right-4 flex items-center gap-2">
+                <div className="text-sm font-mono text-gray-500">
+                    <span className={inputValue.length > 0 ? "text-gray-200" : ""}>{MAX_CHARS - inputValue.length}</span>
                 </div>
-                 <button
+                <div className="relative" ref={menuRef}>
+                    <button type="button" onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 transition-colors">
+                        <MoreVerticalIcon className="w-5 h-5" />
+                    </button>
+                    {isMenuOpen && (
+                        <div className="absolute bottom-full mb-2 right-0 w-56 bg-gray-900/80 backdrop-blur-lg rounded-xl shadow-xl border border-white/10 p-2 z-10">
+                            <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Mode</div>
+                            <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>Web App</MenuItem>
+                            <MenuItem active={appMode === 'native'} onClick={() => { setAppMode('native'); setIsMenuOpen(false); }}>Native App</MenuItem>
+                            <MenuItem active={appMode === 'form'} onClick={() => { setAppMode('form'); setIsMenuOpen(false); }}>Web Form</MenuItem>
+                            <MenuItem active={appMode === 'document'} onClick={() => { setAppMode('document'); setIsMenuOpen(false); }}>Document</MenuItem>
+                            <MenuItem active={appMode === 'study'} onClick={() => { setAppMode('study'); setIsMenuOpen(false); }}>Flashcards</MenuItem>
+                        </div>
+                    )}
+                </div>
+                <button
                     type="submit"
                     disabled={!inputValue.trim()}
-                    className="bg-indigo-500 text-white rounded-full w-10 h-10 flex items-center justify-center disabled:bg-gray-600/50 disabled:cursor-not-allowed hover:bg-indigo-600 transition-all shadow-lg"
+                    className="bg-indigo-500 text-white rounded-full w-9 h-9 flex items-center justify-center disabled:bg-gray-600/50 disabled:cursor-not-allowed hover:bg-indigo-600 transition-all shadow-lg"
                     aria-label="Send prompt"
                 >
                     <SendIcon className="w-5 h-5" />
                 </button>
-              </div>
             </div>
-             <div className="absolute top-1/2 -translate-y-1/2 right-16 text-sm font-mono text-gray-500">
-                <span className={inputValue.length > 0 ? "text-gray-200" : ""}>{MAX_CHARS - inputValue.length}</span>
-             </div>
         </div>
       </form>
+
        <div className="fixed top-4 left-4 z-20">
             <Link to="/onedrive" className="py-2 px-4 bg-white/5 text-gray-300 text-sm font-medium rounded-full transition-colors duration-200 backdrop-blur-sm border border-white/10 hover:bg-white/10">
                 My Creations
