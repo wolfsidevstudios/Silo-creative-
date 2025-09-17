@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { FlashcardDisplay } from '../builder/FlashcardDisplay';
-import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon, PhoneIcon, DesktopIcon, RefreshCwIcon, CodeBracketIcon, TerminalIcon, FileTextIcon, ChevronDownIcon, CodeIcon } from '../common/Icons';
+import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon, PhoneIcon, DesktopIcon, RefreshCwIcon, CodeBracketIcon, TerminalIcon, FileTextIcon, ChevronDownIcon, CodeIcon, GitHubIcon } from '../common/Icons';
 import VisualEditBar from './VisualEditBar';
 import { AgentTestAction } from '../pages/AppBuilderPage';
+import { GitHubPushModal } from './GitHubPushModal';
 
 declare global {
     interface Window {
@@ -70,6 +70,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [isVisualEditMode, setIsVisualEditMode] = useState(false);
     const [visualEditBarState, setVisualEditBarState] = useState<{ isVisible: boolean; top: number; left: number; width: number; } | null>(null);
+    const [isGitHubModalOpen, setIsGitHubModalOpen] = useState(false);
 
     useEffect(() => {
         const iframe = iframeRef.current;
@@ -234,6 +235,13 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
 
                         {/* Right Side */}
                         <button
+                            onClick={() => setIsGitHubModalOpen(true)}
+                            className="p-2.5 rounded-full hover:bg-white/10 transition-colors"
+                            aria-label="Push to GitHub"
+                        >
+                            <GitHubIcon className="w-5 h-5" />
+                        </button>
+                        <button
                             onClick={handleOpenInNewTab}
                             className="p-2.5 rounded-full hover:bg-white/10 transition-colors"
                             aria-label="Open in new tab"
@@ -267,6 +275,12 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                     }}
                 />
             )}
+             <GitHubPushModal
+                isOpen={isGitHubModalOpen}
+                onClose={() => setIsGitHubModalOpen(false)}
+                fileContent={generatedCode}
+                filePath={appMode === 'native' ? 'App.js' : 'index.html'}
+            />
         </div>
     );
 };
