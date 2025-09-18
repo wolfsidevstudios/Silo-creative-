@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { generateDocumentation } from '../../services/geminiService';
@@ -9,6 +11,9 @@ import { AgentTestAction } from '../pages/AppBuilderPage';
 import { GitHubPushModal } from './GitHubPushModal';
 import { VercelPushModal } from './VercelPushModal';
 import { IntegrationsModal } from './IntegrationsModal';
+import { IntegrationDetailsModal } from './IntegrationDetailsModal';
+import { IntegrationType, GenerationStatus } from '../../types';
+import GenerationLoader from './GenerationLoader';
 
 declare global {
     interface Window {
@@ -85,12 +90,13 @@ interface PreviewPanelProps {
   onVercelDeploySuccess: (projectInfo: { id: string; name: string; url: string; }) => void;
   githubRepoUrl: string | null;
   onGitHubPushSuccess: (url: string) => void;
+  status: GenerationStatus;
 }
 
 const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, PreviewPanelProps>(({ 
     onVisualEditSubmit, onScreenshotTaken, onTestComplete,
     activePreviewMode, setActivePreviewMode, onAnalyzeRequest,
-    vercelProject, onVercelDeploySuccess, githubRepoUrl, onGitHubPushSuccess
+    vercelProject, onVercelDeploySuccess, githubRepoUrl, onGitHubPushSuccess, status
 }, ref) => {
     const { generatedCode, appMode, agents, selectedAgentId, selectedModel } = useAppContext();
     const [deviceMode, setDeviceMode] = useState<'desktop' | 'mobile'>('desktop');
@@ -103,7 +109,10 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
     const [documentation, setDocumentation] = useState('');
     const [isGeneratingDocs, setIsGeneratingDocs] = useState(false);
     const [isIntegrationsModalOpen, setIsIntegrationsModalOpen] = useState(false);
+    const [integrationDetails, setIntegrationDetails] = useState<IntegrationType | null>(null);
     const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
+    
+    const isLoading = ['planning', 'generating', 'reviewing', 'testing'].includes(status);
 
     const takeScreenshot = (): Promise<string> => {
         return new Promise((resolve, reject) => {
@@ -147,14 +156,21 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
         };
     }, [isVisualEditMode, activePreviewMode]);
     
-    const handleSelectIntegration = (integrationType: 'supabase' | 'stripe' | 'gemini') => {
+    const handleSelectIntegration = (type: IntegrationType) => {
+        setIsIntegrationsModalOpen(false);
+        setIntegrationDetails(type);
+    };
+
+    const handleAddIntegrationWithDetails = (details: Record<string, string>) => {
+        if (!integrationDetails) return;
+
         let prompt = '';
-        switch (integrationType) {
+        switch (integrationDetails) {
             case 'supabase':
-                prompt = `Integrate the Supabase v2 JavaScript client into the app. Add its CDN script to the head. Then, in the main script tag, add code to initialize the client using placeholder URL and anon key. Also, add a simple example function that fetches and logs data from a 'products' table to the console when the page loads to demonstrate it's working.`;
+                prompt = `Integrate the Supabase v2 JavaScript client into the app. Add its CDN script to the head. Then, in the main script tag, add code to initialize the client with the URL '${details.url}' and the anon key '${details.anonKey}'. Also, add a simple example function that fetches and logs data from a 'products' table to the console when the page loads to demonstrate it's working.`;
                 break;
             case 'stripe':
-                prompt = `Integrate Stripe Payments. Add the Stripe.js v3 script to the head. In the body, add a 'Checkout' button. In the main script tag, add an event listener to this button that, when clicked, redirects to a Stripe Checkout session. Use placeholder data for the checkout session for demonstration purposes. Ensure the code is vanilla JavaScript.`;
+                prompt = `Integrate Stripe Payments. Add the Stripe.js v3 script to the head. In the main script tag, initialize a Stripe object using the publishable key '${details.publishableKey}'. In the body, add a 'Checkout' button. In the script, add an event listener to this button that, when clicked, redirects to a Stripe Checkout session. Use placeholder data for the checkout session for demonstration purposes. Ensure the code is vanilla JavaScript.`;
                 break;
             case 'gemini':
                 prompt = `Integrate the Google Gemini API for in-app AI features. Add a new section to the UI with an input field for a user to enter their Gemini API key, a textarea for a prompt, a 'Generate' button, and a preformatted block to display the result. In the main script tag, add an event listener to the button. When clicked, it should take the key and prompt from the inputs, make a direct fetch call to the Google AI Generative Language API v1beta endpoint for 'gemini-2.5-flash:generateContent', and display the text response in the result block. Handle loading and error states.`;
@@ -164,7 +180,9 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
         if (prompt) {
             onVisualEditSubmit(prompt);
         }
+        setIntegrationDetails(null); // Close the details modal
     };
+
 
     const getSrcDoc = () => !generatedCode ? '' : generatedCode;
 
@@ -197,6 +215,9 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
     const canDeploy = ['build', 'form', 'document', 'component'].includes(appMode);
 
     const renderContent = () => {
+        if (isLoading && !generatedCode) {
+            return <GenerationLoader status={status} />;
+        }
         if (!generatedCode) return <div className="flex items-center justify-center h-full text-gray-500">Preview will appear here...</div>;
         switch (activePreviewMode) {
             case 'editor': return <CodeViewer code={generatedCode} />;
@@ -215,6 +236,11 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
     
     return (
         <div className="relative flex flex-col h-full w-full text-white">
+            {isLoading && generatedCode && (
+                <div className="absolute inset-0 z-10 bg-black/50 backdrop-blur-sm">
+                    <GenerationLoader status={status} />
+                </div>
+            )}
             <div className="flex-1 overflow-hidden">{renderContent()}</div>
             
             {generatedCode && (
@@ -267,6 +293,13 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
              <VercelPushModal isOpen={isVercelModalOpen} onClose={() => setIsVercelModalOpen(false)} fileContent={generatedCode} filePath={appMode === 'native' ? 'App.js' : 'index.html'} project={vercelProject} onDeploySuccess={onVercelDeploySuccess} />
              <DocsModal isOpen={isDocsModalOpen} onClose={() => setIsDocsModalOpen(false)} content={documentation} />
              <IntegrationsModal isOpen={isIntegrationsModalOpen} onClose={() => setIsIntegrationsModalOpen(false)} onSelectIntegration={handleSelectIntegration} />
+             {integrationDetails && (
+                <IntegrationDetailsModal 
+                    integrationType={integrationDetails} 
+                    onClose={() => setIntegrationDetails(null)} 
+                    onSubmit={handleAddIntegrationWithDetails} 
+                />
+             )}
         </div>
     );
 });

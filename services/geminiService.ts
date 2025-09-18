@@ -856,6 +856,60 @@ ${sourceCode}
     }
 };
 
+export const cloneWebsite = async (url: string, model: ModelID, agentSystemInstruction?: string): Promise<string> => {
+  console.log(`Cloning website from URL: "${url}" with model ${model}`);
+  const taskPrompt = `
+    You are an expert web developer who specializes in creating high-fidelity clones of existing websites. Your task is to replicate the visual design, layout, and structure of the provided URL as a single-file web application.
+
+    **Target URL to Clone:**
+    ${url}
+
+    **CRITICAL REQUIREMENTS:**
+    1.  **Analyze the Target:** Conceptually "view" the website at the provided URL. Pay close attention to its HTML structure, color scheme, typography, spacing, layout, and any key interactive components.
+    2.  **Single HTML File:** The entire clone must be contained within a single HTML file.
+    3.  **Vanilla JavaScript:** If there is simple interactivity (e.g., dropdowns, modals), replicate it using modern, vanilla JavaScript (ES6+). All JavaScript must be within a SINGLE <script> tag at the end of the <body>. Do NOT use React, Vue, or any other framework.
+    4.  **Tailwind CSS:** Replicate all styling using Tailwind CSS. You MUST include the Tailwind CSS CDN script in the <head>: <script src="https://cdn.tailwindcss.com"></script>. Do not use external stylesheets or extensive custom CSS in a <style> tag. Rely on Tailwind classes.
+    5.  **High-Fidelity Replica:** The final output should be a visually accurate clone of the original site's "above the fold" content or primary landing page view. You don't need to clone the entire multi-page site, just the main page provided in the URL.
+    6.  **Image and Asset Handling:** Replace images with appropriate placeholders from a service like \`https://placehold.co/\` or use descriptive alt text. For example: \`<img src="https://placehold.co/600x400" alt="Hero image of a mountain landscape">\`. Do not attempt to use the original image URLs.
+    7.  **No Explanations:** The output must ONLY be the raw HTML code. Do not include markdown, comments, or explanations outside the code itself.
+    8.  **Clean & Readable Code:** The generated code should be well-structured, semantic, and clean.
+    `;
+    
+  try {
+    if (model.startsWith('gemini')) {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const config = agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {};
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: taskPrompt,
+            config: config
+        });
+        return response.text;
+    } else {
+        return await callOpenRouter(model, agentSystemInstruction || '', taskPrompt);
+    }
+  } catch (error) {
+      console.error(`Error cloning website with ${model}:`, error);
+      return `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <title>Error Cloning Site</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+        </head>
+        <body class="bg-red-100 flex items-center justify-center h-screen font-sans">
+          <div class="text-center p-8 bg-white rounded-lg shadow-lg">
+            <h1 class="text-2xl font-bold text-red-700">Failed to Clone Website</h1>
+            <p class="text-red-600 mt-2">Sorry, there was an error communicating with the AI model to clone the website from the provided URL.</p>
+          </div>
+        </body>
+        </html>
+      `;
+  }
+};
+
+
 export const analyzeUiUx = async (code: string, imageBase64: string, agentSystemInstruction?: string): Promise<UiUxAnalysis> => {
     console.log(`Analyzing UI/UX for the generated app.`);
     const ai = new GoogleGenAI({ apiKey: getApiKey() });

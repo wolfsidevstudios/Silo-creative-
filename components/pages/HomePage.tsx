@@ -16,7 +16,8 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { 
       setPrompt, appMode, setAppMode, 
-      isTranslation, setIsTranslation
+      isTranslation, setIsTranslation,
+      isCloning, setIsCloning
   } = useAppContext();
 
   React.useEffect(() => {
@@ -57,6 +58,7 @@ const HomePage: React.FC = () => {
   };
 
   const getPlaceholder = () => {
+    if (isCloning) return 'Enter a website URL to clone...';
     if (isTranslation) return 'Paste your code here (e.g., Python, Java)...';
     switch(appMode) {
         case 'build': return 'Describe the web app you want to build...';
@@ -110,8 +112,9 @@ const HomePage: React.FC = () => {
                 <ModelSelector />
             </div>
              <div className="flex items-center bg-black/20 rounded-full p-1 text-sm font-medium">
-                <button type="button" onClick={() => setIsTranslation(false)} className={`px-3 py-1 rounded-full ${!isTranslation ? 'bg-white/10' : 'text-gray-400'}`}>Describe</button>
-                <button type="button" onClick={() => setIsTranslation(true)} className={`px-3 py-1 rounded-full ${isTranslation ? 'bg-white/10' : 'text-gray-400'}`}>Translate</button>
+                <button type="button" onClick={() => { setIsTranslation(false); setIsCloning(false); }} className={`px-3 py-1 rounded-full ${!isTranslation && !isCloning ? 'bg-white/10' : 'text-gray-400'}`}>Describe</button>
+                <button type="button" onClick={() => { setIsTranslation(true); setIsCloning(false); }} className={`px-3 py-1 rounded-full ${isTranslation ? 'bg-white/10' : 'text-gray-400'}`}>Translate</button>
+                <button type="button" onClick={() => { setIsTranslation(false); setIsCloning(true); }} className={`px-3 py-1 rounded-full ${isCloning ? 'bg-white/10' : 'text-gray-400'}`}>Clone</button>
             </div>
         </div>
         <div className="relative">
@@ -126,7 +129,7 @@ const HomePage: React.FC = () => {
                 }}
                 placeholder={getPlaceholder()}
                 className="w-full h-12 bg-black/20 border border-white/10 rounded-xl py-3 pl-4 pr-40 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none placeholder-gray-500 text-base text-gray-200 transition-colors"
-                rows={isTranslation ? 5 : 1}
+                rows={isTranslation || isCloning ? 1 : 1}
             />
             <div className="absolute top-1/2 -translate-y-1/2 right-4 flex items-center gap-2">
                 <div className="text-sm font-mono text-gray-500">

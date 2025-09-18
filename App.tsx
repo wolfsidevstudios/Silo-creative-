@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
@@ -12,6 +11,8 @@ import LoginPage from './components/pages/LoginPage';
 import LandingPage from './components/pages/LandingPage';
 import SiloOneDrivePage from './components/pages/SiloOneDrivePage';
 import ChangelogPage from './components/pages/ChangelogPage';
+import DocsPage from './components/pages/DocsPage'; // New Import
+import DeveloperAPIPage from './components/pages/DeveloperAPIPage'; // New Import
 import Sidebar from './components/common/Sidebar';
 import Banner from './components/common/Banner';
 
@@ -82,6 +83,8 @@ const AppRoutes: React.FC = () => {
       <Route path="/privacy" element={<ProtectedRoute><PrivacyPolicyPage /></ProtectedRoute>} />
       <Route path="/terms" element={<ProtectedRoute><TermsOfServicePage /></ProtectedRoute>} />
       <Route path="/changelog" element={<ProtectedRoute><ChangelogPage /></ProtectedRoute>} />
+      <Route path="/docs" element={<ProtectedRoute><DocsPage /></ProtectedRoute>} />
+      <Route path="/developer" element={<ProtectedRoute><DeveloperAPIPage /></ProtectedRoute>} />
     </Routes>
   );
 };

@@ -15,6 +15,8 @@ interface AppContextType {
   setPrompt: (prompt: string) => void;
   isTranslation: boolean; // For code translation
   setIsTranslation: (isTranslation: boolean) => void;
+  isCloning: boolean; // For website cloning
+  setIsCloning: (isCloning: boolean) => void;
   generatedCode: string;
   setGeneratedCode: (code: string) => void;
   generatedFlashcards: Flashcard[] | null;
@@ -44,6 +46,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [prompt, setPrompt] = useState('');
   const [isTranslation, setIsTranslation] = useState(false);
+  const [isCloning, setIsCloning] = useState(false);
   const [generatedCode, setGeneratedCode] = useState('');
   const [generatedFlashcards, setGeneratedFlashcards] = useState<Flashcard[] | null>(null);
   const [isStudent, setIsStudentState] = useState(false);
@@ -177,12 +180,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setGeneratedCode('');
     setGeneratedFlashcards(null);
     setIsTranslation(false);
+    setIsCloning(false);
   };
 
   return (
     <AppContext.Provider value={{ 
         prompt, setPrompt, 
         isTranslation, setIsTranslation,
+        isCloning, setIsCloning,
         generatedCode, setGeneratedCode, 
         generatedFlashcards, setGeneratedFlashcards, 
         isStudent, setIsStudent, 

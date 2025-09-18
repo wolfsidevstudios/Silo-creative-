@@ -1,8 +1,10 @@
 
+
 import React, { useRef, useState, useEffect } from 'react';
 import ChatPanel, { ChatPanelRef } from '../builder/ChatPanel';
 import PreviewPanel from '../builder/PreviewPanel';
 import { useAppContext } from '../../context/AppContext';
+import { GenerationStatus } from '../../types';
 
 export interface AgentTestAction {
   selector: string;
@@ -19,6 +21,7 @@ const AppBuilderPage: React.FC = () => {
   const [activePreviewMode, setActivePreviewMode] = useState<'viewer' | 'editor' | 'console'>('viewer');
   const [vercelProject, setVercelProject] = useState<{ id: string; name: string; url: string; } | null>(null);
   const [githubRepoUrl, setGithubRepoUrl] = useState<string | null>(null);
+  const [status, setStatus] = useState<GenerationStatus>('idle');
 
   const handleVisualEditSubmit = (prompt: string) => {
     chatPanelRef.current?.submitRefinement(prompt);
@@ -67,6 +70,8 @@ const AppBuilderPage: React.FC = () => {
             ref={chatPanelRef}
             onStartAgentTest={handleStartAgentTest}
             onToggleCodeView={() => setActivePreviewMode(prev => prev === 'editor' ? 'viewer' : 'editor')}
+            status={status}
+            setStatus={setStatus}
           />
         </div>
         <div className="bg-black/30 backdrop-blur-lg border border-white/10 rounded-2xl shadow-lg flex flex-col overflow-hidden">
@@ -84,6 +89,7 @@ const AppBuilderPage: React.FC = () => {
             onVercelDeploySuccess={handleVercelDeploySuccess}
             githubRepoUrl={githubRepoUrl}
             onGitHubPushSuccess={handleGitHubPushSuccess}
+            status={status}
           />
         </div>
       </div>

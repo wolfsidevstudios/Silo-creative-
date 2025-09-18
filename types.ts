@@ -1,6 +1,8 @@
 
 export type AppMode = 'build' | 'study' | 'form' | 'native' | 'document' | 'component';
 export type ModelID = 'gemini-2.5-flash' | 'qwen/qwen3-coder:free';
+export type IntegrationType = 'supabase' | 'stripe' | 'gemini';
+export type GenerationStatus = 'idle' | 'planning' | 'generating' | 'reviewing' | 'testing' | 'finished';
 
 export interface Message {
   role: 'user' | 'model' | 'assistant';

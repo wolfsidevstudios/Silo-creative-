@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
-import { PlusIcon, ClockIcon, CreditCardIcon, ChevronLeftIcon, ChevronRightIcon, ChipIcon, SettingsIcon, UsersIcon, LogOutIcon, FolderIcon, BookIcon } from './Icons';
+import { PlusIcon, ClockIcon, CreditCardIcon, ChevronLeftIcon, ChevronRightIcon, ChipIcon, SettingsIcon, UsersIcon, LogOutIcon, FolderIcon, BookIcon, FileTextIcon, CodeBracketIcon } from './Icons';
 import { PREMADE_AGENTS } from '../../data/premadeAgents';
 
 const Sidebar: React.FC = () => {
@@ -73,6 +73,18 @@ const Sidebar: React.FC = () => {
             to="/agents"
             icon={<UsersIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-200 flex-shrink-0" />}
             text="Custom Agents"
+        />
+
+        <NavItem 
+            to="/docs"
+            icon={<FileTextIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-200 flex-shrink-0" />}
+            text="Documentation"
+        />
+        
+        <NavItem 
+            to="/developer"
+            icon={<CodeBracketIcon className="w-5 h-5 text-gray-400 group-hover:text-gray-200 flex-shrink-0" />}
+            text="Developer API"
         />
 
       </nav>

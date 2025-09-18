@@ -1,7 +1,6 @@
 import React from 'react';
 import { XIcon, SupabaseIcon, StripeIcon, GeminiIcon } from '../common/Icons';
-
-type IntegrationType = 'supabase' | 'stripe' | 'gemini';
+import { IntegrationType } from '../../types';
 
 interface Integration {
   id: IntegrationType;
@@ -72,7 +71,6 @@ export const IntegrationsModal: React.FC<IntegrationsModalProps> = ({ isOpen, on
               key={integration.id}
               onClick={() => {
                 onSelectIntegration(integration.id);
-                onClose();
               }}
               className="group text-left p-4 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 hover:border-indigo-500/50 transition-all duration-200"
             >

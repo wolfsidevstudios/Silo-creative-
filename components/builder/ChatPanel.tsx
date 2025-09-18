@@ -6,10 +6,10 @@ import {
     generateNativeAppCode, refineNativeAppCode, 
     selfCorrectCode, generateDocumentPlan, generateDocumentCode,
     generateComponentPlan, generateComponentCode, translateCodeToWebApp,
-    analyzeUiUx
+    analyzeUiUx, cloneWebsite
 } from '../../services/geminiService';
 import { saveApp } from '../../services/storageService';
-import type { Message, AppPlan, FormPlan, DocumentPlan, RefinementResult, UiUxAnalysis, ComponentPlan } from '../../types';
+import type { Message, AppPlan, FormPlan, DocumentPlan, RefinementResult, UiUxAnalysis, ComponentPlan, GenerationStatus } from '../../types';
 import { AgentTestAction } from '../pages/AppBuilderPage';
 import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon, BotIcon, CheckIcon, PlusIcon, StarIcon, SendIcon, SearchIcon, CodeBracketIcon } from '../common/Icons';
 
@@ -65,13 +65,15 @@ export interface ChatPanelRef {
 interface ChatPanelProps {
     onStartAgentTest: (action: AgentTestAction) => void;
     onToggleCodeView: () => void;
+    status: GenerationStatus;
+    setStatus: (status: GenerationStatus) => void;
 }
 
 const MAX_CHARS_REFINEMENT = 200;
 
-const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, onToggleCodeView }, ref) => {
+const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, onToggleCodeView, status, setStatus }, ref) => {
   const { 
-    prompt, isTranslation, generatedCode, setGeneratedCode, 
+    prompt, isTranslation, isCloning, generatedCode, setGeneratedCode, 
     appMode, setGeneratedFlashcards, agents, selectedAgentId, selectedModel
   } = useAppContext();
   
@@ -80,7 +82,6 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
   const [input, setInput] = useState('');
   const [isCodeGenerated, setIsCodeGenerated] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<AppPlan | FormPlan | DocumentPlan | ComponentPlan | null>(null);
-  const [status, setStatus] = useState<'idle' | 'planning' | 'generating' | 'reviewing' | 'testing' | 'finished'>('idle');
 
   const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
 
@@ -107,6 +108,14 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
         translateCodeToWebApp(prompt, selectedModel, agentInstruction)
             .then(code => handleCodeGeneration(code, "Translated App"))
             .catch(error => handleErrors(error, 'code translation'))
+            .finally(() => setIsLoading(false));
+        return;
+      }
+
+      if(isCloning) {
+        cloneWebsite(prompt, selectedModel, agentInstruction)
+            .then(code => handleCodeGeneration(code, `Clone of ${prompt}`))
+            .catch(error => handleErrors(error, 'website clone'))
             .finally(() => setIsLoading(false));
         return;
       }
@@ -138,7 +147,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
           .catch(error => handleErrors(error, 'plan'));
       }
     }
-  }, [prompt, appMode, selectedModel, isTranslation]);
+  }, [prompt, appMode, selectedModel, isTranslation, isCloning]);
   
   const generateCode = async (plan: AppPlan | FormPlan | DocumentPlan | ComponentPlan) => {
       const agentInstruction = selectedAgent?.systemInstruction;
