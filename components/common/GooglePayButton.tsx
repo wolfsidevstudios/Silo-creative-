@@ -55,8 +55,9 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({ totalPrice, onPayment
                 };
                 
                 const merchantInfo = {
-                  merchantId: 'BCR2DN6T6X4256XN', // Using Google's test merchant ID
-                  merchantName: 'Silo Labs',
+                  merchantId: 'BCR2DN7T5DR3JGA7', // Using Google's test merchant ID
+                  merchantName: 'Rocio Ramirez Store
+',
                 };
 
                 const paymentDataRequest = {
