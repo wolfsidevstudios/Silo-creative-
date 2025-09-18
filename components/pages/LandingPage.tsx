@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GitHubIcon, DiscordIcon, BrainCircuitIcon, CodeIcon, UsersIcon, AtSignIcon, ChevronDownIcon, CheckIcon } from '../common/Icons';
-import GoogleSignInButton from '../auth/GoogleSignInButton';
+import GooglePayButton from '../common/GooglePayButton';
 import { useAppContext } from '../../context/AppContext';
+// FIX: Imported the missing GoogleSignInButton component.
+import GoogleSignInButton from '../auth/GoogleSignInButton';
 
 const AdsterraComponent: React.FC = () => {
     useEffect(() => {
@@ -223,6 +225,16 @@ const LandingPage: React.FC = () => {
         } catch(e) {
             console.error("Anonymous sign in failed", e);
         }
+    };
+
+    const handlePaymentSuccess = () => {
+        alert('Payment successful! Welcome to the Ultra plan. Your benefits are now active.');
+        // Here you would typically link this to your backend to provision the user's account
+    };
+
+    const handlePaymentError = (error: any) => {
+        console.error('Payment Error:', error);
+        alert('There was an error processing your payment. Please try again.');
     };
 
     return (
@@ -477,10 +489,7 @@ const LandingPage: React.FC = () => {
                                 </button>
                             </div>
                             {/* Ultra Plan */}
-                            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 flex flex-col relative overflow-hidden">
-                                <div className="absolute top-4 right-4 px-3 py-1 bg-gray-700 text-gray-300 text-xs font-semibold rounded-full uppercase tracking-wider">
-                                    Coming Soon
-                                </div>
+                            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 flex flex-col">
                                 <h3 className="text-2xl font-semibold text-gray-200">Ultra</h3>
                                 <p className="mt-2 text-gray-400">For professionals and power users.</p>
                                 <div className="mt-6">
@@ -489,13 +498,16 @@ const LandingPage: React.FC = () => {
                                 </div>
                                 <ul className="mt-8 space-y-4 text-gray-300 flex-grow">
                                     <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-400"/><strong>Unlimited</strong> credits</li>
-                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-400"/>Advanced AI models</li>
-                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-400"/>Team collaboration features</li>
-                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-400"/>Priority support</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-400"/>Access to <strong>advanced AI models</strong></li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-400"/><strong>Team collaboration</strong> features</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-400"/><strong>Custom domain</strong> deployments</li>
+                                    <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-indigo-400"/><strong>Priority</strong> support</li>
                                 </ul>
-                                <button disabled className="mt-8 w-full py-3 bg-gray-700 text-gray-400 font-semibold rounded-full cursor-not-allowed">
-                                    Coming Soon
-                                </button>
+                                <GooglePayButton 
+                                    totalPrice="20.00" 
+                                    onPaymentSuccess={handlePaymentSuccess}
+                                    onPaymentError={handlePaymentError}
+                                />
                             </div>
                         </div>
                     </div>
