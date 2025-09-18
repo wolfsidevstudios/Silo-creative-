@@ -14,7 +14,7 @@ const AgentsPage: React.FC = () => {
 
   return (
     <>
-      <div className="flex-1 bg-black p-6 sm:p-10">
+      <div className="h-full overflow-y-auto bg-black p-6 sm:p-10">
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10">
             <div>
                 <h1 className="text-4xl font-bold text-gray-100">Agent Library</h1>
