@@ -1,30 +1,54 @@
+
 import React, { useState, FormEvent, useEffect } from 'react';
 import { XIcon, GitHubIcon, KeyIcon, LinkIcon, CheckIcon, ExternalLinkIcon } from '../common/Icons';
-import { pushToRepo } from '../../services/githubService';
+import { pushToRepo, createRepo } from '../../services/githubService';
 
 interface GitHubPushModalProps {
   isOpen: boolean;
   onClose: () => void;
   fileContent: string;
   filePath: string;
+  repoUrl: string | null;
+  onPushSuccess: (url: string) => void;
 }
 
-export const GitHubPushModal: React.FC<GitHubPushModalProps> = ({ isOpen, onClose, fileContent, filePath }) => {
-  const [repoUrl, setRepoUrl] = useState('');
+export const GitHubPushModal: React.FC<GitHubPushModalProps> = ({ isOpen, onClose, fileContent, filePath, repoUrl: initialRepoUrl, onPushSuccess }) => {
+  const [mode, setMode] = useState<'existing' | 'new'>('existing');
+  
+  // State for existing repo
+  const [repoUrl, setRepoUrl] = useState(initialRepoUrl || '');
+
+  // State for new repo
+  const [newRepoName, setNewRepoName] = useState('');
+  const [newRepoDescription, setNewRepoDescription] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
+  
+  // Common state
   const [token, setToken] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [successUrl, setSuccessUrl] = useState('');
 
   useEffect(() => {
-    if (!isOpen) {
-      setTimeout(() => {
-        setStatus('idle');
-        setMessage('');
-        setSuccessUrl('');
-      }, 300); // Wait for closing animation
+    if (isOpen) {
+        if (initialRepoUrl) {
+            setMode('existing');
+            setRepoUrl(initialRepoUrl);
+        } else {
+            setMode('new');
+        }
+    } else {
+        setTimeout(() => {
+            setRepoUrl(initialRepoUrl || '');
+            setNewRepoName('');
+            setNewRepoDescription('');
+            setIsPrivate(false);
+            setStatus('idle');
+            setMessage('');
+            setSuccessUrl('');
+        }, 300); // Wait for closing animation
     }
-  }, [isOpen]);
+  }, [isOpen, initialRepoUrl]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -33,10 +57,27 @@ export const GitHubPushModal: React.FC<GitHubPushModalProps> = ({ isOpen, onClos
     setSuccessUrl('');
 
     try {
-      const commitUrl = await pushToRepo(repoUrl, token, fileContent, filePath);
+      let finalRepoUrl = repoUrl;
+      let commitMessage = 'feat: update from Silo Create';
+      
+      if (mode === 'new') {
+        if (!newRepoName.trim()) {
+            throw new Error("Repository name cannot be empty.");
+        }
+        commitMessage = 'feat: initial commit from Silo Create';
+        finalRepoUrl = await createRepo(token, newRepoName, newRepoDescription, isPrivate);
+        setRepoUrl(finalRepoUrl);
+      }
+
+      if (!finalRepoUrl) {
+          throw new Error("Repository URL is not set.");
+      }
+
+      const commitUrl = await pushToRepo(finalRepoUrl, token, fileContent, filePath, commitMessage);
       setStatus('success');
-      setMessage('Successfully pushed to repository!');
+      setMessage(mode === 'new' ? 'Successfully created repository and pushed file!' : 'Successfully pushed to repository!');
       setSuccessUrl(commitUrl);
+      onPushSuccess(finalRepoUrl);
     } catch (err: any) {
       setStatus('error');
       setMessage(err.message || 'An unknown error occurred.');
@@ -57,7 +98,7 @@ export const GitHubPushModal: React.FC<GitHubPushModalProps> = ({ isOpen, onClos
         className="bg-gray-900/70 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl w-full max-w-lg relative transform transition-all duration-300 scale-95 opacity-0 animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-white/10 flex justify-between items-center">
+        <div className="p-6 pb-0 border-b border-white/10 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <GitHubIcon className="w-6 h-6 text-gray-200" />
             <h2 id="github-modal-title" className="text-xl font-bold text-gray-100">
@@ -84,72 +125,73 @@ export const GitHubPushModal: React.FC<GitHubPushModalProps> = ({ isOpen, onClos
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
-            <div className="p-6 space-y-5">
-              <div>
-                <label htmlFor="repo-url" className="block text-sm font-medium text-gray-300 mb-1">Repository URL</label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <LinkIcon className="h-5 w-5 text-gray-500" />
-                  </div>
-                  <input
-                    type="url"
-                    id="repo-url"
-                    value={repoUrl}
-                    onChange={(e) => setRepoUrl(e.target.value)}
-                    className="block w-full rounded-full border-white/20 bg-black/30 py-2.5 pl-10 pr-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-white placeholder-gray-500"
-                    placeholder="https://github.com/owner/repo"
-                    required
-                  />
+            <div className="px-6 pt-4">
+                <div className="flex border-b border-white/10">
+                    <button type="button" onClick={() => setMode('existing')} className={`px-4 py-3 text-sm font-medium transition-colors ${mode === 'existing' ? 'border-b-2 border-indigo-500 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}>Push to Existing</button>
+                    <button type="button" onClick={() => setMode('new')} className={`px-4 py-3 text-sm font-medium transition-colors ${mode === 'new' ? 'border-b-2 border-indigo-500 text-gray-100' : 'text-gray-400 hover:text-gray-200'}`}>Create New</button>
                 </div>
-              </div>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {mode === 'existing' ? (
+                <div>
+                    <label htmlFor="repo-url" className="block text-sm font-medium text-gray-300 mb-1">Repository URL</label>
+                    <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <LinkIcon className="h-5 w-5 text-gray-500" />
+                        </div>
+                        <input type="url" id="repo-url" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} className="block w-full rounded-full border-white/20 bg-black/30 py-2.5 pl-10 pr-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-white placeholder-gray-500" placeholder="https://github.com/owner/repo" required />
+                    </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                    <div>
+                        <label htmlFor="repo-name" className="block text-sm font-medium text-gray-300 mb-1">Repository Name</label>
+                        <input type="text" id="repo-name" value={newRepoName} onChange={(e) => setNewRepoName(e.target.value)} className="block w-full rounded-full border-white/20 bg-black/30 py-2.5 px-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-white placeholder-gray-500" placeholder="my-new-app" required />
+                    </div>
+                     <div>
+                        <label htmlFor="repo-desc" className="block text-sm font-medium text-gray-300 mb-1">Description (Optional)</label>
+                        <input type="text" id="repo-desc" value={newRepoDescription} onChange={(e) => setNewRepoDescription(e.target.value)} className="block w-full rounded-full border-white/20 bg-black/30 py-2.5 px-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-white placeholder-gray-500" placeholder="A cool app built with Silo" />
+                    </div>
+                    <fieldset>
+                        <legend className="text-sm font-medium text-gray-300">Visibility</legend>
+                        <div className="mt-2 flex gap-4">
+                            <div className="flex items-center">
+                                <input id="public" name="visibility" type="radio" checked={!isPrivate} onChange={() => setIsPrivate(false)} className="h-4 w-4 text-indigo-600 border-gray-500 bg-gray-700 focus:ring-indigo-500" />
+                                <label htmlFor="public" className="ml-2 block text-sm text-gray-300">Public</label>
+                            </div>
+                            <div className="flex items-center">
+                                <input id="private" name="visibility" type="radio" checked={isPrivate} onChange={() => setIsPrivate(true)} className="h-4 w-4 text-indigo-600 border-gray-500 bg-gray-700 focus:ring-indigo-500" />
+                                <label htmlFor="private" className="ml-2 block text-sm text-gray-300">Private</label>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+              )}
+              
               <div>
-                <label htmlFor="github-token" className="block text-sm font-medium text-gray-300 mb-1">Personal Access Token</label>
+                <label htmlFor="github-token" className="block text-sm font-medium text-gray-300 mb-1">Personal Access Token (Classic)</label>
                 <div className="relative">
                   <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                     <KeyIcon className="h-5 w-5 text-gray-500" />
                   </div>
-                  <input
-                    type="password"
-                    id="github-token"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                    className="block w-full rounded-full border-white/20 bg-black/30 py-2.5 pl-10 pr-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-white placeholder-gray-500"
-                    placeholder="ghp_..."
-                    required
-                  />
+                  <input type="password" id="github-token" value={token} onChange={(e) => setToken(e.target.value)} className="block w-full rounded-full border-white/20 bg-black/30 py-2.5 pl-10 pr-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-white placeholder-gray-500" placeholder="ghp_..." required />
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
                   Create a token with <code className="bg-gray-700 px-1 rounded">repo</code> scope. {' '}
-                  <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">
+                  <a href="https://github.com/settings/tokens/new?scopes=repo" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">
                     Create one here.
                   </a> Your token is not stored.
                 </p>
               </div>
+
               {status === 'error' && <p className="text-sm text-red-400 text-center">{message}</p>}
             </div>
 
             <div className="px-6 py-4 bg-black/20 border-t border-white/10 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 border border-white/20 text-sm font-medium rounded-full shadow-sm text-gray-300 bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-500/50 disabled:cursor-not-allowed"
-                disabled={status === 'loading' || !repoUrl.trim() || !token.trim()}
-              >
-                {status === 'loading' ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Pushing...
-                  </>
-                ) : 'Push to GitHub'}
+              <button type="button" onClick={onClose} className="px-4 py-2 border border-white/20 text-sm font-medium rounded-full shadow-sm text-gray-300 bg-white/10 hover:bg-white/20 focus:outline-none">Cancel</button>
+              <button type="submit" className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none disabled:bg-indigo-500/50 disabled:cursor-not-allowed" disabled={status === 'loading' || !token.trim() || (mode === 'existing' && !repoUrl.trim()) || (mode === 'new' && !newRepoName.trim())}>
+                {status === 'loading' ? (<><svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Processing...</>) : (mode === 'new' ? 'Create & Push' : 'Push to Repo')}
               </button>
             </div>
           </form>

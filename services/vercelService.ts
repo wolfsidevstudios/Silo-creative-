@@ -1,3 +1,4 @@
+
 const VERCEL_API_BASE = 'https://api.vercel.com';
 
 export const deployToVercel = async (
@@ -5,7 +6,8 @@ export const deployToVercel = async (
     projectName: string,
     fileContent: string,
     filePath: string,
-): Promise<string> => {
+    projectId?: string,
+): Promise<{ url: string; projectId: string; deploymentId: string }> => {
     
     const headers = {
         'Authorization': `Bearer ${token}`,
@@ -23,7 +25,7 @@ export const deployToVercel = async (
         ]
     };
 
-    const body = {
+    const body: any = {
         name: projectName,
         files: [
             {
@@ -39,6 +41,10 @@ export const deployToVercel = async (
             framework: null // Indicates a static site
         }
     };
+
+    if (projectId) {
+        body.project = projectId;
+    }
 
     const response = await fetch(`${VERCEL_API_BASE}/v13/deployments`, {
         method: 'POST',
@@ -57,5 +63,9 @@ export const deployToVercel = async (
     }
     
     // The URL returned is the inspector URL. We need to add the protocol.
-    return `https://${responseData.url}`;
+    return {
+        url: `https://${responseData.url}`,
+        projectId: responseData.projectId,
+        deploymentId: responseData.id,
+    };
 };

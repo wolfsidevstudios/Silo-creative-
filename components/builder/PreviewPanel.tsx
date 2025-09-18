@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { generateDocumentation } from '../../services/geminiService';
@@ -78,11 +79,16 @@ interface PreviewPanelProps {
   activePreviewMode: 'viewer' | 'editor' | 'console';
   setActivePreviewMode: (mode: 'viewer' | 'editor' | 'console') => void;
   onAnalyzeRequest: () => void;
+  vercelProject: { id: string; name: string; url: string; } | null;
+  onVercelDeploySuccess: (projectInfo: { id: string; name: string; url: string; }) => void;
+  githubRepoUrl: string | null;
+  onGitHubPushSuccess: (url: string) => void;
 }
 
 const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, PreviewPanelProps>(({ 
     onVisualEditSubmit, onScreenshotTaken, onTestComplete,
-    activePreviewMode, setActivePreviewMode, onAnalyzeRequest
+    activePreviewMode, setActivePreviewMode, onAnalyzeRequest,
+    vercelProject, onVercelDeploySuccess, githubRepoUrl, onGitHubPushSuccess
 }, ref) => {
     const { generatedCode, appMode, agents, selectedAgentId, selectedModel } = useAppContext();
     const [deviceMode, setDeviceMode] = useState<'desktop' | 'mobile'>('desktop');
@@ -235,8 +241,8 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
                 </div>
             )}
              {visualEditBarState?.isVisible && <VisualEditBar position={visualEditBarState} onSubmit={(prompt) => { onVisualEditSubmit(prompt); setVisualEditBarState(null); setIsVisualEditMode(false); }} onClose={() => { setVisualEditBarState(null); setIsVisualEditMode(false); }} />}
-             <GitHubPushModal isOpen={isGitHubModalOpen} onClose={() => setIsGitHubModalOpen(false)} fileContent={generatedCode} filePath={appMode === 'native' ? 'App.js' : 'index.html'} />
-             <VercelPushModal isOpen={isVercelModalOpen} onClose={() => setIsVercelModalOpen(false)} fileContent={generatedCode} filePath={appMode === 'native' ? 'App.js' : 'index.html'} />
+             <GitHubPushModal isOpen={isGitHubModalOpen} onClose={() => setIsGitHubModalOpen(false)} fileContent={generatedCode} filePath={appMode === 'native' ? 'App.js' : 'index.html'} repoUrl={githubRepoUrl} onPushSuccess={onGitHubPushSuccess} />
+             <VercelPushModal isOpen={isVercelModalOpen} onClose={() => setIsVercelModalOpen(false)} fileContent={generatedCode} filePath={appMode === 'native' ? 'App.js' : 'index.html'} project={vercelProject} onDeploySuccess={onVercelDeploySuccess} />
              <DocsModal isOpen={isDocsModalOpen} onClose={() => setIsDocsModalOpen(false)} content={documentation} />
         </div>
     );

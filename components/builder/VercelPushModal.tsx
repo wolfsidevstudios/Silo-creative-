@@ -1,3 +1,4 @@
+
 import React, { useState, FormEvent, useEffect } from 'react';
 import { XIcon, KeyIcon, CheckIcon, ExternalLinkIcon, VercelIcon } from '../common/Icons';
 import { deployToVercel } from '../../services/vercelService';
@@ -7,9 +8,11 @@ interface VercelPushModalProps {
   onClose: () => void;
   fileContent: string;
   filePath: string;
+  project: { id: string; name: string; url: string; } | null;
+  onDeploySuccess: (projectInfo: { id: string; name: string; url: string; }) => void;
 }
 
-export const VercelPushModal: React.FC<VercelPushModalProps> = ({ isOpen, onClose, fileContent, filePath }) => {
+export const VercelPushModal: React.FC<VercelPushModalProps> = ({ isOpen, onClose, fileContent, filePath, project, onDeploySuccess }) => {
   const [projectName, setProjectName] = useState('');
   const [token, setToken] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -17,15 +20,20 @@ export const VercelPushModal: React.FC<VercelPushModalProps> = ({ isOpen, onClos
   const [successUrl, setSuccessUrl] = useState('');
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+        if (project) {
+            setProjectName(project.name);
+            setSuccessUrl(project.url);
+        }
+    } else {
       setTimeout(() => {
         setStatus('idle');
         setMessage('');
         setSuccessUrl('');
-        setProjectName(''); // Also reset project name
+        setProjectName('');
       }, 300); // Wait for closing animation
     }
-  }, [isOpen]);
+  }, [isOpen, project]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -42,10 +50,11 @@ export const VercelPushModal: React.FC<VercelPushModalProps> = ({ isOpen, onClos
     }
 
     try {
-      const deploymentUrl = await deployToVercel(token, sanitizedProjectName, fileContent, filePath);
+      const result = await deployToVercel(token, sanitizedProjectName, fileContent, filePath, project?.id);
       setStatus('success');
-      setMessage('Successfully deployed to Vercel!');
-      setSuccessUrl(deploymentUrl);
+      setMessage(project ? 'Successfully updated deployment!' : 'Successfully deployed to Vercel!');
+      setSuccessUrl(result.url);
+      onDeploySuccess({ id: result.projectId, name: sanitizedProjectName, url: result.url });
     } catch (err: any) {
       setStatus('error');
       setMessage(err.message || 'An unknown error occurred.');
@@ -105,9 +114,10 @@ export const VercelPushModal: React.FC<VercelPushModalProps> = ({ isOpen, onClos
                     id="project-name"
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
-                    className="block w-full rounded-full border-white/20 bg-black/30 py-2.5 pl-10 pr-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-white placeholder-gray-500"
+                    className="block w-full rounded-full border-white/20 bg-black/30 py-2.5 pl-10 pr-4 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-white placeholder-gray-500 disabled:cursor-not-allowed disabled:opacity-70"
                     placeholder="my-awesome-app"
                     required
+                    disabled={!!project}
                   />
                 </div>
               </div>
@@ -158,7 +168,7 @@ export const VercelPushModal: React.FC<VercelPushModalProps> = ({ isOpen, onClos
                     </svg>
                     Deploying...
                   </>
-                ) : 'Deploy'}
+                ) : (project ? 'Update Deployment' : 'Deploy')}
               </button>
             </div>
           </form>

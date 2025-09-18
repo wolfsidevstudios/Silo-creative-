@@ -1,3 +1,4 @@
+
 // A helper to parse owner/repo from URL
 const parseRepoUrl = (url: string): { owner: string; repo: string } | null => {
     try {
@@ -17,6 +18,40 @@ const parseRepoUrl = (url: string): { owner: string; repo: string } | null => {
 };
 
 const GITHUB_API_BASE = 'https://api.github.com';
+
+export const createRepo = async (
+    token: string,
+    repoName: string,
+    description: string,
+    isPrivate: boolean
+): Promise<string> => {
+    const response = await fetch(`${GITHUB_API_BASE}/user/repos`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+        },
+        body: JSON.stringify({
+            name: repoName,
+            description: description,
+            private: isPrivate,
+            auto_init: true, // Initialize with a README to create the main branch
+        }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        // Provide more specific error for existing repo
+        if (response.status === 422 && errorData.errors?.some((e: any) => e.message?.includes('name already exists'))) {
+            throw new Error(`A repository with the name '${repoName}' already exists.`);
+        }
+        throw new Error(`GitHub API Error: ${errorData.message || response.statusText}`);
+    }
+    const repoData = await response.json();
+    return repoData.html_url; // This is the URL needed for pushToRepo
+};
+
 
 export const pushToRepo = async (
     repoUrl: string,

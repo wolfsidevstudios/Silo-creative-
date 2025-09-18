@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import ChatPanel, { ChatPanelRef } from '../builder/ChatPanel';
 import PreviewPanel from '../builder/PreviewPanel';
@@ -16,6 +17,8 @@ const AppBuilderPage: React.FC = () => {
   const [isAgentTesting, setIsAgentTesting] = useState(false);
   const [agentTestAction, setAgentTestAction] = useState<AgentTestAction | null>(null);
   const [activePreviewMode, setActivePreviewMode] = useState<'viewer' | 'editor' | 'console'>('viewer');
+  const [vercelProject, setVercelProject] = useState<{ id: string; name: string; url: string; } | null>(null);
+  const [githubRepoUrl, setGithubRepoUrl] = useState<string | null>(null);
 
   const handleVisualEditSubmit = (prompt: string) => {
     chatPanelRef.current?.submitRefinement(prompt);
@@ -46,6 +49,15 @@ const AppBuilderPage: React.FC = () => {
     setAgentTestAction(null);
     chatPanelRef.current?.finalizeTest();
   };
+  
+  const handleVercelDeploySuccess = (projectInfo: { id: string; name: string; url: string; }) => {
+    setVercelProject(projectInfo);
+  };
+
+  const handleGitHubPushSuccess = (url: string) => {
+    setGithubRepoUrl(url);
+  };
+
 
   return (
     <div className="w-full h-full p-4 futuristic-background">
@@ -68,6 +80,10 @@ const AppBuilderPage: React.FC = () => {
             activePreviewMode={activePreviewMode}
             setActivePreviewMode={setActivePreviewMode}
             onAnalyzeRequest={handleAnalyzeRequest}
+            vercelProject={vercelProject}
+            onVercelDeploySuccess={handleVercelDeploySuccess}
+            githubRepoUrl={githubRepoUrl}
+            onGitHubPushSuccess={handleGitHubPushSuccess}
           />
         </div>
       </div>
