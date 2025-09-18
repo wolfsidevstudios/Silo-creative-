@@ -315,6 +315,43 @@ export const VercelIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+export const PuzzleIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M14 7h.01" />
+        <path d="M10.5 10.5h.01" />
+        <path d="M7 14h.01" />
+        <path d="M10.5 17.5h.01" />
+        <path d="M17.5 10.5h.01" />
+        <path d="M14 14h.01" />
+        <path d="M17.5 17.5h.01" />
+        <path d="M21 11.5v-1A7.5 7.5 0 0 0 13.5 3h-3A7.5 7.5 0 0 0 3 10.5v3A7.5 7.5 0 0 0 10.5 21h1" />
+        <path d="M15.5 21a5.5 5.5 0 0 0 5.5-5.5v-1" />
+    </svg>
+);
+
+export const SupabaseIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M4 14.83V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3.17" />
+        <path d="m12 15-8-6.55" />
+        <path d="m12 15 8-6.55" />
+        <path d="m12 15-8 5.7" />
+        <path d="m12 15 8 5.7" />
+        <path d="M12 3v12" />
+    </svg>
+);
+
+export const StripeIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M13.883 18.067c-1.21.325-2.48.225-3.66-.233-1.07-.417-1.92-1.092-2.47-1.942-.54-1.025-.79-2.208-.7-3.483.08-1.25.51-2.433 1.25-3.45.74-1.025 1.76-1.792 2.94-2.233.99-.358 2.04-.425 3.06-.158.42.116.82.3 1.2.525V2.833c-.45-.158-.9-.275-1.36-.35-.7-.117-1.42-.117-2.12.008-1.56.275-2.99.9-4.14 1.767-1.15.867-1.95 2-2.33 3.275-.38 1.45-.33 2.98.15 4.4.48 1.41 1.33 2.65 2.45 3.633 1.13.992 2.51 1.683 4.02 2.025 1.5.342 3.08.267 4.54-.25.48-.175.94-.4 1.36-.675v-4.292c-.45.225-.92.4-1.4.525-.72.192-1.46.25-2.19.158zM19.667 9.3c.008-.65.017-1.3 0-1.95-.083-1.233-.533-2.392-1.283-3.35-.74-1.133-1.8-1.95-3.04-2.4-1.25-.45-2.6-.542-3.92-.258-.45.09-.9.24-1.34.425v4.25c.5-.233.99-.39 1.48-.467.82-.125 1.65-.083 2.45.15.98.283 1.83.84 2.43 1.583.6.742.94 1.692.96 2.7.02.9-.19 1.783-.59 2.583-.4.8-1.01 1.45-1.75 1.9-.74.45-1.6.683-2.48.658-.65-.025-1.28-.158-1.89-.375v4.292c.65.233 1.32.4 2 .492.9.116 1.81.108 2.7-.017 1.73-.24 3.3-1.01 4.5-2.175 1.18-1.158 1.93-2.659 2.16-4.325.22-1.658.04-3.358-.53-4.942z"/>
+    </svg>
+);
+
+export const GeminiIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+    </svg>
+);
+
 
 // --- File Type Icons ---
 export const FileTextIcon: React.FC<{ className?: string }> = ({ className }) => (

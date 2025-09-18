@@ -1,12 +1,14 @@
 
+
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { generateDocumentation } from '../../services/geminiService';
-import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon, PhoneIcon, DesktopIcon, RefreshCwIcon, CodeBracketIcon, TerminalIcon, FileTextIcon, ChevronDownIcon, GitHubIcon, SearchIcon, XIcon, VercelIcon } from '../common/Icons';
+import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon, PhoneIcon, DesktopIcon, RefreshCwIcon, CodeBracketIcon, TerminalIcon, FileTextIcon, ChevronDownIcon, GitHubIcon, SearchIcon, XIcon, VercelIcon, PuzzleIcon } from '../common/Icons';
 import VisualEditBar from './VisualEditBar';
 import { AgentTestAction } from '../pages/AppBuilderPage';
 import { GitHubPushModal } from './GitHubPushModal';
 import { VercelPushModal } from './VercelPushModal';
+import { IntegrationsModal } from './IntegrationsModal';
 
 declare global {
     interface Window {
@@ -100,6 +102,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
     const [isDocsModalOpen, setIsDocsModalOpen] = useState(false);
     const [documentation, setDocumentation] = useState('');
     const [isGeneratingDocs, setIsGeneratingDocs] = useState(false);
+    const [isIntegrationsModalOpen, setIsIntegrationsModalOpen] = useState(false);
     const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
 
     const takeScreenshot = (): Promise<string> => {
@@ -144,6 +147,24 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
         };
     }, [isVisualEditMode, activePreviewMode]);
     
+    const handleSelectIntegration = (integrationType: 'supabase' | 'stripe' | 'gemini') => {
+        let prompt = '';
+        switch (integrationType) {
+            case 'supabase':
+                prompt = `Integrate the Supabase v2 JavaScript client into the app. Add its CDN script to the head. Then, in the main script tag, add code to initialize the client using placeholder URL and anon key. Also, add a simple example function that fetches and logs data from a 'products' table to the console when the page loads to demonstrate it's working.`;
+                break;
+            case 'stripe':
+                prompt = `Integrate Stripe Payments. Add the Stripe.js v3 script to the head. In the body, add a 'Checkout' button. In the main script tag, add an event listener to this button that, when clicked, redirects to a Stripe Checkout session. Use placeholder data for the checkout session for demonstration purposes. Ensure the code is vanilla JavaScript.`;
+                break;
+            case 'gemini':
+                prompt = `Integrate the Google Gemini API for in-app AI features. Add a new section to the UI with an input field for a user to enter their Gemini API key, a textarea for a prompt, a 'Generate' button, and a preformatted block to display the result. In the main script tag, add an event listener to the button. When clicked, it should take the key and prompt from the inputs, make a direct fetch call to the Google AI Generative Language API v1beta endpoint for 'gemini-2.5-flash:generateContent', and display the text response in the result block. Handle loading and error states.`;
+                break;
+        }
+
+        if (prompt) {
+            onVisualEditSubmit(prompt);
+        }
+    };
 
     const getSrcDoc = () => !generatedCode ? '' : generatedCode;
 
@@ -200,6 +221,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
                     <div className="flex items-center gap-1 bg-black/30 backdrop-blur-lg rounded-full shadow-2xl border border-white/10 p-1.5 text-gray-200">
                         {/* Left Side */}
+                        <button onClick={() => setIsIntegrationsModalOpen(true)} className="p-2.5 rounded-full hover:bg-white/10 transition-colors" aria-label="Add Integration"><PuzzleIcon className="w-5 h-5" /></button>
                         <button onClick={onAnalyzeRequest} className="p-2.5 rounded-full hover:bg-white/10 transition-colors" aria-label="Analyze UI/UX"><SearchIcon className="w-5 h-5" /></button>
                         <button onClick={handleGenerateDocs} disabled={isGeneratingDocs} className="p-2.5 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50" aria-label="Generate Documentation"><FileTextIcon className="w-5 h-5" /></button>
                         <button onClick={() => setIsGitHubModalOpen(true)} className="p-2.5 rounded-full hover:bg-white/10 transition-colors" aria-label="Push to GitHub"><GitHubIcon className="w-5 h-5" /></button>
@@ -244,6 +266,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
              <GitHubPushModal isOpen={isGitHubModalOpen} onClose={() => setIsGitHubModalOpen(false)} fileContent={generatedCode} filePath={appMode === 'native' ? 'App.js' : 'index.html'} repoUrl={githubRepoUrl} onPushSuccess={onGitHubPushSuccess} />
              <VercelPushModal isOpen={isVercelModalOpen} onClose={() => setIsVercelModalOpen(false)} fileContent={generatedCode} filePath={appMode === 'native' ? 'App.js' : 'index.html'} project={vercelProject} onDeploySuccess={onVercelDeploySuccess} />
              <DocsModal isOpen={isDocsModalOpen} onClose={() => setIsDocsModalOpen(false)} content={documentation} />
+             <IntegrationsModal isOpen={isIntegrationsModalOpen} onClose={() => setIsIntegrationsModalOpen(false)} onSelectIntegration={handleSelectIntegration} />
         </div>
     );
 });
