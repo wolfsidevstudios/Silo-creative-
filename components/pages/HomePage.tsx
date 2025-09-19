@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import SuggestionButton from '../common/SuggestionButton';
-import { PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon, PhoneIcon, FilesIcon, FileTextIcon, CodeBracketIcon, XIcon } from '../common/Icons';
+import { PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon, PhoneIcon, FilesIcon, FileTextIcon, CodeBracketIcon, XIcon, TerminalIcon } from '../common/Icons';
 import AgentSelector from '../agents/AgentSelector';
 import { Link } from 'react-router-dom';
 import ModelSelector from '../common/ModelSelector';
@@ -55,6 +55,8 @@ const HomePage: React.FC = () => {
       native: ["Simple weather app", "Quote of the day", "Tap counter"],
       document: ["A presentation on climate change", "A report on Q2 earnings", "A proposal for a new project"],
       component: ["A responsive navbar", "A pricing table component", "A testimonial card"],
+      multifile: ["A recipe website with separate JS for search", "A blog template with its own stylesheet", "A portfolio with interactive gallery"],
+      fullstack: ["A to-do list with a Node.js backend", "A user auth page with Express routes", "A simple blog with a REST API"],
   };
 
   const getPlaceholder = () => {
@@ -67,6 +69,8 @@ const HomePage: React.FC = () => {
         case 'native': return 'Describe the native mobile app you want...';
         case 'document': return 'Describe the document or presentation you want...';
         case 'component': return 'Describe the UI component you want to build...';
+        case 'multifile': return 'Describe the multi-file web app you want...';
+        case 'fullstack': return 'Describe the full-stack app you want...';
         default: return 'Describe something to create...';
     }
   };
@@ -143,6 +147,8 @@ const HomePage: React.FC = () => {
                         <div className="absolute bottom-full mb-2 right-0 w-56 bg-gray-900/80 backdrop-blur-lg rounded-xl shadow-xl border border-white/10 p-2 z-10">
                             <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Mode</div>
                             <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>Web App</MenuItem>
+                            <MenuItem active={appMode === 'multifile'} onClick={() => { setAppMode('multifile'); setIsMenuOpen(false); }}>Multi-file App</MenuItem>
+                            <MenuItem active={appMode === 'fullstack'} onClick={() => { setAppMode('fullstack'); setIsMenuOpen(false); }}>Full-stack App</MenuItem>
                             <MenuItem active={appMode === 'component'} onClick={() => { setAppMode('component'); setIsMenuOpen(false); }}>Component</MenuItem>
                             <MenuItem active={appMode === 'native'} onClick={() => { setAppMode('native'); setIsMenuOpen(false); }}>Native App</MenuItem>
                             <MenuItem active={appMode === 'form'} onClick={() => { setAppMode('form'); setIsMenuOpen(false); }}>Web Form</MenuItem>

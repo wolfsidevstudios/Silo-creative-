@@ -1,10 +1,13 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getRecentApps, getRecentFlashcards } from '../../services/storageService';
 import { StoredApp, StoredFlashcards } from '../../types';
 import { useAppContext } from '../../context/AppContext';
+
+declare const JSZip: any;
 
 const TimeAgo: React.FC<{ timestamp: number }> = ({ timestamp }) => {
     const [timeAgo, setTimeAgo] = useState('');
@@ -38,7 +41,7 @@ const SiloOneDrivePage: React.FC = () => {
     const [recentApps, setRecentApps] = useState<StoredApp[]>([]);
     const [recentFlashcards, setRecentFlashcards] = useState<StoredFlashcards[]>([]);
     const navigate = useNavigate();
-    const { setGeneratedFlashcards, setPrompt, setAppMode, setGeneratedCode } = useAppContext();
+    const { setGeneratedFlashcards, setPrompt, setAppMode, setFiles } = useAppContext();
 
     useEffect(() => {
         setRecentApps(getRecentApps());
@@ -46,24 +49,52 @@ const SiloOneDrivePage: React.FC = () => {
     }, []);
 
     const handleDownload = (app: StoredApp) => {
-        const filename = app.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const filenameBase = app.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
         
-        const blob = new Blob([app.content], { type: app.appMode === 'native' ? 'text/javascript' : 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${filename}.${app.appMode === 'native' ? 'js' : 'html'}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        if (typeof app.content === 'object' && app.content !== null) {
+            const files = app.content;
+            const fileKeys = Object.keys(files);
+
+            if (fileKeys.length === 1) {
+                // Single file download
+                const fileName = fileKeys[0];
+                const content = files[fileName];
+                const mimeType = fileName.endsWith('.js') ? 'text/javascript' : 'text/html';
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } else {
+                // Multiple files, zip them
+                const zip = new JSZip();
+                for (const fileName in files) {
+                    zip.file(fileName, files[fileName]);
+                }
+                zip.generateAsync({ type: "blob" })
+                    .then(function(content: any) {
+                        const url = URL.createObjectURL(content);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${filenameBase}.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    });
+            }
+        }
     };
 
     const handleViewFlashcards = (deck: StoredFlashcards) => {
         setAppMode('study');
         setPrompt(deck.topic);
         setGeneratedFlashcards(deck.cards);
-        setGeneratedCode('');
+        setFiles(null);
         navigate('/build');
     };
 

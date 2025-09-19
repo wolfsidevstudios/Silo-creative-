@@ -1,5 +1,6 @@
 
 
+
 import { StoredApp, StoredFlashcards, Flashcard, AppMode } from '../types';
 
 const RECENT_APPS_KEY = 'silo-recent-apps';
@@ -11,14 +12,22 @@ const MAX_HISTORY = 10;
 export const getRecentApps = (): StoredApp[] => {
   try {
     const stored = localStorage.getItem(RECENT_APPS_KEY);
-    return stored ? JSON.parse(stored) : [];
+    const apps: StoredApp[] = stored ? JSON.parse(stored) : [];
+    // For backward compatibility, ensure content is in the new format.
+    return apps.map(app => {
+        if (typeof app.content === 'string') {
+            const fileName = app.appMode === 'native' ? 'App.js' : 'index.html';
+            return { ...app, content: { [fileName]: app.content } };
+        }
+        return app;
+    });
   } catch (error) {
     console.error("Error reading recent apps from localStorage:", error);
     return [];
   }
 };
 
-export const saveApp = (title: string, content: string, appMode: AppMode): void => {
+export const saveApp = (title: string, content: { [path: string]: string }, appMode: AppMode): void => {
   try {
     const newApp: StoredApp = {
       id: `app-${Date.now()}`,

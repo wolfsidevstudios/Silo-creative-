@@ -1,11 +1,11 @@
 
+
 const VERCEL_API_BASE = 'https://api.vercel.com';
 
 export const deployToVercel = async (
     token: string,
     projectName: string,
-    fileContent: string,
-    filePath: string,
+    files: { [path: string]: string },
     projectId?: string,
 ): Promise<{ url: string; projectId: string; deploymentId: string }> => {
     
@@ -14,29 +14,34 @@ export const deployToVercel = async (
         'Content-Type': 'application/json'
     };
     
+    // Determine the main entry file, default to index.html
+    const mainFile = files['index.html'] ? 'index.html' : Object.keys(files)[0];
+
     // Vercel CLI compatible config for a simple static site
     const vercelConfig = {
         "version": 2,
         "builds": [
-            { "src": filePath, "use": "@vercel/static" }
+            { "src": mainFile, "use": "@vercel/static" }
         ],
         "routes": [
-            { "src": "/(.*)", "dest": `/${filePath}` }
+            { "src": "/(.*)", "dest": `/${mainFile}` }
         ]
     };
 
+    const filesPayload = Object.entries(files).map(([path, data]) => ({
+        file: path,
+        data: data,
+    }));
+
+    // Add vercel.json to the payload
+    filesPayload.push({
+        file: 'vercel.json',
+        data: JSON.stringify(vercelConfig, null, 2)
+    });
+
     const body: any = {
         name: projectName,
-        files: [
-            {
-                file: filePath,
-                data: fileContent,
-            },
-            {
-                file: 'vercel.json',
-                data: JSON.stringify(vercelConfig, null, 2)
-            }
-        ],
+        files: filesPayload,
         projectSettings: {
             framework: null // Indicates a static site
         }

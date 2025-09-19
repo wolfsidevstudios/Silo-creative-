@@ -1,10 +1,17 @@
 
 
+
 import React, { useRef, useState, useEffect } from 'react';
 import ChatPanel, { ChatPanelRef } from '../builder/ChatPanel';
 import PreviewPanel from '../builder/PreviewPanel';
 import { useAppContext } from '../../context/AppContext';
-import { GenerationStatus } from '../../types';
+import { GenerationStatus, Message, AppMode } from '../../types';
+
+export interface Version {
+  files: { [path: string]: string };
+  summary: string;
+  timestamp: number;
+}
 
 export interface AgentTestAction {
   selector: string;
@@ -15,13 +22,36 @@ export interface AgentTestAction {
 const AppBuilderPage: React.FC = () => {
   const chatPanelRef = useRef<ChatPanelRef>(null);
   const previewPanelRef = useRef<{ takeScreenshot: () => Promise<string> }>(null);
-  const { generatedCode, setGeneratedCode } = useAppContext();
+  
+  const { prompt, appMode, setFiles: setContextFiles, files: contextFiles } = useAppContext();
+
+  const [files, setFiles] = useState<{ [path: string]: string } | null>(contextFiles);
+  const [history, setHistory] = useState<Version[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  
   const [isAgentTesting, setIsAgentTesting] = useState(false);
   const [agentTestAction, setAgentTestAction] = useState<AgentTestAction | null>(null);
-  const [activePreviewMode, setActivePreviewMode] = useState<'viewer' | 'editor' | 'console'>('viewer');
+  const [activePreviewMode, setActivePreviewMode] = useState<'viewer' | 'editor' | 'history' | 'console'>('viewer');
   const [vercelProject, setVercelProject] = useState<{ id: string; name: string; url: string; } | null>(null);
   const [githubRepoUrl, setGithubRepoUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<GenerationStatus>('idle');
+
+  const handleSetFiles = (newFiles: { [path: string]: string }, summary?: string) => {
+      if(summary && files) {
+          // Add previous state to history
+          setHistory(prev => [...prev, { files: files, summary: "Previous version", timestamp: Date.now() - 1 }]);
+      }
+      setFiles(newFiles);
+      setContextFiles(newFiles); // also update context for persistence across navigation
+  };
+
+  const handleRevertToVersion = (version: Version) => {
+    setFiles(version.files);
+    setContextFiles(version.files);
+    // Optionally, you could add a message indicating a revert happened
+    setMessages(prev => [...prev, { role: 'assistant', content: `Reverted to a previous version.`, isAgentActivity: true }]);
+    setActivePreviewMode('viewer');
+  };
 
   const handleVisualEditSubmit = (prompt: string) => {
     chatPanelRef.current?.submitRefinement(prompt);
@@ -72,11 +102,16 @@ const AppBuilderPage: React.FC = () => {
             onToggleCodeView={() => setActivePreviewMode(prev => prev === 'editor' ? 'viewer' : 'editor')}
             status={status}
             setStatus={setStatus}
+            files={files}
+            setFiles={handleSetFiles}
+            messages={messages}
+            setMessages={setMessages}
           />
         </div>
         <div className="bg-black/30 backdrop-blur-lg border border-white/10 rounded-2xl shadow-lg flex flex-col overflow-hidden">
           <PreviewPanel 
             ref={previewPanelRef}
+            files={files}
             onVisualEditSubmit={handleVisualEditSubmit}
             onScreenshotTaken={handleScreenshotTaken}
             isAgentTesting={isAgentTesting}
@@ -90,6 +125,8 @@ const AppBuilderPage: React.FC = () => {
             githubRepoUrl={githubRepoUrl}
             onGitHubPushSuccess={handleGitHubPushSuccess}
             status={status}
+            history={history}
+            onRevertToVersion={handleRevertToVersion}
           />
         </div>
       </div>

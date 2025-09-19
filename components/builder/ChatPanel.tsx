@@ -1,12 +1,13 @@
 import React, { useState, useEffect, FormEvent, forwardRef, useImperativeHandle } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { 
-    generateAppPlan, generateAppCode, generateFlashcards, 
-    generateFormPlan, generateFormCode, refineAppCode, 
-    generateNativeAppCode, refineNativeAppCode, 
-    selfCorrectCode, generateDocumentPlan, generateDocumentCode,
-    generateComponentPlan, generateComponentCode, translateCodeToWebApp,
-    analyzeUiUx, cloneWebsite
+    generateAppPlan, generateFlashcards, 
+    generateFormPlan, refineFiles, 
+    selfCorrectCode, generateDocumentPlan,
+    generateComponentPlan, 
+    analyzeUiUx, 
+    generateProject,
+    wrapSimpleCodeCall
 } from '../../services/geminiService';
 import { saveApp } from '../../services/storageService';
 import type { Message, AppPlan, FormPlan, DocumentPlan, RefinementResult, UiUxAnalysis, ComponentPlan, GenerationStatus } from '../../types';
@@ -67,18 +68,20 @@ interface ChatPanelProps {
     onToggleCodeView: () => void;
     status: GenerationStatus;
     setStatus: (status: GenerationStatus) => void;
+    files: { [path: string]: string } | null;
+    setFiles: (files: { [path: string]: string }, summary?: string) => void;
+    messages: Message[];
+    setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 }
 
 const MAX_CHARS_REFINEMENT = 200;
 
-const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, onToggleCodeView, status, setStatus }, ref) => {
+const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, onToggleCodeView, status, setStatus, files, setFiles, messages, setMessages }, ref) => {
   const { 
-    prompt, isTranslation, isCloning, generatedCode, setGeneratedCode, 
-    appMode, setGeneratedFlashcards, agents, selectedAgentId, selectedModel
+    prompt, isTranslation, isCloning, setGeneratedFlashcards, agents, selectedAgentId, selectedModel, appMode
   } = useAppContext();
   
   const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isCodeGenerated, setIsCodeGenerated] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<AppPlan | FormPlan | DocumentPlan | ComponentPlan | null>(null);
@@ -86,8 +89,8 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
   const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
 
   useEffect(() => {
-    if (prompt) {
-      setGeneratedCode('');
+    if (prompt && !files) { // Only run generation if files are not already populated
+      setFiles({});
       setGeneratedFlashcards(null);
       setIsCodeGenerated(false);
       setCurrentPlan(null);
@@ -104,18 +107,11 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
         setIsLoading(false);
       };
       
-      if(isTranslation) {
-        translateCodeToWebApp(prompt, selectedModel, agentInstruction)
-            .then(code => handleCodeGeneration(code, "Translated App"))
-            .catch(error => handleErrors(error, 'code translation'))
-            .finally(() => setIsLoading(false));
-        return;
-      }
-
-      if(isCloning) {
-        cloneWebsite(prompt, selectedModel, agentInstruction)
-            .then(code => handleCodeGeneration(code, `Clone of ${prompt}`))
-            .catch(error => handleErrors(error, 'website clone'))
+      const generationCall = wrapSimpleCodeCall(isTranslation, isCloning, prompt, selectedModel, agentInstruction);
+      if(generationCall) {
+        generationCall
+            .then(files => handleCodeGeneration(files, "Generated App"))
+            .catch(error => handleErrors(error, 'code generation'))
             .finally(() => setIsLoading(false));
         return;
       }
@@ -126,6 +122,8 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
           form: generateFormPlan,
           document: generateDocumentPlan,
           component: generateComponentPlan,
+          multifile: generateAppPlan,
+          fullstack: generateAppPlan,
       };
 
       if (appMode === 'study') {
@@ -142,51 +140,20 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
           .then((plan: AppPlan | FormPlan | DocumentPlan | ComponentPlan) => {
               setCurrentPlan(plan);
               setStatus('generating');
-              return generateCode(plan);
+              return generateProject(plan, appMode, selectedModel, agentInstruction);
           })
-          .catch(error => handleErrors(error, 'plan'));
+          .then((generatedFiles) => {
+              const title = (currentPlan as any)?.title || (currentPlan as any)?.name || "Generated Project";
+              handleCodeGeneration(generatedFiles, title);
+          })
+          .catch(error => handleErrors(error, 'plan or code generation'));
       }
     }
-  }, [prompt, appMode, selectedModel, isTranslation, isCloning]);
-  
-  const generateCode = async (plan: AppPlan | FormPlan | DocumentPlan | ComponentPlan) => {
-      const agentInstruction = selectedAgent?.systemInstruction;
-      
-      try {
-          let code: string;
-          let title = "Generated Content";
-          if (appMode === 'build' && 'features' in plan) {
-              code = await generateAppCode(plan as AppPlan, selectedModel, agentInstruction);
-              title = plan.title;
-          } else if (appMode === 'native' && 'features' in plan) {
-              code = await generateNativeAppCode(plan as AppPlan, selectedModel, agentInstruction);
-              title = plan.title;
-          } else if (appMode === 'form' && 'fields' in plan) {
-              code = await generateFormCode(plan as FormPlan, selectedModel, agentInstruction);
-              title = plan.title;
-          } else if (appMode === 'document' && 'documentType' in plan) {
-              code = await generateDocumentCode(plan as DocumentPlan, selectedModel, agentInstruction);
-              title = plan.title;
-          } else if (appMode === 'component' && 'properties' in plan) {
-              code = await generateComponentCode(plan as ComponentPlan, selectedModel, agentInstruction);
-              title = (plan as ComponentPlan).name;
-          } else {
-              throw new Error(`Invalid appMode or plan type mismatch: ${appMode}`);
-          }
-          
-          handleCodeGeneration(code, title);
+  }, [prompt, appMode, selectedModel, isTranslation, isCloning, files]);
 
-      } catch (error) {
-          console.error("Error generating code:", error);
-          setMessages(prev => [...prev, {role: 'assistant', content: "Sorry, there was an error generating the code."}]);
-          setStatus('finished');
-          setIsLoading(false);
-      }
-  };
-
-  const handleCodeGeneration = (code: string, title: string) => {
-      setGeneratedCode(code); // This triggers PreviewPanel screenshot
-      saveApp(title, code, appMode);
+  const handleCodeGeneration = (files: { [path: string]: string }, title: string) => {
+      setFiles(files); // This triggers PreviewPanel screenshot
+      saveApp(title, files, appMode);
       setIsCodeGenerated(true);
   }
 
@@ -203,12 +170,15 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
   };
 
   const runUiUxAnalysis = async (dataUrl: string) => {
-      if (!generatedCode) return;
+      if (!files) return;
+      const htmlCode = files['index.html'] || '';
+      if (!htmlCode) return;
+
       setMessages(prev => [...prev, {role: 'assistant', content: 'Analyzing UI/UX...', isAgentActivity: true}]);
       setIsLoading(true);
       try {
           const agentInstruction = selectedAgent?.systemInstruction;
-          const analysis = await analyzeUiUx(generatedCode, dataUrl, agentInstruction);
+          const analysis = await analyzeUiUx(htmlCode, dataUrl, agentInstruction);
           setMessages(prev => prev.filter(m => m.content !== 'Analyzing UI/UX...'));
           setMessages(prev => [...prev, {role: 'assistant', content: '', analysis}]);
       } catch (error) {
@@ -228,28 +198,26 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
   }));
 
   const submitRefinement = async (refinementPrompt: string) => {
-    if (!generatedCode) return;
+    if (!files) return;
     setStatus('generating');
     setIsLoading(true);
     setInput('');
     try {
       const agentInstruction = selectedAgent?.systemInstruction;
-      let result: RefinementResult;
-      if (appMode === 'native') {
-        result = await refineNativeAppCode(generatedCode, refinementPrompt, selectedModel, agentInstruction);
-      } else {
-        result = await refineAppCode(generatedCode, refinementPrompt, selectedModel, agentInstruction);
-      }
-      setGeneratedCode(result.code);
-      // FIX: Safely access title or name from the union type for the currentPlan.
-      saveApp((currentPlan as any)?.title || (currentPlan as any)?.name || "Updated App", result.code, appMode);
+      const result: RefinementResult = await refineFiles(files, refinementPrompt, selectedModel, agentInstruction);
+      
+      setFiles(result.files, result.summary);
+      
+      const title = (currentPlan as any)?.title || (currentPlan as any)?.name || "Updated App";
+      saveApp(title, result.files, appMode);
+      
       setMessages(prev => [...prev, {role: 'assistant', content: result.summary, isChangeSummary: true}]);
     } catch (error) {
         console.error("Error refining code:", error);
         setMessages(prev => [...prev, {role: 'assistant', content: "Sorry, I couldn't apply those changes."}]);
-        setStatus('finished');
     } finally {
-        setIsLoading(false);
+        setStatus('finished'); // This will trigger screenshot review
+        setIsLoading(false); // keep loading state for now
     }
   };
   
@@ -270,7 +238,6 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
   return (
     <div className="flex flex-col h-full text-gray-300">
       <div className="flex-1 p-6 overflow-y-auto">
-        {/* FIX: Safely access title or name from the union type of currentPlan. */}
         <h2 className="text-2xl font-bold text-gray-100">{(currentPlan as any)?.title || (currentPlan as any)?.name || "Building your creation..."}</h2>
         <p className="text-gray-400 mt-1 line-clamp-1">From prompt: "{prompt}"</p>
         
@@ -279,7 +246,6 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
                 {currentPlan && (
                     <div className="text-sm text-gray-300 p-3 bg-white/5 rounded-md border border-white/10">
                         <p className="font-medium text-gray-200">
-                           {/* FIX: Safely access description property, which doesn't exist on DocumentPlan. */}
                            { (currentPlan as any).description || `Type: ${(currentPlan as DocumentPlan).documentType}` }
                         </p>
                     </div>
@@ -294,7 +260,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
         </div>
         
         <div className="mt-6 space-y-3">
-             {messages.filter(m => !m.isChangeSummary).map((msg, index) => (
+             {messages.filter(m => !m.isChangeSummary && !m.isAgentActivity).map((msg, index) => (
                 msg.analysis 
                     ? <UiAnalysisResult key={index} analysis={msg.analysis} />
                     : <p key={index} className="text-sm text-gray-400">{msg.content}</p>

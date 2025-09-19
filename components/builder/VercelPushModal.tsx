@@ -1,4 +1,5 @@
 
+
 import React, { useState, FormEvent, useEffect } from 'react';
 import { XIcon, KeyIcon, CheckIcon, ExternalLinkIcon, VercelIcon } from '../common/Icons';
 import { deployToVercel } from '../../services/vercelService';
@@ -6,13 +7,12 @@ import { deployToVercel } from '../../services/vercelService';
 interface VercelPushModalProps {
   isOpen: boolean;
   onClose: () => void;
-  fileContent: string;
-  filePath: string;
+  files: { [path: string]: string };
   project: { id: string; name: string; url: string; } | null;
   onDeploySuccess: (projectInfo: { id: string; name: string; url: string; }) => void;
 }
 
-export const VercelPushModal: React.FC<VercelPushModalProps> = ({ isOpen, onClose, fileContent, filePath, project, onDeploySuccess }) => {
+export const VercelPushModal: React.FC<VercelPushModalProps> = ({ isOpen, onClose, files, project, onDeploySuccess }) => {
   const [projectName, setProjectName] = useState('');
   const [token, setToken] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -50,7 +50,7 @@ export const VercelPushModal: React.FC<VercelPushModalProps> = ({ isOpen, onClos
     }
 
     try {
-      const result = await deployToVercel(token, sanitizedProjectName, fileContent, filePath, project?.id);
+      const result = await deployToVercel(token, sanitizedProjectName, files, project?.id);
       setStatus('success');
       setMessage(project ? 'Successfully updated deployment!' : 'Successfully deployed to Vercel!');
       setSuccessUrl(result.url);

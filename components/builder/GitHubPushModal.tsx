@@ -1,4 +1,5 @@
 
+
 import React, { useState, FormEvent, useEffect } from 'react';
 import { XIcon, GitHubIcon, KeyIcon, LinkIcon, CheckIcon, ExternalLinkIcon } from '../common/Icons';
 import { pushToRepo, createRepo } from '../../services/githubService';
@@ -6,13 +7,12 @@ import { pushToRepo, createRepo } from '../../services/githubService';
 interface GitHubPushModalProps {
   isOpen: boolean;
   onClose: () => void;
-  fileContent: string;
-  filePath: string;
+  files: { [path: string]: string };
   repoUrl: string | null;
   onPushSuccess: (url: string) => void;
 }
 
-export const GitHubPushModal: React.FC<GitHubPushModalProps> = ({ isOpen, onClose, fileContent, filePath, repoUrl: initialRepoUrl, onPushSuccess }) => {
+export const GitHubPushModal: React.FC<GitHubPushModalProps> = ({ isOpen, onClose, files, repoUrl: initialRepoUrl, onPushSuccess }) => {
   const [mode, setMode] = useState<'existing' | 'new'>('existing');
   
   // State for existing repo
@@ -73,7 +73,7 @@ export const GitHubPushModal: React.FC<GitHubPushModalProps> = ({ isOpen, onClos
           throw new Error("Repository URL is not set.");
       }
 
-      const commitUrl = await pushToRepo(finalRepoUrl, token, fileContent, filePath, commitMessage);
+      const commitUrl = await pushToRepo(finalRepoUrl, token, files, commitMessage);
       setStatus('success');
       setMessage(mode === 'new' ? 'Successfully created repository and pushed file!' : 'Successfully pushed to repository!');
       setSuccessUrl(commitUrl);

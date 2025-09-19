@@ -17,8 +17,8 @@ interface AppContextType {
   setIsTranslation: (isTranslation: boolean) => void;
   isCloning: boolean; // For website cloning
   setIsCloning: (isCloning: boolean) => void;
-  generatedCode: string;
-  setGeneratedCode: (code: string) => void;
+  files: { [path: string]: string } | null;
+  setFiles: (files: { [path: string]: string } | null) => void;
   generatedFlashcards: Flashcard[] | null;
   setGeneratedFlashcards: (flashcards: Flashcard[] | null) => void;
   isStudent: boolean;
@@ -47,7 +47,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [prompt, setPrompt] = useState('');
   const [isTranslation, setIsTranslation] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState('');
+  const [files, setFiles] = useState<{ [path: string]: string } | null>(null);
   const [generatedFlashcards, setGeneratedFlashcards] = useState<Flashcard[] | null>(null);
   const [isStudent, setIsStudentState] = useState(false);
   const [appMode, setAppMode] = useState<AppMode>('build');
@@ -177,7 +177,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const resetApp = () => {
     setPrompt('');
-    setGeneratedCode('');
+    setFiles(null);
     setGeneratedFlashcards(null);
     setIsTranslation(false);
     setIsCloning(false);
@@ -188,7 +188,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         prompt, setPrompt, 
         isTranslation, setIsTranslation,
         isCloning, setIsCloning,
-        generatedCode, setGeneratedCode, 
+        files, setFiles, 
         generatedFlashcards, setGeneratedFlashcards, 
         isStudent, setIsStudent, 
         resetApp, 

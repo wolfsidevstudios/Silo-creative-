@@ -1,4 +1,5 @@
 
+
 // A helper to parse owner/repo from URL
 const parseRepoUrl = (url: string): { owner: string; repo: string } | null => {
     try {
@@ -56,8 +57,7 @@ export const createRepo = async (
 export const pushToRepo = async (
     repoUrl: string,
     token: string,
-    fileContent: string,
-    filePath: string,
+    files: { [path: string]: string },
     commitMessage: string = 'feat: initial commit from Silo Create'
 ): Promise<string> => {
     
@@ -103,29 +103,24 @@ export const pushToRepo = async (
         }
     }
     
-    // 2. Create a blob for the file content
-    const blobData = await ghFetch(`/repos/${owner}/${repo}/git/blobs`, {
-        method: 'POST',
-        body: JSON.stringify({
-            content: fileContent,
-            encoding: 'utf-8',
-        }),
+    // 2. Create blobs for all file contents
+    const blobPromises = Object.entries(files).map(async ([path, content]) => {
+        const blobData = await ghFetch(`/repos/${owner}/${repo}/git/blobs`, {
+            method: 'POST',
+            body: JSON.stringify({ content, encoding: 'utf-8' }),
+        });
+        return { path, mode: '100644' as const, type: 'blob' as const, sha: blobData.sha };
     });
-    const blobSha = blobData.sha;
-
-    // 3. Create a new tree with the new file blob. To avoid deleting other files, we get the base tree.
+    const treeItems = await Promise.all(blobPromises);
+    
+    // 3. Create a new tree with the new file blobs. To avoid deleting other files, we get the base tree.
     const latestCommit = await ghFetch(`/repos/${owner}/${repo}/git/commits/${latestCommitSha}`);
     
     const treeData = await ghFetch(`/repos/${owner}/${repo}/git/trees`, {
         method: 'POST',
         body: JSON.stringify({
             base_tree: latestCommit.tree.sha,
-            tree: [{
-                path: filePath,
-                mode: '100644', // file
-                type: 'blob',
-                sha: blobSha,
-            }],
+            tree: treeItems,
         }),
     });
     const treeSha = treeData.sha;

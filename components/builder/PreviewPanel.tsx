@@ -2,12 +2,14 @@
 
 
 
+
+
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { generateDocumentation } from '../../services/geminiService';
-import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon, PhoneIcon, DesktopIcon, RefreshCwIcon, CodeBracketIcon, TerminalIcon, FileTextIcon, ChevronDownIcon, GitHubIcon, SearchIcon, XIcon, VercelIcon, PuzzleIcon } from '../common/Icons';
+import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon, PhoneIcon, DesktopIcon, RefreshCwIcon, CodeBracketIcon, TerminalIcon, FileTextIcon, ChevronDownIcon, GitHubIcon, SearchIcon, XIcon, VercelIcon, PuzzleIcon, ClockIcon, HtmlIcon, CssIcon, TsIcon, JsonIcon } from '../common/Icons';
 import VisualEditBar from './VisualEditBar';
-import { AgentTestAction } from '../pages/AppBuilderPage';
+import { AgentTestAction, Version } from '../pages/AppBuilderPage';
 import { GitHubPushModal } from './GitHubPushModal';
 import { VercelPushModal } from './VercelPushModal';
 import { IntegrationsModal } from './IntegrationsModal';
@@ -19,21 +21,107 @@ declare global {
     interface Window {
         QRCode: any;
         html2canvas: any;
+        JSZip: any;
     }
 }
 
-const CodeViewer: React.FC<{ code: string }> = ({ code }) => {
+const FileIcon: React.FC<{ filename: string }> = ({ filename }) => {
+    if (filename.endsWith('.html')) return <HtmlIcon className="w-5 h-5 text-orange-400" />;
+    if (filename.endsWith('.css')) return <CssIcon className="w-5 h-5 text-blue-400" />;
+    if (filename.endsWith('.js')) return <TsIcon className="w-5 h-5 text-yellow-400" />; // Using TS icon for JS
+    if (filename.endsWith('.json')) return <JsonIcon className="w-5 h-5 text-green-400" />;
+    if (filename.endsWith('.md')) return <FileTextIcon className="w-5 h-5 text-gray-400" />;
+    return <FileTextIcon className="w-5 h-5 text-gray-400" />;
+};
+
+const FileExplorer: React.FC<{ files: { [path: string]: string } }> = ({ files }) => {
+    const [selectedFile, setSelectedFile] = useState(Object.keys(files)[0] || null);
     const [isCopied, setIsCopied] = useState(false);
-    const handleCopy = () => { navigator.clipboard.writeText(code); setIsCopied(true); setTimeout(() => setIsCopied(false), 2000); };
+
+    const handleCopy = () => {
+        if (!selectedFile) return;
+        navigator.clipboard.writeText(files[selectedFile]);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
+    
+    const handleDownload = () => {
+        const zip = new window.JSZip();
+        Object.keys(files).forEach(filename => {
+            zip.file(filename, files[filename]);
+        });
+        zip.generateAsync({ type: "blob" }).then(function(content: any) {
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `project.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    };
+
     return (
-        <div className="relative w-full h-full bg-[#161B22] text-white font-mono text-sm overflow-auto rounded-lg">
-            <button onClick={handleCopy} className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md text-xs transition-colors">
-                {isCopied ? <><CheckIcon className="w-4 h-4 text-green-400" /><span>Copied!</span></> : <><ClipboardIcon className="w-4 h-4" /><span>Copy Code</span></>}
-            </button>
-            <pre className="p-4 pt-12"><code>{code}</code></pre>
+        <div className="flex w-full h-full bg-[#161B22] rounded-lg overflow-hidden">
+            <div className="w-48 bg-black/30 border-r border-white/10 p-2">
+                <h3 className="text-xs font-bold uppercase text-gray-500 px-2 mb-2">Files</h3>
+                {Object.keys(files).map(filename => (
+                    <button 
+                        key={filename} 
+                        onClick={() => setSelectedFile(filename)}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded ${selectedFile === filename ? 'bg-indigo-500/30 text-white' : 'text-gray-400 hover:bg-white/10'}`}
+                    >
+                        <FileIcon filename={filename} />
+                        <span className="truncate">{filename}</span>
+                    </button>
+                ))}
+                <button onClick={handleDownload} className="w-full mt-4 text-center px-3 py-1.5 border border-white/20 text-sm font-medium rounded-full text-gray-300 bg-white/10 hover:bg-white/20">
+                    Download .zip
+                </button>
+            </div>
+            <div className="relative flex-1 font-mono text-sm text-white overflow-auto">
+                {selectedFile && (
+                    <>
+                        <div className="sticky top-0 bg-[#161B22]/80 backdrop-blur-sm z-10 p-3 border-b border-white/10 flex justify-between items-center">
+                            <span className="text-gray-300">{selectedFile}</span>
+                             <button onClick={handleCopy} className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md text-xs transition-colors">
+                                {isCopied ? <><CheckIcon className="w-4 h-4 text-green-400" /><span>Copied!</span></> : <><ClipboardIcon className="w-4 h-4" /><span>Copy Code</span></>}
+                            </button>
+                        </div>
+                        <pre className="p-4"><code>{files[selectedFile]}</code></pre>
+                    </>
+                )}
+            </div>
         </div>
     );
 };
+
+const HistoryViewer: React.FC<{ history: Version[], onRevert: (version: Version) => void }> = ({ history, onRevert }) => {
+    if (history.length === 0) {
+        return <div className="flex items-center justify-center h-full text-gray-500">No version history yet. Refine the code to create versions.</div>;
+    }
+
+    return (
+        <div className="w-full h-full p-4 overflow-y-auto">
+            <h3 className="text-lg font-bold text-gray-200 mb-4">Version History</h3>
+            <ul className="space-y-3">
+                {history.slice().reverse().map((version, index) => (
+                    <li key={version.timestamp} className="bg-white/5 border border-white/10 rounded-lg p-3 flex items-center justify-between">
+                        <div>
+                            <p className="font-semibold text-gray-300">{`Version ${history.length - index}`}</p>
+                            <p className="text-sm text-gray-400">Refinement at {new Date(version.timestamp).toLocaleTimeString()}</p>
+                        </div>
+                        <button onClick={() => onRevert(version)} className="px-3 py-1.5 text-sm font-medium rounded-full bg-indigo-600 text-white hover:bg-indigo-700">
+                            Revert
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+
 
 const ConsoleViewer: React.FC = () => (
     <div className="w-full h-full bg-[#161B22] text-white font-mono text-sm p-4 rounded-lg flex flex-col">
@@ -78,27 +166,31 @@ const DocsModal: React.FC<{ isOpen: boolean, onClose: () => void, content: strin
 };
 
 interface PreviewPanelProps {
+  files: { [path: string]: string } | null;
   onVisualEditSubmit: (prompt: string) => void;
   onScreenshotTaken: (dataUrl: string) => void;
   isAgentTesting: boolean;
   agentTestAction: AgentTestAction | null;
   onTestComplete: () => void;
-  activePreviewMode: 'viewer' | 'editor' | 'console';
-  setActivePreviewMode: (mode: 'viewer' | 'editor' | 'console') => void;
+  activePreviewMode: 'viewer' | 'editor' | 'history' | 'console';
+  setActivePreviewMode: (mode: 'viewer' | 'editor' | 'history' | 'console') => void;
   onAnalyzeRequest: () => void;
   vercelProject: { id: string; name: string; url: string; } | null;
   onVercelDeploySuccess: (projectInfo: { id: string; name: string; url: string; }) => void;
   githubRepoUrl: string | null;
   onGitHubPushSuccess: (url: string) => void;
   status: GenerationStatus;
+  history: Version[];
+  onRevertToVersion: (version: Version) => void;
 }
 
 const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, PreviewPanelProps>(({ 
-    onVisualEditSubmit, onScreenshotTaken, onTestComplete,
+    files, onVisualEditSubmit, onScreenshotTaken, onTestComplete,
     activePreviewMode, setActivePreviewMode, onAnalyzeRequest,
-    vercelProject, onVercelDeploySuccess, githubRepoUrl, onGitHubPushSuccess, status
+    vercelProject, onVercelDeploySuccess, githubRepoUrl, onGitHubPushSuccess, status,
+    history, onRevertToVersion
 }, ref) => {
-    const { generatedCode, appMode, agents, selectedAgentId, selectedModel } = useAppContext();
+    const { appMode, agents, selectedAgentId, selectedModel } = useAppContext();
     const [deviceMode, setDeviceMode] = useState<'desktop' | 'mobile'>('desktop');
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [isVisualEditMode, setIsVisualEditMode] = useState(false);
@@ -167,13 +259,13 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
         let prompt = '';
         switch (integrationDetails) {
             case 'supabase':
-                prompt = `Integrate the Supabase v2 JavaScript client into the app. Add its CDN script to the head. Then, in the main script tag, add code to initialize the client with the URL '${details.url}' and the anon key '${details.anonKey}'. Also, add a simple example function that fetches and logs data from a 'products' table to the console when the page loads to demonstrate it's working.`;
+                prompt = `Integrate the Supabase v2 JavaScript client into the app. Add its CDN script to the head of index.html. Then, in script.js, add code to initialize the client with the URL '${details.url}' and the anon key '${details.anonKey}'. Also, add a simple example function that fetches and logs data from a 'products' table to the console when the page loads to demonstrate it's working.`;
                 break;
             case 'stripe':
-                prompt = `Integrate Stripe Payments. Add the Stripe.js v3 script to the head. In the main script tag, initialize a Stripe object using the publishable key '${details.publishableKey}'. In the body, add a 'Checkout' button. In the script, add an event listener to this button that, when clicked, redirects to a Stripe Checkout session. Use placeholder data for the checkout session for demonstration purposes. Ensure the code is vanilla JavaScript.`;
+                prompt = `Integrate Stripe Payments. Add the Stripe.js v3 script to the head of index.html. In script.js, initialize a Stripe object using the publishable key '${details.publishableKey}'. In the body of index.html, add a 'Checkout' button. In the script, add an event listener to this button that, when clicked, redirects to a Stripe Checkout session. Use placeholder data for the checkout session for demonstration purposes. Ensure the code is vanilla JavaScript.`;
                 break;
             case 'gemini':
-                prompt = `Integrate the Google Gemini API for in-app AI features. Add a new section to the UI with an input field for a user to enter their Gemini API key, a textarea for a prompt, a 'Generate' button, and a preformatted block to display the result. In the main script tag, add an event listener to the button. When clicked, it should take the key and prompt from the inputs, make a direct fetch call to the Google AI Generative Language API v1beta endpoint for 'gemini-2.5-flash:generateContent', and display the text response in the result block. Handle loading and error states.`;
+                prompt = `Integrate the Google Gemini API for in-app AI features. Add a new section to the UI in index.html with an input field for a user to enter their Gemini API key, a textarea for a prompt, a 'Generate' button, and a preformatted block to display the result. In script.js, add an event listener to the button. When clicked, it should take the key and prompt from the inputs, make a direct fetch call to the Google AI Generative Language API v1beta endpoint for 'gemini-2.5-flash:generateContent', and display the text response in the result block. Handle loading and error states. Style it appropriately in style.css.`;
                 break;
         }
 
@@ -184,7 +276,19 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
     };
 
 
-    const getSrcDoc = () => !generatedCode ? '' : generatedCode;
+    const getSrcDoc = () => {
+        if (!files) return '';
+        const html = files['index.html'] || '';
+        const css = files['style.css'] || '';
+        const js = files['script.js'] || '';
+    
+        if (!html) return '';
+    
+        // Inject CSS and JS into the HTML for preview
+        return html
+            .replace('</head>', `<style>${css}</style></head>`)
+            .replace('</body>', `<script>${js}</script></body>`);
+    };
 
     const handleIframeLoad = () => {
         if (!iframeRef.current?.contentDocument?.body.innerHTML.trim()) return;
@@ -192,17 +296,18 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
     };
 
     const handleOpenInNewTab = () => {
-        if (!generatedCode) return;
-        const blob = new Blob([generatedCode], { type: 'text/html' });
+        if (!files || !files['index.html']) return;
+        const blob = new Blob([getSrcDoc()], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
     };
     
     const handleGenerateDocs = async () => {
-        if (!generatedCode || isGeneratingDocs) return;
+        const code = files ? Object.values(files).join('\n\n--- FILE ---\n\n') : '';
+        if (!code || isGeneratingDocs) return;
         setIsGeneratingDocs(true);
         try {
-            const docs = await generateDocumentation(generatedCode, selectedModel, selectedAgent?.systemInstruction);
+            const docs = await generateDocumentation(code, selectedModel, selectedAgent?.systemInstruction);
             setDocumentation(docs);
             setIsDocsModalOpen(true);
         } catch (error) {
@@ -212,17 +317,22 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
         }
     };
 
-    const canDeploy = ['build', 'form', 'document', 'component'].includes(appMode);
+    const canDeploy = ['build', 'form', 'document', 'component', 'multifile', 'fullstack'].includes(appMode);
 
     const renderContent = () => {
-        if (isLoading && !generatedCode) {
+        if (isLoading && !files) {
             return <GenerationLoader status={status} />;
         }
-        if (!generatedCode) return <div className="flex items-center justify-center h-full text-gray-500">Preview will appear here...</div>;
+        if (!files || Object.keys(files).length === 0) return <div className="flex items-center justify-center h-full text-gray-500">Preview will appear here...</div>;
+
         switch (activePreviewMode) {
-            case 'editor': return <CodeViewer code={generatedCode} />;
+            case 'editor': return <FileExplorer files={files} />;
+            case 'history': return <HistoryViewer history={history} onRevert={onRevertToVersion} />;
             case 'console': return <ConsoleViewer />;
             default:
+                if (appMode === 'native') {
+                     return <div className="p-4 h-full"><FileExplorer files={files} /></div>;
+                }
                 const FrameComponent = deviceMode === 'desktop' ? DesktopFrame : MobileFrame;
                 return (
                     <div className="w-full h-full flex items-center justify-center p-4">
@@ -236,14 +346,14 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
     
     return (
         <div className="relative flex flex-col h-full w-full text-white">
-            {isLoading && generatedCode && (
+            {isLoading && files && (
                 <div className="absolute inset-0 z-10 bg-black/50 backdrop-blur-sm">
                     <GenerationLoader status={status} />
                 </div>
             )}
             <div className="flex-1 overflow-hidden">{renderContent()}</div>
             
-            {generatedCode && (
+            {files && Object.keys(files).length > 0 && (
                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
                     <div className="flex items-center gap-1 bg-black/30 backdrop-blur-lg rounded-full shadow-2xl border border-white/10 p-1.5 text-gray-200">
                         {/* Left Side */}
@@ -258,7 +368,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
                         <div className="w-px h-6 bg-white/10 mx-1"></div>
                         
                         {/* Middle Controls */}
-                        {activePreviewMode === 'viewer' && (
+                        {activePreviewMode === 'viewer' && appMode !== 'native' && (
                             <>
                                 <button onClick={() => setIsVisualEditMode(p => !p)} className={`p-2.5 rounded-full transition-colors ${isVisualEditMode ? 'bg-indigo-500 text-white' : 'hover:bg-white/10'}`} aria-label="Toggle visual edit mode"><MousePointerClickIcon className="w-5 h-5" /></button>
                                 <div className="flex items-center bg-black/20 rounded-full p-0.5 ml-1">
@@ -269,11 +379,12 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
                         )}
                          <div className="relative group ml-1">
                             <button className="flex items-center gap-2 px-4 py-2.5 rounded-full hover:bg-white/10 text-sm font-medium transition-colors">
-                                <span>Viewer</span><ChevronDownIcon className="w-4 h-4 opacity-50"/>
+                                <span>{activePreviewMode.charAt(0).toUpperCase() + activePreviewMode.slice(1)}</span><ChevronDownIcon className="w-4 h-4 opacity-50"/>
                             </button>
                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-gray-900/80 backdrop-blur-lg border border-white/10 rounded-xl shadow-lg hidden group-hover:block z-10 text-sm p-2">
                                 <button onClick={() => setActivePreviewMode('editor')} className={`w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-md ${activePreviewMode === 'editor' && 'text-indigo-400'}`}><CodeBracketIcon className="w-5 h-5"/>Editor</button>
                                 <button onClick={() => setActivePreviewMode('viewer')} className={`w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-md ${activePreviewMode === 'viewer' && 'text-indigo-400'}`}><DesktopIcon className="w-5 h-5"/>App Viewer</button>
+                                <button onClick={() => setActivePreviewMode('history')} className={`w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-md ${activePreviewMode === 'history' && 'text-indigo-400'}`}><ClockIcon className="w-5 h-5"/>History</button>
                                 <button onClick={() => setActivePreviewMode('console')} className={`w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-md ${activePreviewMode === 'console' && 'text-indigo-400'}`}><TerminalIcon className="w-5 h-5"/>Console</button>
                             </div>
                         </div>
@@ -289,8 +400,8 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
                 </div>
             )}
              {visualEditBarState?.isVisible && <VisualEditBar position={visualEditBarState} onSubmit={(prompt) => { onVisualEditSubmit(prompt); setVisualEditBarState(null); setIsVisualEditMode(false); }} onClose={() => { setVisualEditBarState(null); setIsVisualEditMode(false); }} />}
-             <GitHubPushModal isOpen={isGitHubModalOpen} onClose={() => setIsGitHubModalOpen(false)} fileContent={generatedCode} filePath={appMode === 'native' ? 'App.js' : 'index.html'} repoUrl={githubRepoUrl} onPushSuccess={onGitHubPushSuccess} />
-             <VercelPushModal isOpen={isVercelModalOpen} onClose={() => setIsVercelModalOpen(false)} fileContent={generatedCode} filePath={appMode === 'native' ? 'App.js' : 'index.html'} project={vercelProject} onDeploySuccess={onVercelDeploySuccess} />
+             {files && <GitHubPushModal isOpen={isGitHubModalOpen} onClose={() => setIsGitHubModalOpen(false)} files={files} repoUrl={githubRepoUrl} onPushSuccess={onGitHubPushSuccess} />}
+             {files && <VercelPushModal isOpen={isVercelModalOpen} onClose={() => setIsVercelModalOpen(false)} files={files} project={vercelProject} onDeploySuccess={onVercelDeploySuccess} />}
              <DocsModal isOpen={isDocsModalOpen} onClose={() => setIsDocsModalOpen(false)} content={documentation} />
              <IntegrationsModal isOpen={isIntegrationsModalOpen} onClose={() => setIsIntegrationsModalOpen(false)} onSelectIntegration={handleSelectIntegration} />
              {integrationDetails && (

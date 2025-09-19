@@ -1,5 +1,6 @@
 
-export type AppMode = 'build' | 'study' | 'form' | 'native' | 'document' | 'component';
+
+export type AppMode = 'build' | 'study' | 'form' | 'native' | 'document' | 'component' | 'multifile' | 'fullstack';
 export type ModelID = 'gemini-2.5-flash' | 'qwen/qwen3-coder:free';
 export type IntegrationType = 'supabase' | 'stripe' | 'gemini';
 export type GenerationStatus = 'idle' | 'planning' | 'generating' | 'reviewing' | 'testing' | 'finished';
@@ -8,7 +9,7 @@ export interface Message {
   role: 'user' | 'model' | 'assistant';
   content: string;
   isPlan?: boolean;
-  planType?: 'app' | 'form' | 'document' | 'component';
+  planType?: 'app' | 'form' | 'document' | 'component' | 'multifile' | 'fullstack';
   isChangeSummary?: boolean;
   imageUrl?: string; // For screenshots
   isAgentActivity?: boolean; // For status messages
@@ -19,6 +20,7 @@ export interface AppPlan {
     title: string;
     description: string;
     features: string[];
+    files?: string[];
 }
 
 export interface ComponentPlan {
@@ -40,7 +42,7 @@ export interface DocumentPlan {
 }
 
 export interface RefinementResult {
-  code: string;
+  files: { [path: string]: string };
   summary: string;
   files_edited: string[];
 }
@@ -78,7 +80,7 @@ export interface StoredApp {
     id: string;
     title: string;
     appMode: AppMode;
-    content: string;
+    content: string | { [path: string]: string }; // Updated to support multi-file
     timestamp: number;
 }
 
