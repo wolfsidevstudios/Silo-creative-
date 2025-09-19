@@ -204,7 +204,8 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
     setInput('');
     try {
       const agentInstruction = selectedAgent?.systemInstruction;
-      const result: RefinementResult = await refineFiles(files, refinementPrompt, selectedModel, agentInstruction);
+      // FIX: Added appMode to the refineFiles call
+      const result: RefinementResult = await refineFiles(files, refinementPrompt, selectedModel, agentInstruction, appMode);
       
       setFiles(result.files, result.summary);
       

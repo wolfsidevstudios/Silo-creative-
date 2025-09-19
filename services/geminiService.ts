@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import { AppPlan, Flashcard, FormPlan, DocumentPlan, RefinementResult, ModelID, ComponentPlan, UiUxAnalysis } from '../types';
+import { AppPlan, Flashcard, FormPlan, DocumentPlan, RefinementResult, ModelID, ComponentPlan, UiUxAnalysis, AppMode } from '../types';
 import { getApiKey, getOpenRouterApiKey } from './apiKeyService';
 
 const combineInstructions = (agentInstruction: string | undefined, taskInstruction: string): string => {
@@ -649,6 +649,174 @@ ${propsString}
     }
 };
 
+// FIX: Add generateMultiFileAppCode
+export const generateMultiFileAppCode = async (plan: AppPlan, model: ModelID, agentSystemInstruction?: string): Promise<{ [path: string]: string }> => {
+    console.log(`Generating multi-file code for app: "${plan.title}" with model ${model}`);
+    
+    const featuresString = plan.features.map(f => `- ${f}`).join('\n');
+    const taskPrompt = `
+You are an expert web developer creating modern, multi-file web applications.
+Based on the following plan, generate a set of files (HTML, CSS, JavaScript).
+
+**Application Plan:**
+- **Title:** ${plan.title}
+- **Description:** ${plan.description}
+- **Features:**
+${featuresString}
+
+**CRITICAL REQUIREMENTS:**
+1.  **File Structure:** Create separate files for HTML (\`index.html\`), CSS (\`style.css\`), and JavaScript (\`script.js\`).
+2.  **HTML:** The \`index.html\` should link to the CSS and JS files correctly (\`<link rel="stylesheet" href="style.css">\` and \`<script src="script.js" defer></script>\`).
+3.  **CSS:** Use modern CSS for styling in \`style.css\`. You can use flexbox, grid, and custom properties for a clean and responsive design. Do not use Tailwind CSS classes in the HTML.
+4.  **JavaScript:** Use vanilla JavaScript (ES6+) in \`script.js\` for all application logic. The code should be clean, commented, and well-organized.
+5.  **Functionality:** The final app must be fully functional, implementing all features from the plan.
+6.  **Return JSON:** You MUST respond with a single JSON object where keys are the file paths and values are the file content as strings.
+    Example:
+    {
+      "index.html": "<!DOCTYPE html>...",
+      "style.css": "body { ... }",
+      "script.js": "document.addEventListener..."
+    }
+`;
+    const systemInstruction = agentSystemInstruction || '';
+    try {
+        let resultJson: string;
+        if (model.startsWith('gemini')) {
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    'index.html': { type: Type.STRING },
+                    'style.css': { type: Type.STRING },
+                    'script.js': { type: Type.STRING },
+                },
+                required: ['index.html', 'style.css', 'script.js'],
+            };
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: taskPrompt,
+                config: {
+                    ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                },
+            });
+            resultJson = response.text.trim();
+        } else {
+            resultJson = await callOpenRouter(model, systemInstruction, taskPrompt);
+        }
+        return JSON.parse(cleanJsonString(resultJson));
+    } catch (error) {
+        console.error(`Error generating multi-file code with ${model}:`, error);
+        throw new Error("Failed to generate multi-file application code.");
+    }
+};
+
+// FIX: Add generateFullStackAppCode
+export const generateFullStackAppCode = async (plan: AppPlan, model: ModelID, agentSystemInstruction?: string): Promise<{ [path: string]: string }> => {
+    console.log(`Generating full-stack code for app: "${plan.title}" with model ${model}`);
+
+    const featuresString = plan.features.map(f => `- ${f}`).join('\n');
+    const taskPrompt = `
+You are an expert full-stack developer creating a simple project with a vanilla HTML/CSS/JS frontend and a Node.js/Express backend.
+Based on the plan, generate a set of files for the project.
+
+**Application Plan:**
+- **Title:** ${plan.title}
+- **Description:** ${plan.description}
+- **Features:**
+${featuresString}
+
+**CRITICAL REQUIREMENTS:**
+1.  **File Structure:**
+    - \`package.json\`: Basic config with 'express' as a dependency and a 'start' script.
+    - \`server.js\`: A simple Express server. It should serve static files from a 'public' directory and include at least one API endpoint (e.g., \`/api/data\`).
+    - \`public/index.html\`: The main frontend file.
+    - \`public/style.css\`: The frontend stylesheet.
+    - \`public/script.js\`: The frontend JavaScript, which should include a \`fetch\` call to the backend API endpoint.
+2.  **Backend:** The \`server.js\` file should be well-commented and create a functional Express server.
+3.  **Frontend:** The frontend files should constitute a complete, working user interface that interacts with the backend.
+4.  **Return JSON:** You MUST respond with a single JSON object where keys are the full file paths and values are the file content as strings.
+    Example:
+    {
+      "package.json": "{...}",
+      "server.js": "const express = require('express'); ...",
+      "public/index.html": "<!DOCTYPE html>...",
+      "public/style.css": "body { ... }",
+      "public/script.js": "fetch('/api/data')..."
+    }
+`;
+    const systemInstruction = agentSystemInstruction || '';
+    try {
+        let resultJson: string;
+        if (model.startsWith('gemini')) {
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    'package.json': { type: Type.STRING },
+                    'server.js': { type: Type.STRING },
+                    'public/index.html': { type: Type.STRING },
+                    'public/style.css': { type: Type.STRING },
+                    'public/script.js': { type: Type.STRING },
+                },
+                required: ['package.json', 'server.js', 'public/index.html', 'public/style.css', 'public/script.js'],
+            };
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: taskPrompt,
+                config: {
+                    ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                },
+            });
+            resultJson = response.text.trim();
+        } else {
+            resultJson = await callOpenRouter(model, systemInstruction, taskPrompt);
+        }
+        return JSON.parse(cleanJsonString(resultJson));
+    } catch (error) {
+        console.error(`Error generating full-stack code with ${model}:`, error);
+        throw new Error("Failed to generate full-stack application code.");
+    }
+};
+
+// FIX: Add generateProject
+export const generateProject = async (
+    plan: AppPlan | FormPlan | DocumentPlan | ComponentPlan,
+    appMode: AppMode,
+    model: ModelID,
+    agentSystemInstruction?: string
+): Promise<{ [path: string]: string }> => {
+    let code: string;
+    let fileName = 'index.html';
+
+    switch (appMode) {
+        case 'build':
+            code = await generateAppCode(plan as AppPlan, model, agentSystemInstruction);
+            return { [fileName]: code };
+        case 'native':
+            code = await generateNativeAppCode(plan as AppPlan, model, agentSystemInstruction);
+            fileName = 'App.js';
+            return { [fileName]: code };
+        case 'form':
+            code = await generateFormCode(plan as FormPlan, model, agentSystemInstruction);
+            return { [fileName]: code };
+        case 'document':
+            code = await generateDocumentCode(plan as DocumentPlan, model, agentSystemInstruction);
+            return { [fileName]: code };
+        case 'component':
+            code = await generateComponentCode(plan as ComponentPlan, model, agentSystemInstruction);
+            return { [fileName]: code };
+        case 'multifile':
+            return await generateMultiFileAppCode(plan as AppPlan, model, agentSystemInstruction);
+        case 'fullstack':
+            return await generateFullStackAppCode(plan as AppPlan, model, agentSystemInstruction);
+        default:
+            throw new Error(`Code generation for appMode "${appMode}" is not supported.`);
+    }
+};
 
 export const refineAppCode = async (existingCode: string, prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<RefinementResult> => {
   console.log(`Refining code with prompt: "${prompt}" using model ${model}`);
@@ -704,6 +872,7 @@ export const refineAppCode = async (existingCode: string, prompt: string, model:
         } else {
             resultJson = await callOpenRouter(model, systemInstruction, taskPrompt);
         }
+        // @ts-ignore
         return JSON.parse(cleanJsonString(resultJson));
     } catch (error) {
         console.error(`Error refining code with ${model}:`, error);
@@ -758,6 +927,7 @@ You MUST respond with a single JSON object.
                 responseSchema: schema,
             },
         });
+        // @ts-ignore
         return JSON.parse(response.text.trim());
     } catch (error) {
         console.error("Error during self-correction:", error);
@@ -814,12 +984,146 @@ export const refineNativeAppCode = async (existingCode: string, prompt: string, 
         } else {
             resultJson = await callOpenRouter(model, systemInstruction, taskPrompt);
         }
+        // @ts-ignore
         return JSON.parse(cleanJsonString(resultJson));
     } catch (error) {
         console.error(`Error refining native code with ${model}:`, error);
         throw new Error("Failed to refine the application code.");
     }
 };
+
+// FIX: Add refineMultiFileCode
+export const refineMultiFileCode = async (files: { [path: string]: string }, prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<RefinementResult> => {
+    console.log(`Refining multi-file code with prompt: "${prompt}" using model ${model}`);
+    const filesString = Object.entries(files).map(([path, content]) => `
+--- FILE: ${path} ---
+\`\`\`
+${content}
+\`\`\`
+`).join('\n');
+
+    const taskPrompt = `
+You are an expert web developer tasked with modifying an existing multi-file web application.
+The user will provide a change request and the full content of all relevant files.
+
+**User's Change Request:**
+"${prompt}"
+
+**Existing Application Files:**
+${filesString}
+
+**CRITICAL INSTRUCTIONS:**
+1.  **Analyze and Apply:** Carefully analyze all provided files and the user's request. Modify one or more files to implement the change.
+2.  **Return All Files:** You MUST return the complete and updated content for ALL original files, even those you did not change.
+3.  **Summarize:** Provide a brief, user-friendly summary of the changes you made and list the file paths of the files you edited.
+4.  **Return JSON:** You MUST respond with a single JSON object with the following structure:
+    {
+      "files": {
+        "path/to/file1.html": "...",
+        "path/to/file2.css": "...",
+        "path/to/file3.js": "..."
+      },
+      "summary": "A friendly summary of the changes you made.",
+      "files_edited": ["path/to/file2.css", "path/to/file3.js"]
+    }
+5.  **Maintain Structure:** Preserve the original file structure. Do not add or remove files unless specifically requested.
+6.  **Preserve Functionality:** Ensure existing functionality remains intact unless the user explicitly asks to change or remove it.
+`;
+    const systemInstruction = agentSystemInstruction || '';
+
+    try {
+        let resultJson: string;
+        if (model.startsWith('gemini')) {
+            const ai = new GoogleGenAI({ apiKey: getApiKey() });
+            const schema = {
+                type: Type.OBJECT,
+                properties: {
+                    files: {
+                        type: Type.OBJECT,
+                        additionalProperties: { type: Type.STRING },
+                    },
+                    summary: { type: Type.STRING },
+                    files_edited: {
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING }
+                    }
+                },
+                required: ['files', 'summary', 'files_edited'],
+            };
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: taskPrompt,
+                config: {
+                    ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                },
+            });
+            resultJson = response.text.trim();
+        } else {
+            resultJson = await callOpenRouter(model, systemInstruction, taskPrompt);
+        }
+        return JSON.parse(cleanJsonString(resultJson));
+    } catch (error) {
+        console.error(`Error refining multi-file code with ${model}:`, error);
+        throw new Error("Failed to refine the application code.");
+    }
+};
+
+// FIX: Add refineFiles
+export const refineFiles = async (
+    files: { [path: string]: string },
+    prompt: string,
+    model: ModelID,
+    agentSystemInstruction: string | undefined,
+    appMode: AppMode
+): Promise<RefinementResult> => {
+    if (appMode === 'native') {
+        const result: any = await refineNativeAppCode(files['App.js'] || '', prompt, model, agentSystemInstruction);
+        return {
+            files: { 'App.js': result.code },
+            summary: result.summary,
+            files_edited: result.files_edited
+        };
+    }
+    
+    if (['build', 'form', 'document', 'component'].includes(appMode)) {
+        // These are single-file web apps
+        const result: any = await refineAppCode(files['index.html'] || '', prompt, model, agentSystemInstruction);
+        return {
+            files: { 'index.html': result.code },
+            summary: result.summary,
+            files_edited: result.files_edited
+        };
+    }
+    
+    if (['multifile', 'fullstack'].includes(appMode)) {
+        return await refineMultiFileCode(files, prompt, model, agentSystemInstruction);
+    }
+
+    // Fallback or error for unsupported modes
+    throw new Error(`Refinement for appMode "${appMode}" is not supported.`);
+};
+
+// FIX: Add wrapSimpleCodeCall
+export const wrapSimpleCodeCall = (
+    isTranslation: boolean,
+    isCloning: boolean,
+    prompt: string,
+    model: ModelID,
+    agentSystemInstruction?: string
+): Promise<{ [path: string]: string }> | null => {
+    if (isTranslation) {
+        return translateCodeToWebApp(prompt, model, agentSystemInstruction)
+            .then(code => ({ 'index.html': code }));
+    }
+    if (isCloning) {
+        return cloneWebsite(prompt, model, agentSystemInstruction)
+            .then(code => ({ 'index.html': code }));
+    }
+    return null;
+};
+
 
 export const translateCodeToWebApp = async (sourceCode: string, model: ModelID, agentSystemInstruction?: string): Promise<string> => {
     console.log(`Translating code to web app with model ${model}`);
