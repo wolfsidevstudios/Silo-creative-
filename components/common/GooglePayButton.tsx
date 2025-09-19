@@ -56,8 +56,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({ totalPrice, onPayment
                 
                 const merchantInfo = {
                   merchantId: 'BCR2DN7T5DR3JGA7', // Using Google's test merchant ID
-                  merchantName: 'Rocio Ramirez Store
-',
+                  merchantName: 'Rocio Ramirez Store',
                 };
 
                 const paymentDataRequest = {
