@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { generateDocumentation } from '../../services/geminiService';
-import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon, PhoneIcon, DesktopIcon, RefreshCwIcon, CodeBracketIcon, TerminalIcon, FileTextIcon, ChevronDownIcon, GitHubIcon, SearchIcon, XIcon, VercelIcon, PuzzleIcon, ClockIcon, HtmlIcon, CssIcon, TsIcon, JsonIcon, ReactIcon, ViteIcon } from '../common/Icons';
+import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon, PhoneIcon, DesktopIcon, RefreshCwIcon, CodeBracketIcon, TerminalIcon, FileTextIcon, ChevronDownIcon, GitHubIcon, SearchIcon, XIcon, VercelIcon, PuzzleIcon, ClockIcon, HtmlIcon, CssIcon, TsIcon, JsonIcon, ReactIcon, ViteIcon, BrainCircuitIcon } from '../common/Icons';
 import VisualEditBar from './VisualEditBar';
 import { AgentTestAction, Version } from '../pages/AppBuilderPage';
 import { GitHubPushModal } from './GitHubPushModal';
 import { VercelPushModal } from './VercelPushModal';
 import { IntegrationsModal } from './IntegrationsModal';
 import { IntegrationDetailsModal } from './IntegrationDetailsModal';
-import { IntegrationType, GenerationStatus } from '../../types';
+import { IntegrationType, GenerationStatus, ConsoleMessage } from '../../types';
 import GenerationLoader from './GenerationLoader';
 
 declare global {
@@ -149,15 +149,31 @@ const HistoryViewer: React.FC<{ history: Version[], onRevert: (version: Version)
 };
 
 
-const ConsoleViewer: React.FC = () => (
-    <div className="w-full h-full bg-[#161B22] text-white font-mono text-sm p-4 rounded-lg flex flex-col">
-        <div className="flex-shrink-0 flex gap-4 border-b border-gray-700 mb-4">
-            <button className="py-2 border-b-2 border-white text-white">Console</button>
-            <button className="py-2 border-b-2 border-transparent text-gray-400">0 Errors</button>
-            <button className="py-2 border-b-2 border-transparent text-gray-400">1 Info</button>
+const ConsoleViewer: React.FC<{ messages: ConsoleMessage[], onDebug: (error: ConsoleMessage) => void, onClear: () => void }> = ({ messages, onDebug, onClear }) => (
+    <div className="w-full h-full bg-[#161B22] text-white font-mono text-sm rounded-lg flex flex-col">
+        <div className="flex-shrink-0 flex justify-between items-center gap-4 border-b border-gray-700 p-2">
+            <p className="px-2 text-xs font-semibold text-gray-400">Console</p>
+            <button onClick={onClear} className="text-xs text-gray-500 hover:text-gray-300">Clear</button>
         </div>
-        <div className="flex-1 text-gray-500 flex items-center justify-center">
-            <p>No logs at the moment.</p>
+        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+            {messages.length === 0 ? (
+                <p className="text-gray-600">No logs yet...</p>
+            ) : (
+                messages.map((msg, index) => (
+                    <div key={index} className={`flex items-start gap-2 p-1 rounded ${msg.type === 'error' ? 'bg-red-500/10 text-red-300' : 'text-gray-300'}`}>
+                        <span className="text-gray-600 mt-0.5">&gt;</span>
+                        <div className="flex-1">
+                            <pre className="whitespace-pre-wrap break-words">{msg.content.map(c => typeof c === 'object' ? JSON.stringify(c, null, 2) : String(c)).join(' ')}</pre>
+                             {msg.type === 'error' && (
+                                <button onClick={() => onDebug(msg)} className="mt-2 flex items-center gap-2 px-2 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-semibold rounded-full">
+                                    <BrainCircuitIcon className="w-4 h-4" />
+                                    Debug with AI
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                ))
+            )}
         </div>
     </div>
 );
@@ -202,6 +218,7 @@ interface PreviewPanelProps {
   activePreviewMode: 'viewer' | 'editor' | 'history' | 'console';
   setActivePreviewMode: (mode: 'viewer' | 'editor' | 'history' | 'console') => void;
   onAnalyzeRequest: () => void;
+  onDebugError: (error: ConsoleMessage, files: { [path: string]: string }) => void;
   vercelProject: { id: string; name: string; url: string; } | null;
   onVercelDeploySuccess: (projectInfo: { id: string; name: string; url: string; }) => void;
   githubRepoUrl: string | null;
@@ -213,7 +230,7 @@ interface PreviewPanelProps {
 
 const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, PreviewPanelProps>(({ 
     files, onFileContentChange, onVisualEditSubmit, onScreenshotTaken, onTestComplete,
-    activePreviewMode, setActivePreviewMode, onAnalyzeRequest,
+    activePreviewMode, setActivePreviewMode, onAnalyzeRequest, onDebugError,
     vercelProject, onVercelDeploySuccess, githubRepoUrl, onGitHubPushSuccess, status,
     history, onRevertToVersion
 }, ref) => {
@@ -229,6 +246,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
     const [isGeneratingDocs, setIsGeneratingDocs] = useState(false);
     const [isIntegrationsModalOpen, setIsIntegrationsModalOpen] = useState(false);
     const [integrationDetails, setIntegrationDetails] = useState<IntegrationType | null>(null);
+    const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
     const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
     
     const isLoading = ['planning', 'generating', 'reviewing', 'testing'].includes(status);
@@ -249,6 +267,28 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
     };
 
     useImperativeHandle(ref, () => ({ takeScreenshot }));
+    
+    useEffect(() => {
+        const handleConsoleMessage = (event: MessageEvent) => {
+            if (event.source !== iframeRef.current?.contentWindow) return;
+            const { type, content } = event.data;
+            if (type === 'log' || type === 'error' || type === 'warn') {
+                setConsoleMessages(prev => [...prev, { type, content }]);
+                if(type === 'error' && activePreviewMode !== 'console') {
+                    setActivePreviewMode('console');
+                }
+            }
+        };
+        window.addEventListener('message', handleConsoleMessage);
+        return () => window.removeEventListener('message', handleConsoleMessage);
+    }, [activePreviewMode, setActivePreviewMode]);
+
+    useEffect(() => {
+        if (!files) return;
+        setConsoleMessages([]); // Clear console on new code
+        updateIframeContent();
+    }, [files]);
+
 
     useEffect(() => {
         const iframe = iframeRef.current;
@@ -302,39 +342,74 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
         setIntegrationDetails(null); // Close the details modal
     };
 
-
-    const getSrcDoc = () => {
+    const getIframeSrcDoc = () => {
         if (!files) return '';
         if (appMode === 'native' || appMode === 'project') return '';
 
-        let html = files['index.html'] || '';
+        let html = files['index.html'] || '<html><head></head><body></body></html>';
         const css = files['style.css'] || '';
         const js = files['script.js'] || '';
     
-        if (!html) return '';
+        const consoleLoggerScript = `
+            <script>
+                const originalConsoleLog = console.log;
+                const originalConsoleError = console.error;
+                const originalConsoleWarn = console.warn;
+                console.log = (...args) => {
+                    window.parent.postMessage({ type: 'log', content: args }, '*');
+                    originalConsoleLog.apply(console, args);
+                };
+                console.error = (...args) => {
+                    window.parent.postMessage({ type: 'error', content: args }, '*');
+                    originalConsoleError.apply(console, args);
+                };
+                console.warn = (...args) => {
+                    window.parent.postMessage({ type: 'warn', content: args }, '*');
+                    originalConsoleWarn.apply(console, args);
+                };
+                window.onerror = (message, source, lineno, colno, error) => {
+                    window.parent.postMessage({ type: 'error', content: [message, 'at', source + ':' + lineno + ':' + colno] }, '*');
+                };
+            </script>
+        `;
+        
+        html = html.replace('</head>', `${consoleLoggerScript}</head>`);
 
         if (css) {
              html = html.replace('<style></style>', `<style>${css}</style>`);
         }
     
         if(js) {
-            html = html.replace('</body>', `<script>${js}</script></body>`);
+            html = html.replace('</body>', `<script type="module">${js}</script></body>`);
         }
 
         return html;
     };
+    
+    const updateIframeContent = () => {
+        const iframe = iframeRef.current;
+        if (!iframe) return;
 
-    const handleIframeLoad = () => {
-        if (status !== 'generating' && status !== 'planning' ) return;
-        if (!iframeRef.current?.contentDocument?.body.innerHTML.trim()) return;
-        takeScreenshot().then(onScreenshotTaken).catch(err => console.error("Initial screenshot failed:", err));
+        const html = getIframeSrcDoc();
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        
+        iframe.src = url;
+
+        iframe.onload = () => {
+            URL.revokeObjectURL(url); // Clean up the blob URL
+            if (status === 'generating' || status === 'planning' ) {
+                takeScreenshot().then(onScreenshotTaken).catch(err => console.error("Initial screenshot failed:", err));
+            }
+        };
     };
 
     const handleOpenInNewTab = () => {
-        if (!files || !files['index.html']) return;
-        const blob = new Blob([getSrcDoc()], { type: 'text/html' });
+        if (!files) return;
+        const blob = new Blob([getIframeSrcDoc()], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
+        URL.revokeObjectURL(url);
     };
     
     const handleGenerateDocs = async () => {
@@ -350,6 +425,11 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
         } finally {
             setIsGeneratingDocs(false);
         }
+    };
+    
+    const handleDebug = (error: ConsoleMessage) => {
+        if (!files) return;
+        onDebugError(error, files);
     };
 
     const canDeploy = ['build', 'form', 'document', 'component', 'multifile', 'fullstack'].includes(appMode);
@@ -380,7 +460,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
         switch (activePreviewMode) {
             case 'editor': return <FileExplorer files={files} onFileContentChange={onFileContentChange} />;
             case 'history': return <HistoryViewer history={history} onRevert={onRevertToVersion} />;
-            case 'console': return <ConsoleViewer />;
+            case 'console': return <ConsoleViewer messages={consoleMessages} onDebug={handleDebug} onClear={() => setConsoleMessages([])}/>;
             default:
                 if (appMode === 'native') {
                      return <div className="p-4 h-full"><FileExplorer files={files} onFileContentChange={onFileContentChange} /></div>;
@@ -389,7 +469,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
                 return (
                     <div className="w-full h-full flex items-center justify-center p-4">
                         <FrameComponent>
-                             <iframe ref={iframeRef} srcDoc={getSrcDoc()} onLoad={handleIframeLoad} title="App Preview" className="w-full h-full border-0" sandbox="allow-scripts allow-forms allow-same-origin" />
+                             <iframe ref={iframeRef} title="App Preview" className="w-full h-full border-0" sandbox="allow-scripts allow-forms allow-same-origin" />
                         </FrameComponent>
                     </div>
                 );

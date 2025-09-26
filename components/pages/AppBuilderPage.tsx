@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import ChatPanel, { ChatPanelRef } from '../builder/ChatPanel';
 import PreviewPanel from '../builder/PreviewPanel';
 import { useAppContext } from '../../context/AppContext';
-import { GenerationStatus, Message, AppMode } from '../../types';
+import { GenerationStatus, Message, AppMode, ConsoleMessage } from '../../types';
 
 export interface Version {
   files: { [path: string]: string };
@@ -75,6 +75,10 @@ const AppBuilderPage: React.FC = () => {
     }
   };
 
+  const handleDebugError = (error: ConsoleMessage, codeFiles: { [path: string]: string }) => {
+    chatPanelRef.current?.debugError(error, codeFiles);
+  };
+
   const handleStartAgentTest = (action: AgentTestAction) => {
     setIsAgentTesting(true);
     setAgentTestAction(action);
@@ -124,6 +128,7 @@ const AppBuilderPage: React.FC = () => {
             activePreviewMode={activePreviewMode}
             setActivePreviewMode={setActivePreviewMode}
             onAnalyzeRequest={handleAnalyzeRequest}
+            onDebugError={handleDebugError}
             vercelProject={vercelProject}
             onVercelDeploySuccess={handleVercelDeploySuccess}
             githubRepoUrl={githubRepoUrl}

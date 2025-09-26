@@ -9,11 +9,12 @@ import {
     generateProject,
     wrapSimpleCodeCall,
     generateProjectPlan,
+    debugCode,
 } from '../../services/geminiService';
 import { saveApp } from '../../services/storageService';
-import type { Message, AppPlan, FormPlan, DocumentPlan, RefinementResult, UiUxAnalysis, ComponentPlan, GenerationStatus, ProjectPlan } from '../../types';
+import type { Message, AppPlan, FormPlan, DocumentPlan, RefinementResult, UiUxAnalysis, ComponentPlan, GenerationStatus, ProjectPlan, ConsoleMessage } from '../../types';
 import { AgentTestAction } from '../pages/AppBuilderPage';
-import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon, BotIcon, CheckIcon, PlusIcon, StarIcon, SendIcon, SearchIcon, CodeBracketIcon, FolderIcon } from '../common/Icons';
+import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon, BotIcon, CheckIcon, PlusIcon, StarIcon, SendIcon, SearchIcon, CodeBracketIcon, FolderIcon, PuzzleIcon } from '../common/Icons';
 
 // --- Sub-components for new UI ---
 
@@ -78,6 +79,7 @@ export interface ChatPanelRef {
   reviewScreenshot: (dataUrl: string) => void;
   finalizeTest: () => void;
   runUiUxAnalysis: (dataUrl: string) => void;
+  debugError: (error: ConsoleMessage, files: { [path: string]: string }) => void;
 }
 
 interface ChatPanelProps {
@@ -260,11 +262,36 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
       }
   };
 
+  const debugError = async (error: ConsoleMessage, codeFiles: { [path: string]: string }) => {
+    setIsLoading(true);
+    setStatus('generating');
+    setMessages(prev => [...prev, { role: 'assistant', content: `Debugging error: "${error.content[0]}"`, isAgentActivity: true }]);
+    
+    try {
+        const agentInstruction = selectedAgent?.systemInstruction;
+        const result = await debugCode(codeFiles, error, selectedModel, agentInstruction, appMode);
+        
+        setFiles(result.files, result.summary);
+        
+        const title = (currentPlan as any)?.title || (currentPlan as any)?.name || "Updated App";
+        saveApp(title, result.files, appMode);
+        
+        setMessages(prev => [...prev, { role: 'assistant', content: `Bug Fixed: ${result.summary}`, isChangeSummary: true }]);
+    } catch (e) {
+        console.error("Error during AI debugging:", e);
+        setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I couldn't fix the bug." }]);
+    } finally {
+        setIsLoading(false);
+        setStatus('reviewing'); // Trigger screenshot to confirm fix
+    }
+  };
+
   useImperativeHandle(ref, () => ({
     submitRefinement,
     reviewScreenshot,
     finalizeTest,
     runUiUxAnalysis,
+    debugError,
   }));
 
   const submitRefinement = async (refinementPrompt: string) => {

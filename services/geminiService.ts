@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import { AppPlan, Flashcard, FormPlan, DocumentPlan, RefinementResult, ModelID, ComponentPlan, UiUxAnalysis, AppMode, ProjectPlan } from '../types';
+import { AppPlan, Flashcard, FormPlan, DocumentPlan, RefinementResult, ModelID, ComponentPlan, UiUxAnalysis, AppMode, ProjectPlan, ConsoleMessage } from '../types';
 import { getApiKey, getOpenRouterApiKey } from './apiKeyService';
 
 const combineInstructions = (agentInstruction: string | undefined, taskInstruction: string): string => {
@@ -1186,6 +1186,80 @@ ${filesString}
         throw new Error("Failed to refine the application code.");
     }
 };
+
+export const debugCode = async (
+    files: { [path: string]: string },
+    error: ConsoleMessage,
+    model: ModelID,
+    agentSystemInstruction: string | undefined,
+    appMode: AppMode
+): Promise<RefinementResult> => {
+    console.log(`Debugging code with error: "${error.content[0]}"`);
+    const filesString = Object.entries(files).map(([path, content]) => `
+--- FILE: ${path} ---
+\`\`\`
+${content}
+\`\`\`
+`).join('\n');
+
+    const taskPrompt = `
+You are an expert AI software engineer specializing in debugging. You will be given the full code for an application and a runtime error that occurred. Your task is to identify the bug, fix it, and explain your reasoning.
+
+**Runtime Error:**
+\`\`\`
+${error.content.join(' ')}
+\`\`\`
+
+**Existing Application Files:**
+${filesString}
+
+**CRITICAL INSTRUCTIONS:**
+1.  **Analyze and Fix:** Carefully analyze the error message and the provided code to locate the bug. Fix the bug by modifying the necessary file(s).
+2.  **Return All Files:** You MUST return the complete and updated content for ALL original files in a \`files\` object, even for files you did not change.
+3.  **Explain the Fix:** Provide a brief, user-friendly summary explaining what the bug was and how you fixed it.
+4.  **Return JSON:** You MUST respond with a single JSON object with the following structure:
+    {
+      "files": {
+        "path/to/file1.html": "...",
+        "path/to/file2.css": "...",
+        "path/to/file3.js": "..."
+      },
+      "summary": "A friendly explanation of the fix.",
+      "files_edited": ["path/to/the/file/I/edited.js"]
+    }
+5.  **Preserve Functionality:** Ensure your fix does not break any other existing functionality.
+`;
+    const systemInstruction = agentSystemInstruction || '';
+    
+    // For now, AI debugging is only implemented for Gemini.
+    try {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const schema = {
+            type: Type.OBJECT,
+            properties: {
+                files: { type: Type.OBJECT, additionalProperties: { type: Type.STRING } },
+                summary: { type: Type.STRING },
+                files_edited: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ['files', 'summary', 'files_edited'],
+        };
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: taskPrompt,
+            config: {
+                ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
+                responseMimeType: "application/json",
+                responseSchema: schema,
+            },
+        });
+        const resultJson = response.text.trim();
+        return JSON.parse(cleanJsonString(resultJson));
+    } catch (error) {
+        console.error(`Error debugging code with ${model}:`, error);
+        throw new Error("Failed to debug the application code.");
+    }
+};
+
 
 // FIX: Add refineFiles
 export const refineFiles = async (
