@@ -117,6 +117,11 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
       setIsLoading(true);
       setIsAwaitingPlanConfirmation(false);
 
+      // Request notification permission at the start of generation
+      if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+      }
+
       const agentInstruction = selectedAgent?.systemInstruction;
 
       const handleErrors = (error: any, type: string) => {
@@ -179,6 +184,19 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
       }
     }
   }, [prompt, appMode, selectedModel, isTranslation, isCloning, files]);
+
+  // Effect to show notification when generation is finished
+  useEffect(() => {
+    if (status === 'finished' && isCodeGenerated) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Silo Labs: Generation Complete!', {
+          body: `Your creation for "${prompt}" is ready to view.`,
+          icon: 'https://i.ibb.co/DH3dtsXr/IMG-3806.png',
+          silent: true,
+        });
+      }
+    }
+  }, [status, isCodeGenerated, prompt]);
 
   const handlePlanConfirmation = () => {
       setIsAwaitingPlanConfirmation(false);

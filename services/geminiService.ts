@@ -881,7 +881,6 @@ Example Response:
             model: 'gemini-2.5-flash',
             contents: taskPrompt,
             config: {
-                // FIX: Corrected the use of systemInstruction shorthand property.
                 ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
                 responseMimeType: "application/json",
                 // A dynamic schema is complex, so we ask the model to produce a flat object
