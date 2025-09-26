@@ -57,6 +57,7 @@ const HomePage: React.FC = () => {
       component: ["A responsive navbar", "A pricing table component", "A testimonial card"],
       multifile: ["A recipe website with separate JS for search", "A blog template with its own stylesheet", "A portfolio with interactive gallery"],
       fullstack: ["A to-do list with a Node.js backend", "A user auth page with Express routes", "A simple blog with a REST API"],
+      project: ["A React + Vite portfolio website", "A blog with Next.js", "Task manager with Supabase"],
   };
 
   const getPlaceholder = () => {
@@ -71,6 +72,7 @@ const HomePage: React.FC = () => {
         case 'component': return 'Describe the UI component you want to build...';
         case 'multifile': return 'Describe the multi-file web app you want...';
         case 'fullstack': return 'Describe the full-stack app you want...';
+        case 'project': return 'Describe the project you want to build (e.g., React, Next.js)...';
         default: return 'Describe something to create...';
     }
   };
@@ -132,8 +134,8 @@ const HomePage: React.FC = () => {
                     }
                 }}
                 placeholder={getPlaceholder()}
-                className="w-full h-12 bg-black/20 border border-white/10 rounded-xl py-3 pl-4 pr-40 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none placeholder-gray-500 text-base text-gray-200 transition-colors"
-                rows={isTranslation || isCloning ? 1 : 1}
+                className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-4 pr-40 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none placeholder-gray-500 text-base text-gray-200 transition-colors"
+                rows={isTranslation || isCloning ? 8 : 1}
             />
             <div className="absolute top-1/2 -translate-y-1/2 right-4 flex items-center gap-2">
                 <div className="text-sm font-mono text-gray-500">
@@ -147,9 +149,10 @@ const HomePage: React.FC = () => {
                         <div className="absolute bottom-full mb-2 right-0 w-56 bg-gray-900/80 backdrop-blur-lg rounded-xl shadow-xl border border-white/10 p-2 z-10">
                             <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Mode</div>
                             <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>Web App</MenuItem>
+                            <MenuItem active={appMode === 'component'} onClick={() => { setAppMode('component'); setIsMenuOpen(false); }}>Component</MenuItem>
+                            <MenuItem active={appMode === 'project'} onClick={() => { setAppMode('project'); setIsMenuOpen(false); }}>Project</MenuItem>
                             <MenuItem active={appMode === 'multifile'} onClick={() => { setAppMode('multifile'); setIsMenuOpen(false); }}>Multi-file App</MenuItem>
                             <MenuItem active={appMode === 'fullstack'} onClick={() => { setAppMode('fullstack'); setIsMenuOpen(false); }}>Full-stack App</MenuItem>
-                            <MenuItem active={appMode === 'component'} onClick={() => { setAppMode('component'); setIsMenuOpen(false); }}>Component</MenuItem>
                             <MenuItem active={appMode === 'native'} onClick={() => { setAppMode('native'); setIsMenuOpen(false); }}>Native App</MenuItem>
                             <MenuItem active={appMode === 'form'} onClick={() => { setAppMode('form'); setIsMenuOpen(false); }}>Web Form</MenuItem>
                             <MenuItem active={appMode === 'document'} onClick={() => { setAppMode('document'); setIsMenuOpen(false); }}>Document</MenuItem>

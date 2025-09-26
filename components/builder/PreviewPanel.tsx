@@ -1,13 +1,7 @@
-
-
-
-
-
-
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { generateDocumentation } from '../../services/geminiService';
-import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon, PhoneIcon, DesktopIcon, RefreshCwIcon, CodeBracketIcon, TerminalIcon, FileTextIcon, ChevronDownIcon, GitHubIcon, SearchIcon, XIcon, VercelIcon, PuzzleIcon, ClockIcon, HtmlIcon, CssIcon, TsIcon, JsonIcon } from '../common/Icons';
+import { ClipboardIcon, CheckIcon, MousePointerClickIcon, ExternalLinkIcon, PhoneIcon, DesktopIcon, RefreshCwIcon, CodeBracketIcon, TerminalIcon, FileTextIcon, ChevronDownIcon, GitHubIcon, SearchIcon, XIcon, VercelIcon, PuzzleIcon, ClockIcon, HtmlIcon, CssIcon, TsIcon, JsonIcon, ReactIcon, ViteIcon } from '../common/Icons';
 import VisualEditBar from './VisualEditBar';
 import { AgentTestAction, Version } from '../pages/AppBuilderPage';
 import { GitHubPushModal } from './GitHubPushModal';
@@ -26,11 +20,15 @@ declare global {
 }
 
 const FileIcon: React.FC<{ filename: string }> = ({ filename }) => {
-    if (filename.endsWith('.html')) return <HtmlIcon className="w-5 h-5 text-orange-400" />;
-    if (filename.endsWith('.css')) return <CssIcon className="w-5 h-5 text-blue-400" />;
-    if (filename.endsWith('.js')) return <TsIcon className="w-5 h-5 text-yellow-400" />; // Using TS icon for JS
-    if (filename.endsWith('.json')) return <JsonIcon className="w-5 h-5 text-green-400" />;
-    if (filename.endsWith('.md')) return <FileTextIcon className="w-5 h-5 text-gray-400" />;
+    const lowerFilename = filename.toLowerCase();
+    if (lowerFilename.endsWith('.html')) return <HtmlIcon className="w-5 h-5 text-orange-400" />;
+    if (lowerFilename.endsWith('.css')) return <CssIcon className="w-5 h-5 text-blue-400" />;
+    if (lowerFilename.endsWith('.js')) return <TsIcon className="w-5 h-5 text-yellow-400" />;
+    if (lowerFilename.endsWith('.jsx')) return <ReactIcon className="w-5 h-5 text-blue-300" />;
+    if (lowerFilename.endsWith('.tsx')) return <ReactIcon className="w-5 h-5 text-blue-300" />;
+    if (lowerFilename.endsWith('vite.config.js') || lowerFilename.endsWith('vite.config.ts')) return <ViteIcon className="w-5 h-5 text-purple-400" />;
+    if (lowerFilename.endsWith('.json')) return <JsonIcon className="w-5 h-5 text-green-400" />;
+    if (lowerFilename.endsWith('.md')) return <FileTextIcon className="w-5 h-5 text-gray-400" />;
     return <FileTextIcon className="w-5 h-5 text-gray-400" />;
 };
 
@@ -291,6 +289,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
     };
 
     const handleIframeLoad = () => {
+        if (status !== 'generating' && status !== 'planning' ) return;
         if (!iframeRef.current?.contentDocument?.body.innerHTML.trim()) return;
         takeScreenshot().then(onScreenshotTaken).catch(err => console.error("Initial screenshot failed:", err));
     };
@@ -324,6 +323,23 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
             return <GenerationLoader status={status} />;
         }
         if (!files || Object.keys(files).length === 0) return <div className="flex items-center justify-center h-full text-gray-500">Preview will appear here...</div>;
+
+        if (appMode === 'project') {
+             return (
+                <div className="p-4 h-full flex flex-col gap-4">
+                    <FileExplorer files={files} />
+                    <div className="p-4 bg-black/30 rounded-lg text-sm text-gray-400 border border-white/10">
+                        <h4 className="font-bold text-gray-200">How to Run This Project</h4>
+                        <ol className="list-decimal list-inside mt-2 space-y-1 font-mono">
+                            <li>Download the project as a <code className="text-xs bg-white/10 p-1 rounded">.zip</code> file.</li>
+                            <li>Unzip the file and open the folder in your terminal.</li>
+                            <li>Run <code className="text-xs bg-white/10 p-1 rounded">npm install</code> to install dependencies.</li>
+                            <li>Run <code className="text-xs bg-white/10 p-1 rounded">npm run dev</code> to start the local server.</li>
+                        </ol>
+                    </div>
+                </div>
+            );
+        }
 
         switch (activePreviewMode) {
             case 'editor': return <FileExplorer files={files} />;
@@ -368,7 +384,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
                         <div className="w-px h-6 bg-white/10 mx-1"></div>
                         
                         {/* Middle Controls */}
-                        {activePreviewMode === 'viewer' && appMode !== 'native' && (
+                        {activePreviewMode === 'viewer' && appMode !== 'native' && appMode !== 'project' && (
                             <>
                                 <button onClick={() => setIsVisualEditMode(p => !p)} className={`p-2.5 rounded-full transition-colors ${isVisualEditMode ? 'bg-indigo-500 text-white' : 'hover:bg-white/10'}`} aria-label="Toggle visual edit mode"><MousePointerClickIcon className="w-5 h-5" /></button>
                                 <div className="flex items-center bg-black/20 rounded-full p-0.5 ml-1">

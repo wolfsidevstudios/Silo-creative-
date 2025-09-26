@@ -7,12 +7,13 @@ import {
     generateComponentPlan, 
     analyzeUiUx, 
     generateProject,
-    wrapSimpleCodeCall
+    wrapSimpleCodeCall,
+    generateProjectPlan,
 } from '../../services/geminiService';
 import { saveApp } from '../../services/storageService';
-import type { Message, AppPlan, FormPlan, DocumentPlan, RefinementResult, UiUxAnalysis, ComponentPlan, GenerationStatus } from '../../types';
+import type { Message, AppPlan, FormPlan, DocumentPlan, RefinementResult, UiUxAnalysis, ComponentPlan, GenerationStatus, ProjectPlan } from '../../types';
 import { AgentTestAction } from '../pages/AppBuilderPage';
-import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon, BotIcon, CheckIcon, PlusIcon, StarIcon, SendIcon, SearchIcon, CodeBracketIcon } from '../common/Icons';
+import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon, BotIcon, CheckIcon, PlusIcon, StarIcon, SendIcon, SearchIcon, CodeBracketIcon, FolderIcon } from '../common/Icons';
 
 // --- Sub-components for new UI ---
 
@@ -53,6 +54,22 @@ const UiAnalysisResult: React.FC<{ analysis: UiUxAnalysis }> = ({ analysis }) =>
     </div>
 );
 
+const FileTree: React.FC<{ structure: { [key: string]: any }, level?: number }> = ({ structure, level = 0 }) => {
+    return (
+        <div className="text-sm font-mono text-gray-300">
+            {Object.entries(structure).map(([name, content]) => (
+                <div key={name} style={{ paddingLeft: `${level * 16}px` }}>
+                    <div className="flex items-center gap-2 py-1">
+                        {typeof content === 'string' ? <FileTextIcon className="w-4 h-4 text-gray-500" /> : <FolderIcon className="w-4 h-4 text-indigo-400" />}
+                        <span>{name}</span>
+                    </div>
+                    {typeof content === 'object' && content !== null && <FileTree structure={content} level={level + 1} />}
+                </div>
+            ))}
+        </div>
+    );
+};
+
 
 // --- Main ChatPanel Component ---
 
@@ -74,8 +91,6 @@ interface ChatPanelProps {
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
 }
 
-const MAX_CHARS_REFINEMENT = 200;
-
 const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, onToggleCodeView, status, setStatus, files, setFiles, messages, setMessages }, ref) => {
   const { 
     prompt, isTranslation, isCloning, setGeneratedFlashcards, agents, selectedAgentId, selectedModel, appMode
@@ -84,7 +99,8 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
   const [isLoading, setIsLoading] = useState(false);
   const [input, setInput] = useState('');
   const [isCodeGenerated, setIsCodeGenerated] = useState(false);
-  const [currentPlan, setCurrentPlan] = useState<AppPlan | FormPlan | DocumentPlan | ComponentPlan | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<any | null>(null);
+  const [isAwaitingPlanConfirmation, setIsAwaitingPlanConfirmation] = useState(false);
 
   const selectedAgent = agents.find(agent => agent.id === selectedAgentId);
 
@@ -97,6 +113,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
       setMessages([]);
       setStatus('planning');
       setIsLoading(true);
+      setIsAwaitingPlanConfirmation(false);
 
       const agentInstruction = selectedAgent?.systemInstruction;
 
@@ -124,6 +141,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
           component: generateComponentPlan,
           multifile: generateAppPlan,
           fullstack: generateAppPlan,
+          project: generateProjectPlan,
       };
 
       if (appMode === 'study') {
@@ -137,19 +155,46 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
 
       } else if (appMode in planGenerators) {
         planGenerators[appMode](prompt, selectedModel, agentInstruction)
-          .then((plan: AppPlan | FormPlan | DocumentPlan | ComponentPlan) => {
+          .then((plan) => {
               setCurrentPlan(plan);
-              setStatus('generating');
-              return generateProject(plan, appMode, selectedModel, agentInstruction);
+              setMessages(prev => [...prev, { role: 'assistant', content: 'Plan generated.', plan, isPlan: true }]);
+
+              if (appMode === 'project') {
+                  setIsAwaitingPlanConfirmation(true);
+                  setIsLoading(false); // Wait for user action
+              } else {
+                  setStatus('generating');
+                  return generateProject(plan, appMode, selectedModel, agentInstruction);
+              }
           })
           .then((generatedFiles) => {
-              const title = (currentPlan as any)?.title || (currentPlan as any)?.name || "Generated Project";
-              handleCodeGeneration(generatedFiles, title);
+              if (generatedFiles) {
+                const title = (currentPlan as any)?.title || (currentPlan as any)?.name || "Generated Project";
+                handleCodeGeneration(generatedFiles, title);
+              }
           })
           .catch(error => handleErrors(error, 'plan or code generation'));
       }
     }
   }, [prompt, appMode, selectedModel, isTranslation, isCloning, files]);
+
+  const handlePlanConfirmation = () => {
+      setIsAwaitingPlanConfirmation(false);
+      setIsLoading(true);
+      setStatus('generating');
+      const agentInstruction = selectedAgent?.systemInstruction;
+      generateProject(currentPlan, appMode, selectedModel, agentInstruction)
+          .then(generatedFiles => {
+              const title = (currentPlan as any)?.title || "Generated Project";
+              handleCodeGeneration(generatedFiles, title);
+          })
+          .catch(error => {
+              console.error("Error generating code from plan:", error);
+              setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, there was an error generating the code from the plan.' }]);
+              setStatus('finished');
+              setIsLoading(false);
+          });
+  };
 
   const handleCodeGeneration = (files: { [path: string]: string }, title: string) => {
       setFiles(files); // This triggers PreviewPanel screenshot
@@ -158,10 +203,35 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
   }
 
   const reviewScreenshot = async (dataUrl: string) => {
-    // Self-correction and testing step has been removed by user request.
-    // This function is still wired up and is called after code generation.
-    // We just call finalizeTest() to move the status to 'finished'.
-    finalizeTest();
+    if (!files) return;
+    const mainFile = files['index.html'] || files['App.js'] || Object.values(files)[0] || '';
+    if (!mainFile) {
+        finalizeTest();
+        return;
+    }
+    
+    setStatus('reviewing');
+    setMessages(prev => [...prev, {role: 'assistant', content: 'Reviewing the generated app for issues...', isAgentActivity: true}]);
+    
+    try {
+        const result: any = await selfCorrectCode(prompt, mainFile, dataUrl.split(',')[1], selectedAgent?.systemInstruction);
+
+        setMessages(prev => prev.filter(m => !m.isAgentActivity));
+
+        if (result.summary === 'NO_CHANGES_NEEDED') {
+            setMessages(prev => [...prev, {role: 'assistant', content: 'Self-correction complete. No issues found.', isAgentActivity: true}]);
+        } else {
+            const updatedFiles = { ...files, 'index.html': result.code };
+            setFiles(updatedFiles, result.summary);
+            setMessages(prev => [...prev, {role: 'assistant', content: `Self-correction complete: ${result.summary}`, isChangeSummary: true}]);
+        }
+    } catch (error) {
+        console.error("Error during self-correction:", error);
+        setMessages(prev => prev.filter(m => !m.isAgentActivity));
+        setMessages(prev => [...prev, {role: 'assistant', content: 'Could not complete self-correction review.', isAgentActivity: true}]);
+    } finally {
+        finalizeTest();
+    }
   };
   
   const finalizeTest = () => {
@@ -178,7 +248,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
       setIsLoading(true);
       try {
           const agentInstruction = selectedAgent?.systemInstruction;
-          const analysis = await analyzeUiUx(htmlCode, dataUrl, agentInstruction);
+          const analysis = await analyzeUiUx(htmlCode, dataUrl.split(',')[1], agentInstruction);
           setMessages(prev => prev.filter(m => m.content !== 'Analyzing UI/UX...'));
           setMessages(prev => [...prev, {role: 'assistant', content: '', analysis}]);
       } catch (error) {
@@ -204,7 +274,6 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
     setInput('');
     try {
       const agentInstruction = selectedAgent?.systemInstruction;
-      // FIX: Added appMode to the refineFiles call
       const result: RefinementResult = await refineFiles(files, refinementPrompt, selectedModel, agentInstruction, appMode);
       
       setFiles(result.files, result.summary);
@@ -217,8 +286,8 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
         console.error("Error refining code:", error);
         setMessages(prev => [...prev, {role: 'assistant', content: "Sorry, I couldn't apply those changes."}]);
     } finally {
-        setStatus('finished'); // This will trigger screenshot review
-        setIsLoading(false); // keep loading state for now
+        setIsLoading(false);
+        setStatus('reviewing'); // Trigger screenshot and self-correction
     }
   };
   
@@ -236,6 +305,8 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
     return "Describe a change...";
   };
 
+  const planMessage = messages.find(m => m.isPlan);
+
   return (
     <div className="flex flex-col h-full text-gray-300">
       <div className="flex-1 p-6 overflow-y-auto">
@@ -244,11 +315,27 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
         
         <div className="mt-8 space-y-6">
             <Step icon={<StarIcon className="w-5 h-5"/>} title="1. Review the generated plan" isComplete={status !== 'planning' && status !== 'idle'}>
-                {currentPlan && (
+                {planMessage && planMessage.plan && (
                     <div className="text-sm text-gray-300 p-3 bg-white/5 rounded-md border border-white/10">
-                        <p className="font-medium text-gray-200">
-                           { (currentPlan as any).description || `Type: ${(currentPlan as DocumentPlan).documentType}` }
-                        </p>
+                       {appMode === 'project' ? (
+                           <>
+                                <p className="font-medium text-gray-200 mb-2">{planMessage.plan.description}</p>
+                                <p className="text-xs mb-3 text-gray-400">Tech Stack: {planMessage.plan.techStack.join(', ')}</p>
+                                <FileTree structure={planMessage.plan.fileStructure} />
+                           </>
+                       ) : (
+                            <p className="font-medium text-gray-200">
+                                { planMessage.plan.description || `Type: ${planMessage.plan.documentType}` }
+                            </p>
+                       )}
+
+                        {isAwaitingPlanConfirmation && (
+                            <div className="mt-4 text-right">
+                                <button onClick={handlePlanConfirmation} className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-full hover:bg-indigo-700">
+                                    Generate Code
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </Step>
@@ -261,7 +348,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ onStartAgentTest, 
         </div>
         
         <div className="mt-6 space-y-3">
-             {messages.filter(m => !m.isChangeSummary && !m.isAgentActivity).map((msg, index) => (
+             {messages.filter(m => !m.isChangeSummary && !m.isAgentActivity && !m.isPlan).map((msg, index) => (
                 msg.analysis 
                     ? <UiAnalysisResult key={index} analysis={msg.analysis} />
                     : <p key={index} className="text-sm text-gray-400">{msg.content}</p>

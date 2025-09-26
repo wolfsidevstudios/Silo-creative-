@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import { AppPlan, Flashcard, FormPlan, DocumentPlan, RefinementResult, ModelID, ComponentPlan, UiUxAnalysis, AppMode } from '../types';
+import { AppPlan, Flashcard, FormPlan, DocumentPlan, RefinementResult, ModelID, ComponentPlan, UiUxAnalysis, AppMode, ProjectPlan } from '../types';
 import { getApiKey, getOpenRouterApiKey } from './apiKeyService';
 
 const combineInstructions = (agentInstruction: string | undefined, taskInstruction: string): string => {
@@ -102,6 +102,70 @@ You must respond with only a JSON object that strictly follows this structure:
     throw new Error("Failed to generate an app plan from the AI model.");
   }
 };
+
+export const generateProjectPlan = async (prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<ProjectPlan> => {
+  console.log(`Generating project plan for prompt: "${prompt}" with model ${model}`);
+
+  const taskInstruction = `You are a world-class software architect. A user will describe a web application project. Your task is to create a comprehensive project plan.
+
+The plan must include:
+1.  A concise **title**.
+2.  A one-sentence **description**.
+3.  A **techStack** array, identifying key technologies (e.g., "React", "Vite", "Tailwind CSS", "Node.js", "Supabase").
+4.  A detailed **fileStructure** as a nested JSON object representing the complete directory tree. Files should be keys with an empty string as a value, and folders should be keys with an object of their contents as the value.
+
+Example fileStructure:
+{
+  "public/": {
+    "index.html": ""
+  },
+  "src/": {
+    "components/": {
+        "Button.jsx": ""
+    },
+    "App.jsx": "",
+    "index.css": ""
+  },
+  "package.json": "",
+  "vite.config.js": ""
+}
+
+Respond with ONLY the JSON object.`;
+  const systemInstruction = combineInstructions(agentSystemInstruction, taskInstruction);
+
+  try {
+    if (model.startsWith('gemini')) {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const schema = {
+            type: Type.OBJECT,
+            properties: {
+                title: { type: Type.STRING },
+                description: { type: Type.STRING },
+                techStack: { type: Type.ARRAY, items: { type: Type.STRING } },
+                fileStructure: { type: Type.OBJECT, additionalProperties: true }
+            },
+            required: ['title', 'description', 'techStack', 'fileStructure'],
+        };
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                systemInstruction: systemInstruction,
+                responseMimeType: "application/json",
+                responseSchema: schema,
+            },
+        });
+        return JSON.parse(response.text.trim());
+    } else {
+        const responseJson = await callOpenRouter(model, systemInstruction, prompt);
+        return JSON.parse(cleanJsonString(responseJson));
+    }
+  } catch (error) {
+    console.error(`Error generating project plan with ${model}:`, error);
+    throw new Error("Failed to generate a project plan from the AI model.");
+  }
+};
+
 
 export const generateComponentPlan = async (prompt: string, model: ModelID, agentSystemInstruction?: string): Promise<ComponentPlan> => {
   console.log(`Generating component plan for prompt: "${prompt}" with model ${model}`);
@@ -782,9 +846,60 @@ ${featuresString}
     }
 };
 
+export const generateProjectCode = async (plan: ProjectPlan, model: ModelID, agentSystemInstruction?: string): Promise<{ [path: string]: string }> => {
+    console.log(`Generating project code for: "${plan.title}" with model ${model}`);
+    
+    const taskPrompt = `
+You are an expert full-stack software engineer. You will be given a complete project plan, including title, description, tech stack, and a detailed file structure.
+Your task is to generate the full code for every single file specified in the plan.
+
+**Project Plan:**
+- **Title:** ${plan.title}
+- **Description:** ${plan.description}
+- **Tech Stack:** ${plan.techStack.join(', ')}
+- **File Structure:**
+${JSON.stringify(plan.fileStructure, null, 2)}
+
+**CRITICAL REQUIREMENTS:**
+1.  **Generate All Files:** You MUST provide the complete code for every file listed in the \`fileStructure\`.
+2.  **Adhere to Tech Stack:** The code must be written using the specified technologies. For example, if the stack includes "React" and "Vite", generate appropriate JSX, vite configs, etc.
+3.  **High-Quality Code:** The code must be clean, functional, well-commented, and follow modern best practices.
+4.  **Functionality:** The final generated project must be runnable and fully implement the features implied by the description and file structure.
+5.  **Return JSON:** Your response MUST be a single JSON object where the keys are the full file paths (e.g., "src/App.jsx") and the values are the complete file content as a string. Do not nest the JSON object.
+
+Example Response:
+{
+  "src/App.jsx": "import React from 'react'; ...",
+  "src/index.css": "body { ... }",
+  "package.json": "{ \\"name\\": \\"...\\" }"
+}
+`;
+
+    try {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: taskPrompt,
+            config: {
+                // FIX: Corrected the use of systemInstruction shorthand property.
+                ...(agentSystemInstruction ? { systemInstruction: agentSystemInstruction } : {}),
+                responseMimeType: "application/json",
+                // A dynamic schema is complex, so we ask the model to produce a flat object
+                // and parse it carefully.
+            },
+        });
+        const resultJson = response.text.trim();
+        return JSON.parse(cleanJsonString(resultJson));
+    } catch (error) {
+        console.error(`Error generating project code with ${model}:`, error);
+        throw new Error("Failed to generate project code.");
+    }
+};
+
+
 // FIX: Add generateProject
 export const generateProject = async (
-    plan: AppPlan | FormPlan | DocumentPlan | ComponentPlan,
+    plan: any,
     appMode: AppMode,
     model: ModelID,
     agentSystemInstruction?: string
@@ -813,6 +928,8 @@ export const generateProject = async (
             return await generateMultiFileAppCode(plan as AppPlan, model, agentSystemInstruction);
         case 'fullstack':
             return await generateFullStackAppCode(plan as AppPlan, model, agentSystemInstruction);
+        case 'project':
+            return await generateProjectCode(plan as ProjectPlan, model, agentSystemInstruction);
         default:
             throw new Error(`Code generation for appMode "${appMode}" is not supported.`);
     }
@@ -1097,7 +1214,7 @@ export const refineFiles = async (
         };
     }
     
-    if (['multifile', 'fullstack'].includes(appMode)) {
+    if (['multifile', 'fullstack', 'project'].includes(appMode)) {
         return await refineMultiFileCode(files, prompt, model, agentSystemInstruction);
     }
 

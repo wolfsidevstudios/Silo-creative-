@@ -1,6 +1,7 @@
 
 
-export type AppMode = 'build' | 'study' | 'form' | 'native' | 'document' | 'component' | 'multifile' | 'fullstack';
+
+export type AppMode = 'build' | 'study' | 'form' | 'native' | 'document' | 'component' | 'multifile' | 'fullstack' | 'project';
 export type ModelID = 'gemini-2.5-flash' | 'qwen/qwen3-coder:free';
 export type IntegrationType = 'supabase' | 'stripe' | 'gemini';
 export type GenerationStatus = 'idle' | 'planning' | 'generating' | 'reviewing' | 'testing' | 'finished';
@@ -9,11 +10,12 @@ export interface Message {
   role: 'user' | 'model' | 'assistant';
   content: string;
   isPlan?: boolean;
-  planType?: 'app' | 'form' | 'document' | 'component' | 'multifile' | 'fullstack';
+  planType?: 'app' | 'form' | 'document' | 'component' | 'multifile' | 'fullstack' | 'project';
   isChangeSummary?: boolean;
   imageUrl?: string; // For screenshots
   isAgentActivity?: boolean; // For status messages
   analysis?: UiUxAnalysis;
+  plan?: any; // To hold any type of plan object
 }
 
 export interface AppPlan {
@@ -22,6 +24,14 @@ export interface AppPlan {
     features: string[];
     files?: string[];
 }
+
+export interface ProjectPlan {
+    title: string;
+    description: string;
+    techStack: string[];
+    fileStructure: { [key: string]: any }; // Nested object for file tree
+}
+
 
 export interface ComponentPlan {
     name: string;
