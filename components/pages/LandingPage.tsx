@@ -27,12 +27,16 @@ const AdsterraComponent: React.FC = () => {
 
 const AdComponent: React.FC = () => {
     useEffect(() => {
-        try {
-            // @ts-ignore
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
-        } catch (e) {
-            console.error('AdSense error:', e);
-        }
+        const timeoutId = setTimeout(() => {
+            try {
+                // @ts-ignore
+                (window.adsbygoogle = window.adsbygoogle || []).push({});
+            } catch (e) {
+                console.error('AdSense error:', e);
+            }
+        }, 150); // Delaying slightly to ensure the container has dimensions
+
+        return () => clearTimeout(timeoutId);
     }, []);
 
     return (

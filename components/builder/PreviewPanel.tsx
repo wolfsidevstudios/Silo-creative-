@@ -32,9 +32,20 @@ const FileIcon: React.FC<{ filename: string }> = ({ filename }) => {
     return <FileTextIcon className="w-5 h-5 text-gray-400" />;
 };
 
-const FileExplorer: React.FC<{ files: { [path: string]: string } }> = ({ files }) => {
+const FileExplorer: React.FC<{
+    files: { [path: string]: string };
+    onFileContentChange: (path: string, content: string) => void;
+}> = ({ files, onFileContentChange }) => {
     const [selectedFile, setSelectedFile] = useState(Object.keys(files)[0] || null);
     const [isCopied, setIsCopied] = useState(false);
+
+    useEffect(() => {
+        // If the selected file is no longer in the files list (e.g., after a revert), select the first available file.
+        if (selectedFile && !files[selectedFile]) {
+            setSelectedFile(Object.keys(files)[0] || null);
+        }
+    }, [files, selectedFile]);
+
 
     const handleCopy = () => {
         if (!selectedFile) return;
@@ -43,6 +54,12 @@ const FileExplorer: React.FC<{ files: { [path: string]: string } }> = ({ files }
         setTimeout(() => setIsCopied(false), 2000);
     };
     
+    const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        if (selectedFile) {
+            onFileContentChange(selectedFile, e.target.value);
+        }
+    };
+
     const handleDownload = () => {
         const zip = new window.JSZip();
         Object.keys(files).forEach(filename => {
@@ -62,33 +79,44 @@ const FileExplorer: React.FC<{ files: { [path: string]: string } }> = ({ files }
 
     return (
         <div className="flex w-full h-full bg-[#161B22] rounded-lg overflow-hidden">
-            <div className="w-48 bg-black/30 border-r border-white/10 p-2">
-                <h3 className="text-xs font-bold uppercase text-gray-500 px-2 mb-2">Files</h3>
-                {Object.keys(files).map(filename => (
-                    <button 
-                        key={filename} 
-                        onClick={() => setSelectedFile(filename)}
-                        className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded ${selectedFile === filename ? 'bg-indigo-500/30 text-white' : 'text-gray-400 hover:bg-white/10'}`}
-                    >
-                        <FileIcon filename={filename} />
-                        <span className="truncate">{filename}</span>
-                    </button>
-                ))}
-                <button onClick={handleDownload} className="w-full mt-4 text-center px-3 py-1.5 border border-white/20 text-sm font-medium rounded-full text-gray-300 bg-white/10 hover:bg-white/20">
+            <div className="w-48 bg-black/30 border-r border-white/10 p-2 flex flex-col">
+                <h3 className="text-xs font-bold uppercase text-gray-500 px-2 mb-2 flex-shrink-0">Files</h3>
+                <div className="flex-grow overflow-y-auto">
+                    {Object.keys(files).map(filename => (
+                        <button 
+                            key={filename} 
+                            onClick={() => setSelectedFile(filename)}
+                            className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded ${selectedFile === filename ? 'bg-indigo-500/30 text-white' : 'text-gray-400 hover:bg-white/10'}`}
+                        >
+                            <FileIcon filename={filename} />
+                            <span className="truncate">{filename}</span>
+                        </button>
+                    ))}
+                </div>
+                <button onClick={handleDownload} className="w-full mt-4 flex-shrink-0 text-center px-3 py-1.5 border border-white/20 text-sm font-medium rounded-full text-gray-300 bg-white/10 hover:bg-white/20">
                     Download .zip
                 </button>
             </div>
-            <div className="relative flex-1 font-mono text-sm text-white overflow-auto">
-                {selectedFile && (
+            <div className="flex-1 flex flex-col font-mono text-sm text-white overflow-hidden">
+                {selectedFile ? (
                     <>
-                        <div className="sticky top-0 bg-[#161B22]/80 backdrop-blur-sm z-10 p-3 border-b border-white/10 flex justify-between items-center">
+                        <div className="flex-shrink-0 bg-[#161B22]/80 backdrop-blur-sm z-10 p-3 border-b border-white/10 flex justify-between items-center">
                             <span className="text-gray-300">{selectedFile}</span>
                              <button onClick={handleCopy} className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-md text-xs transition-colors">
                                 {isCopied ? <><CheckIcon className="w-4 h-4 text-green-400" /><span>Copied!</span></> : <><ClipboardIcon className="w-4 h-4" /><span>Copy Code</span></>}
                             </button>
                         </div>
-                        <pre className="p-4"><code>{files[selectedFile]}</code></pre>
+                        <div className="flex-1 relative">
+                            <textarea
+                                value={files[selectedFile] || ''}
+                                onChange={handleCodeChange}
+                                className="absolute inset-0 w-full h-full bg-[#161B22] p-4 resize-none focus:outline-none text-white font-mono leading-relaxed"
+                                spellCheck="false"
+                            />
+                        </div>
                     </>
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-500">Select a file to view or edit</div>
                 )}
             </div>
         </div>
@@ -165,6 +193,7 @@ const DocsModal: React.FC<{ isOpen: boolean, onClose: () => void, content: strin
 
 interface PreviewPanelProps {
   files: { [path: string]: string } | null;
+  onFileContentChange: (path: string, content: string) => void;
   onVisualEditSubmit: (prompt: string) => void;
   onScreenshotTaken: (dataUrl: string) => void;
   isAgentTesting: boolean;
@@ -183,7 +212,7 @@ interface PreviewPanelProps {
 }
 
 const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, PreviewPanelProps>(({ 
-    files, onVisualEditSubmit, onScreenshotTaken, onTestComplete,
+    files, onFileContentChange, onVisualEditSubmit, onScreenshotTaken, onTestComplete,
     activePreviewMode, setActivePreviewMode, onAnalyzeRequest,
     vercelProject, onVercelDeploySuccess, githubRepoUrl, onGitHubPushSuccess, status,
     history, onRevertToVersion
@@ -276,16 +305,23 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
 
     const getSrcDoc = () => {
         if (!files) return '';
-        const html = files['index.html'] || '';
+        if (appMode === 'native' || appMode === 'project') return '';
+
+        let html = files['index.html'] || '';
         const css = files['style.css'] || '';
         const js = files['script.js'] || '';
     
         if (!html) return '';
+
+        if (css) {
+             html = html.replace('<style></style>', `<style>${css}</style>`);
+        }
     
-        // Inject CSS and JS into the HTML for preview
-        return html
-            .replace('</head>', `<style>${css}</style></head>`)
-            .replace('</body>', `<script>${js}</script></body>`);
+        if(js) {
+            html = html.replace('</body>', `<script>${js}</script></body>`);
+        }
+
+        return html;
     };
 
     const handleIframeLoad = () => {
@@ -327,7 +363,7 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
         if (appMode === 'project') {
              return (
                 <div className="p-4 h-full flex flex-col gap-4">
-                    <FileExplorer files={files} />
+                    <FileExplorer files={files} onFileContentChange={onFileContentChange} />
                     <div className="p-4 bg-black/30 rounded-lg text-sm text-gray-400 border border-white/10">
                         <h4 className="font-bold text-gray-200">How to Run This Project</h4>
                         <ol className="list-decimal list-inside mt-2 space-y-1 font-mono">
@@ -342,12 +378,12 @@ const PreviewPanel = forwardRef<{ takeScreenshot: () => Promise<string> }, Previ
         }
 
         switch (activePreviewMode) {
-            case 'editor': return <FileExplorer files={files} />;
+            case 'editor': return <FileExplorer files={files} onFileContentChange={onFileContentChange} />;
             case 'history': return <HistoryViewer history={history} onRevert={onRevertToVersion} />;
             case 'console': return <ConsoleViewer />;
             default:
                 if (appMode === 'native') {
-                     return <div className="p-4 h-full"><FileExplorer files={files} /></div>;
+                     return <div className="p-4 h-full"><FileExplorer files={files} onFileContentChange={onFileContentChange} /></div>;
                 }
                 const FrameComponent = deviceMode === 'desktop' ? DesktopFrame : MobileFrame;
                 return (

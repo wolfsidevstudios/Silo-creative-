@@ -2,33 +2,23 @@ import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../../context/AppContext';
 import SuggestionButton from '../common/SuggestionButton';
-import { PaperclipIcon, BookIcon, StarIcon, CheckIcon, SendIcon, MoreVerticalIcon, PhoneIcon, FilesIcon, FileTextIcon, CodeBracketIcon, XIcon, TerminalIcon } from '../common/Icons';
+import { SendIcon, CodeBracketIcon } from '../common/Icons';
 import AgentSelector from '../agents/AgentSelector';
 import { Link } from 'react-router-dom';
 import ModelSelector from '../common/ModelSelector';
+import { ModeSelectionModal, MODES } from '../common/ModeSelectionModal';
 
 const MAX_CHARS = 10000; // Increased for code translation
 
 const HomePage: React.FC = () => {
   const [inputValue, setInputValue] = React.useState('');
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-  const menuRef = React.useRef<HTMLDivElement>(null);
+  const [isModeModalOpen, setIsModeModalOpen] = React.useState(false);
   const navigate = useNavigate();
   const { 
       setPrompt, appMode, setAppMode, 
       isTranslation, setIsTranslation,
       isCloning, setIsCloning
   } = useAppContext();
-
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
@@ -77,12 +67,7 @@ const HomePage: React.FC = () => {
     }
   };
 
-  const MenuItem: React.FC<{ children: React.ReactNode, active: boolean, onClick: () => void }> = ({ children, active, onClick }) => (
-    <button onClick={onClick} className="w-full text-left flex items-center justify-between px-4 py-2 text-sm text-gray-300 hover:bg-white/10 rounded-md">
-        <span>{children}</span>
-        {active && <CheckIcon className="w-4 h-4 text-indigo-400" />}
-    </button>
-  );
+  const currentModeDetails = MODES.find(m => m.id === appMode);
 
   return (
     <div className="relative flex flex-col h-screen w-screen bg-black overflow-hidden futuristic-background">
@@ -111,11 +96,22 @@ const HomePage: React.FC = () => {
         </div>
       </main>
       
-      <form onSubmit={handleSubmit} className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[95%] max-w-3xl bg-black/30 backdrop-blur-lg border border-white/10 rounded-2xl p-4 shadow-2xl z-20">
+      <form onSubmit={handleSubmit} className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl bg-black/30 backdrop-blur-lg border border-white/10 rounded-2xl p-4 shadow-2xl z-20">
         <div className="flex items-center justify-between gap-4 mb-3">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
                 <AgentSelector />
                 <ModelSelector />
+                 <button
+                    type="button"
+                    onClick={() => setIsModeModalOpen(true)}
+                    className="flex items-center gap-2 text-left p-1.5 pr-3 rounded-full hover:bg-white/10 transition-colors"
+                >
+                    {currentModeDetails && <currentModeDetails.icon className="w-8 h-8 rounded-full bg-gray-700 text-indigo-400 p-1.5 flex-shrink-0" />}
+                    <div>
+                        <div className="font-semibold text-gray-200 leading-tight">{currentModeDetails?.name || 'Select Mode'}</div>
+                        <div className="text-xs text-gray-500 leading-tight">Creation Mode</div>
+                    </div>
+                </button>
             </div>
              <div className="flex items-center bg-black/20 rounded-full p-1 text-sm font-medium">
                 <button type="button" onClick={() => { setIsTranslation(false); setIsCloning(false); }} className={`px-3 py-1 rounded-full ${!isTranslation && !isCloning ? 'bg-white/10' : 'text-gray-400'}`}>Describe</button>
@@ -134,31 +130,12 @@ const HomePage: React.FC = () => {
                     }
                 }}
                 placeholder={getPlaceholder()}
-                className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-4 pr-40 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none placeholder-gray-500 text-base text-gray-200 transition-colors"
+                className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-4 pr-28 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none placeholder-gray-500 text-base text-gray-200 transition-colors"
                 rows={isTranslation || isCloning ? 8 : 1}
             />
             <div className="absolute top-1/2 -translate-y-1/2 right-4 flex items-center gap-2">
                 <div className="text-sm font-mono text-gray-500">
                     <span className={inputValue.length > 0 ? "text-gray-200" : ""}>{MAX_CHARS - inputValue.length}</span>
-                </div>
-                <div className="relative" ref={menuRef}>
-                    <button type="button" onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 transition-colors">
-                        <MoreVerticalIcon className="w-5 h-5" />
-                    </button>
-                    {isMenuOpen && (
-                        <div className="absolute bottom-full mb-2 right-0 w-56 bg-gray-900/80 backdrop-blur-lg rounded-xl shadow-xl border border-white/10 p-2 z-10">
-                            <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">Mode</div>
-                            <MenuItem active={appMode === 'build'} onClick={() => { setAppMode('build'); setIsMenuOpen(false); }}>Web App</MenuItem>
-                            <MenuItem active={appMode === 'component'} onClick={() => { setAppMode('component'); setIsMenuOpen(false); }}>Component</MenuItem>
-                            <MenuItem active={appMode === 'project'} onClick={() => { setAppMode('project'); setIsMenuOpen(false); }}>Project</MenuItem>
-                            <MenuItem active={appMode === 'multifile'} onClick={() => { setAppMode('multifile'); setIsMenuOpen(false); }}>Multi-file App</MenuItem>
-                            <MenuItem active={appMode === 'fullstack'} onClick={() => { setAppMode('fullstack'); setIsMenuOpen(false); }}>Full-stack App</MenuItem>
-                            <MenuItem active={appMode === 'native'} onClick={() => { setAppMode('native'); setIsMenuOpen(false); }}>Native App</MenuItem>
-                            <MenuItem active={appMode === 'form'} onClick={() => { setAppMode('form'); setIsMenuOpen(false); }}>Web Form</MenuItem>
-                            <MenuItem active={appMode === 'document'} onClick={() => { setAppMode('document'); setIsMenuOpen(false); }}>Document</MenuItem>
-                            <MenuItem active={appMode === 'study'} onClick={() => { setAppMode('study'); setIsMenuOpen(false); }}>Flashcards</MenuItem>
-                        </div>
-                    )}
                 </div>
                 <button
                     type="submit"
@@ -171,6 +148,16 @@ const HomePage: React.FC = () => {
             </div>
         </div>
       </form>
+
+       <ModeSelectionModal 
+            isOpen={isModeModalOpen} 
+            onClose={() => setIsModeModalOpen(false)}
+            currentMode={appMode}
+            onSelectMode={(mode) => {
+                setAppMode(mode);
+                setIsModeModalOpen(false);
+            }}
+        />
 
        <div className="fixed top-4 left-4 z-20">
             <Link to="/onedrive" className="py-2 px-4 bg-white/5 text-gray-300 text-sm font-medium rounded-full transition-colors duration-200 backdrop-blur-sm border border-white/10 hover:bg-white/10">

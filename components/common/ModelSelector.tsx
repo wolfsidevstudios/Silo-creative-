@@ -35,18 +35,18 @@ const ModelSelector: React.FC = () => {
 
       {isModalOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 transition-opacity duration-300"
+          className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-opacity duration-300 animate-fade-in"
           onClick={() => setIsModalOpen(false)}
           role="dialog"
           aria-modal="true"
           aria-labelledby="model-selector-title"
         >
           <div
-            className="bg-gray-900/70 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl w-full max-w-md relative transform transition-all duration-300 scale-95 opacity-0 animate-scale-in"
+            className="bg-gray-900/70 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl w-full max-w-lg relative transform transition-all duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 border-b border-white/10 flex justify-between items-center">
-              <h2 id="model-selector-title" className="text-xl font-bold text-gray-100">
+              <h2 id="model-selector-title" className="text-2xl font-bold text-gray-100">
                 Choose a Model
               </h2>
               <button
@@ -54,7 +54,7 @@ const ModelSelector: React.FC = () => {
                 className="p-2 rounded-full text-gray-400 hover:bg-white/10 transition-colors"
                 aria-label="Close"
               >
-                <XIcon className="w-5 h-5" />
+                <XIcon className="w-6 h-6" />
               </button>
             </div>
             
@@ -81,12 +81,12 @@ const ModelSelector: React.FC = () => {
             </ul>
           </div>
           <style>{`
-            @keyframes scale-in {
-              from { transform: scale(0.95); opacity: 0; }
-              to { transform: scale(1); opacity: 1; }
+            @keyframes fade-in {
+                from { opacity: 0; }
+                to { opacity: 1; }
             }
-            .animate-scale-in {
-              animation: scale-in 0.2s ease-out forwards;
+            .animate-fade-in {
+                animation: fade-in 0.2s ease-out forwards;
             }
           `}</style>
         </div>

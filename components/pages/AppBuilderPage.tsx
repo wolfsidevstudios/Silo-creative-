@@ -1,6 +1,3 @@
-
-
-
 import React, { useRef, useState, useEffect } from 'react';
 import ChatPanel, { ChatPanelRef } from '../builder/ChatPanel';
 import PreviewPanel from '../builder/PreviewPanel';
@@ -43,6 +40,12 @@ const AppBuilderPage: React.FC = () => {
       }
       setFiles(newFiles);
       setContextFiles(newFiles); // also update context for persistence across navigation
+  };
+
+  const handleFileContentChange = (path: string, newContent: string) => {
+    const newFiles = { ...(files || {}), [path]: newContent };
+    // We don't want to create a history entry for every keystroke, so pass undefined for summary
+    handleSetFiles(newFiles);
   };
 
   const handleRevertToVersion = (version: Version) => {
@@ -112,6 +115,7 @@ const AppBuilderPage: React.FC = () => {
           <PreviewPanel 
             ref={previewPanelRef}
             files={files}
+            onFileContentChange={handleFileContentChange}
             onVisualEditSubmit={handleVisualEditSubmit}
             onScreenshotTaken={handleScreenshotTaken}
             isAgentTesting={isAgentTesting}
