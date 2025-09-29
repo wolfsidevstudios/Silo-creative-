@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import ChatPanel, { ChatPanelRef } from '../builder/ChatPanel';
+import ChatPanel from '../builder/ChatPanel';
+import type { ChatPanelRef } from '../builder/ChatPanel';
 import PreviewPanel from '../builder/PreviewPanel';
 import { useAppContext } from '../../context/AppContext';
 import { GenerationStatus, Message, AppMode, ConsoleMessage } from '../../types';

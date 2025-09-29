@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
 import HomePage from './components/pages/HomePage';
@@ -15,6 +15,7 @@ import DocsPage from './components/pages/DocsPage'; // New Import
 import DeveloperAPIPage from './components/pages/DeveloperAPIPage'; // New Import
 import Sidebar from './components/common/Sidebar';
 import Banner from './components/common/Banner';
+import DeprecationNotice from './components/common/DeprecationNotice';
 
 const FullPageSpinner: React.FC = () => (
     <div className="flex items-center justify-center h-screen w-screen bg-black">
@@ -90,8 +91,18 @@ const AppRoutes: React.FC = () => {
 };
 
 function App() {
+  const [showDeprecationNotice, setShowDeprecationNotice] = useState(true);
+
+  const handleDeprecationAcknowledge = () => {
+    // Hide the notice first to avoid seeing it during redirection
+    setShowDeprecationNotice(false);
+    // Redirect to the new website
+    window.location.href = 'https://silobuild.vercel.app/';
+  };
+
   return (
     <AppProvider>
+      {showDeprecationNotice && <DeprecationNotice onAcknowledge={handleDeprecationAcknowledge} />}
       <HashRouter>
         <AppRoutes />
       </HashRouter>

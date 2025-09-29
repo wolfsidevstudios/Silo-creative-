@@ -357,4 +357,76 @@ const LandingPage: React.FC = () => {
                                 </div>
                                 <h3 className="text-xl font-semibold text-gray-200">AI-Powered Generation</h3>
                                 <p className="mt-2 text-gray-400">
-                                    Describe your app in plain English and watch our AI bring it to life,
+                                    Describe your app in plain English and watch our AI bring it to life, generating clean and functional code in moments.
+                                </p>
+                            </div>
+                            <div className="text-center p-6 bg-white/5 border border-white/10 rounded-2xl">
+                                <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-500/20 text-indigo-300 rounded-lg mb-4">
+                                    <CodeIcon className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-200">Interactive Previews</h3>
+                                <p className="mt-2 text-gray-400">
+                                    Instantly view and interact with your generated application. Refine and iterate in real-time until it's perfect.
+                                </p>
+                            </div>
+                            <div className="text-center p-6 bg-white/5 border border-white/10 rounded-2xl">
+                                <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-500/20 text-indigo-300 rounded-lg mb-4">
+                                    <UsersIcon className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-200">Custom Agents</h3>
+                                <p className="mt-2 text-gray-400">
+                                    Create and customize AI agents with specific personalities and expertise to tailor the generation process to your needs.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Pricing Section */}
+                <section id="pricing" className="relative isolate py-20 sm:py-28">
+                    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-100">Simple, Transparent Pricing</h2>
+                        <p className="mt-4 text-lg text-gray-400">Choose a plan that works for you.</p>
+                        <div className="mt-16 bg-white/5 border border-white/10 rounded-2xl p-8 max-w-md mx-auto">
+                            <h3 className="text-2xl font-bold text-white">Ultra</h3>
+                            <p className="mt-2 text-indigo-400">For power users and professionals.</p>
+                            <div className="mt-6">
+                                <span className="text-5xl font-extrabold text-white">$10</span>
+                                <span className="text-lg font-medium text-gray-400">/ month</span>
+                            </div>
+                            <ul className="mt-8 space-y-4 text-left">
+                                <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-green-400" /> Unlimited app generations</li>
+                                <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-green-400" /> Access to all premium models</li>
+                                <li className="flex items-center gap-3"><CheckIcon className="w-5 h-5 text-green-400" /> Priority support</li>
+                            </ul>
+                            <GooglePayButton
+                                totalPrice="10.00"
+                                onPaymentSuccess={handlePaymentSuccess}
+                                onPaymentError={handlePaymentError}
+                            />
+                        </div>
+                    </div>
+                </section>
+
+                {/* FAQ Section */}
+                <section id="faq" className="relative isolate py-20 sm:py-28 bg-black/30 backdrop-blur-sm">
+                    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-100 text-center mb-12">Frequently Asked Questions</h2>
+                        <FaqItem question="What kind of apps can I build?">
+                            You can build a wide range of web applications, from simple single-page apps and forms to more complex multi-file projects using frameworks like React. You can also generate UI components, documents, and even native mobile app layouts.
+                        </FaqItem>
+                        <FaqItem question="Do I need to know how to code?">
+                            No coding knowledge is required to get started! Silo Labs is designed for both beginners and experienced developers. The AI handles the code generation, but you can always dive in and edit the code yourself.
+                        </FaqItem>
+                        <FaqItem question="How does the API key work?">
+                            For certain models, you need to provide your own API key (e.g., from Google Gemini). Your key is stored securely in your browser's local storage and is never sent to our servers. It is used directly by your browser to communicate with the AI model's API.
+                        </FaqItem>
+                    </div>
+                </section>
+            </main>
+            <Footer />
+        </div>
+    );
+};
+
+export default LandingPage;

@@ -13,7 +13,7 @@ import {
 } from '../../services/geminiService';
 import { saveApp } from '../../services/storageService';
 import type { Message, AppPlan, FormPlan, DocumentPlan, RefinementResult, UiUxAnalysis, ComponentPlan, GenerationStatus, ProjectPlan, ConsoleMessage } from '../../types';
-import { AgentTestAction } from '../pages/AppBuilderPage';
+import type { AgentTestAction } from '../pages/AppBuilderPage';
 import { HtmlIcon, CssIcon, TsIcon, FileTextIcon, ReactIcon, BotIcon, CheckIcon, PlusIcon, StarIcon, SendIcon, SearchIcon, CodeBracketIcon, FolderIcon, PuzzleIcon } from '../common/Icons';
 
 // --- Sub-components for new UI ---

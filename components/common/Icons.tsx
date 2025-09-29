@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export const LogoIcon: React.FC = () => (
@@ -228,7 +229,12 @@ export const BrainCircuitIcon: React.FC<{ className?: string }> = ({ className }
 );
 
 export const ClipboardIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" stroke
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+    </svg>
+);
+
 // FIX: Added missing icon components.
 export const CodeBracketIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
@@ -293,8 +299,8 @@ export const PuzzleIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-export const MousePointerClickIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+export const MousePointerClickIcon: React.FC<{ className?: string, style?: React.CSSProperties }> = ({ className, style }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
         <path d="m9 9 5 12 1.8-5.2L21 14Z" /><path d="m11 11 4 4" /><path d="m2 2 4 11 5.3-2.1L18 4 2 2Z" />
     </svg>
 );
